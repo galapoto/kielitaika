@@ -1,0 +1,74 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Android / NDK build artifacts
+frontend/android/app/.cxx/
+frontend/android/app/build/
+frontend/android/.gradle/
+
+# iOS build artifacts
+frontend/ios/DerivedData/
+frontend/ios/Pods/
+
+# Native build outputs
+*.o
+*.so
+*.a
+*.dylib
+compile_commands.json
+
+# Node / tooling
+node_modules/

@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+httpx
+python-dotenv
+sqlalchemy
+aiosqlite
+pydantic
+pydantic-settings
+openai
+python-multipart
+reportlab
+pyjwt
+bcrypt
+fastapi-security
+stripe
