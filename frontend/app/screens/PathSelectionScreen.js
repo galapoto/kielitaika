@@ -6,8 +6,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import Background from '../components/ui/Background';
 import SectionHeader from '../components/core/SectionHeader';
-import PathCard from '../../components/core/PathCard';
-import { spacing } from '../../design/spacing';
+import PathCard from '../components/core/PathCard';
+import { spacing } from '../design/spacing';
 import HomeButton from '../components/HomeButton';
 
 /**
