@@ -3,10 +3,12 @@
 // ============================================================================
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import SceneBackground from '../components/SceneBackground';
-import { colors } from '../styles/colors';
-import { spacing } from '../styles/spacing';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import Background from '../components/ui/Background';
+import SectionHeader from '../components/core/SectionHeader';
+import PathCard from '../../components/core/PathCard';
+import { spacing } from '../../design/spacing';
+import HomeButton from '../components/HomeButton';
 
 /**
  * PathSelectionScreen
@@ -24,29 +26,27 @@ export default function PathSelectionScreen({ navigation }) {
   ];
 
   return (
-    <View style={styles.container}>
-      <SceneBackground sceneKey="forest" orbEmotion="calm" />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Choose Your Path</Text>
+    <Background module="home" variant="brown">
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <SectionHeader title="Choose Your Path" />
+          <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
+        </View>
+        
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {paths.map((path) => (
+            <PathCard
+              key={path.id}
+              {...path}
+              onPress={() => navigation.navigate('PathDetails', { pathId: path.id })}
+            />
+          ))}
+        </ScrollView>
       </View>
-      
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {paths.map((path) => (
-          <TouchableOpacity
-            key={path.id}
-            style={styles.pathCard}
-            onPress={() => navigation.navigate('PathDetails', { pathId: path.id })}
-          >
-            <Text style={styles.pathIcon}>{path.icon}</Text>
-            <Text style={styles.pathTitle}>{path.title}</Text>
-            <Text style={styles.pathDescription}>{path.description}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
+    </Background>
   );
 }
 
@@ -54,43 +54,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  homeButtonHeader: {
+    marginLeft: 'auto',
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: spacing.lg,
     gap: spacing.md,
-  },
-  header: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  pathCard: {
-    backgroundColor: '#fff',
-    padding: spacing.md,
-    borderRadius: 12,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  pathIcon: {
-    fontSize: 32,
-    marginBottom: spacing.sm,
-  },
-  pathTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: spacing.xs,
-  },
-  pathDescription: {
-    fontSize: 14,
-    color: '#666',
   },
 });
 
