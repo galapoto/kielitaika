@@ -1,24 +1,14 @@
 // Authentication service
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
-const API_BASE_ALT = 'http://localhost:8001';
+import { HTTP_API_BASE } from '../config/backend';
 
-async function fetchWithFallback(url, options = {}) {
-  try {
-    const response = await fetch(`${API_BASE}${url}`, options);
-    if (response.ok || response.status !== 0) return response;
-  } catch (e) {
-    // Network error, try 8001
-  }
-  try {
-    return await fetch(`${API_BASE_ALT}${url}`, options);
-  } catch (e) {
-    throw new Error(`API request failed: ${e.message}`);
-  }
+async function fetchWithAuth(url, options = {}) {
+  const response = await fetch(`${HTTP_API_BASE}${url}`, options);
+  return response;
 }
 
 export async function login(email, password) {
-  const response = await fetchWithFallback('/auth/login', {
+  const response = await fetchWithAuth('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -33,7 +23,7 @@ export async function login(email, password) {
 }
 
 export async function register(email, password, name = null) {
-  const response = await fetchWithFallback('/auth/register', {
+  const response = await fetchWithAuth('/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, name }),
@@ -48,7 +38,7 @@ export async function register(email, password, name = null) {
 }
 
 export async function refreshToken(refreshTokenValue) {
-  const response = await fetchWithFallback('/auth/refresh', {
+  const response = await fetchWithAuth('/auth/refresh', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh_token: refreshTokenValue }),
@@ -63,7 +53,7 @@ export async function refreshToken(refreshTokenValue) {
 }
 
 export async function getCurrentUser(token) {
-  const response = await fetchWithFallback('/auth/me', {
+  const response = await fetchWithAuth('/auth/me', {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

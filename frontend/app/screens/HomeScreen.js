@@ -4,19 +4,13 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import SceneBackground from '../../components/SceneBackground';
-import VoiceOrb from '../../components/orb/VoiceOrb';
-import { useRukaStore } from '../../state/useRukaStore';
-import HeroCard from '../../components/core/HeroCard';
-import QuickActionsCarousel from '../../components/core/QuickActionsCarousel';
-import PathCarousel from '../../components/core/PathCarousel';
-import DailyJourneyTimeline from '../../components/core/DailyJourneyTimeline';
-import FloatingActionButton from '../../components/core/FloatingActionButton';
-import BottomSheet from '../../components/core/BottomSheet';
-import SectionHeader from '../../components/core/SectionHeader';
-import { colors } from '../../design/colors';
-import { typography } from '../../design/typography';
-import { spacing } from '../../design/spacing';
+import SceneBackground from '../components/SceneBackground';
+import VoiceOrb from '../components/VoiceOrb';
+import { useRukaStore } from '../state/useRukaStore';
+import BottomSheet from '../components/BottomSheet';
+import { colors } from '../styles/colors';
+import { typography } from '../styles/typography';
+import { spacing } from '../styles/spacing';
 
 /**
  * HomeScreen - Premium redesigned home screen
@@ -87,36 +81,70 @@ export default function HomeScreen({ navigation }) {
         {/* Hero Section with VoiceOrb */}
         <View style={styles.heroSection}>
           <View style={styles.orbContainer}>
-            <VoiceOrb />
+            <VoiceOrb amplitude={amplitude} />
           </View>
-          <HeroCard
-            title="Welcome back!"
-            subtitle="Continue your Finnish learning journey"
-          />
+          <View style={styles.welcomeCard}>
+            <Text style={styles.welcomeTitle}>Welcome back!</Text>
+            <Text style={styles.welcomeSubtitle}>Continue your Finnish learning journey</Text>
+          </View>
         </View>
 
         {/* Quick Actions */}
-        <SectionHeader title="Quick Actions" />
-        <QuickActionsCarousel actions={quickActions} />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActionsGrid}>
+            {quickActions.map((action, idx) => (
+              <TouchableOpacity key={idx} style={styles.actionCard}>
+                <Text style={styles.actionIcon}>{action.icon}</Text>
+                <Text style={styles.actionTitle}>{action.title}</Text>
+                <Text style={styles.actionSubtitle}>{action.subtitle}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {/* Learning Paths */}
-        <SectionHeader title="Your Learning Paths" />
-        <PathCarousel paths={learningPaths} />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Your Learning Paths</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {learningPaths.map((path) => (
+              <View key={path.id} style={styles.pathCard}>
+                <Text style={styles.pathIcon}>{path.icon}</Text>
+                <Text style={styles.pathTitle}>{path.title}</Text>
+                <Text style={styles.pathDescription}>{path.description}</Text>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${path.progress}%` }]} />
+                </View>
+                <Text style={styles.progressText}>{path.progress}%</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
 
         {/* Daily Journey */}
-        <SectionHeader title="Today's Journey" />
-        <DailyJourneyTimeline tasks={dailyTasks} showTitle={false} />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Today's Journey</Text>
+          {dailyTasks.map((task) => (
+            <View key={task.id} style={styles.taskItem}>
+              <Text style={styles.taskIcon}>{task.icon}</Text>
+              <Text style={styles.taskTitle}>{task.title}</Text>
+              <Text style={styles.taskStatus}>{task.completed ? '✓' : '○'}</Text>
+            </View>
+          ))}
+        </View>
 
         {/* Spacer for FAB */}
         <View style={styles.spacer} />
       </ScrollView>
 
       {/* Floating Action Button */}
-      <FloatingActionButton
-        icon="➕"
-        label="More"
+      <TouchableOpacity
+        style={styles.fab}
         onPress={handleMorePress}
-      />
+        activeOpacity={0.8}
+      >
+        <Text style={styles.fabIcon}>➕</Text>
+      </TouchableOpacity>
 
       {/* Bottom Sheet Menu */}
       <BottomSheet
@@ -223,5 +251,134 @@ const styles = StyleSheet.create({
     ...typography.styles.h3,
     color: colors.text.primary,
     marginBottom: spacing.lg,
+  },
+  welcomeCard: {
+    backgroundColor: colors.background.surface,
+    padding: spacing.lg,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  welcomeTitle: {
+    ...typography.styles.h2,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+  },
+  welcomeSubtitle: {
+    ...typography.styles.body,
+    color: colors.text.secondary,
+  },
+  section: {
+    padding: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  sectionTitle: {
+    ...typography.styles.h3,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  actionCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: colors.background.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionIcon: {
+    fontSize: 32,
+    marginBottom: spacing.sm,
+  },
+  actionTitle: {
+    ...typography.styles.body,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  actionSubtitle: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
+  pathCard: {
+    width: 200,
+    backgroundColor: colors.background.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginRight: spacing.md,
+  },
+  pathIcon: {
+    fontSize: 32,
+    marginBottom: spacing.sm,
+  },
+  pathTitle: {
+    ...typography.styles.h4,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  pathDescription: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 2,
+    marginBottom: spacing.xs,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primary.main,
+    borderRadius: 2,
+  },
+  progressText: {
+    ...typography.styles.caption,
+    color: colors.text.secondary,
+  },
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.surface,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  taskIcon: {
+    fontSize: 24,
+  },
+  taskTitle: {
+    ...typography.styles.body,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  taskStatus: {
+    fontSize: 20,
+    color: colors.primary.main,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    right: spacing.xl,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  fabIcon: {
+    fontSize: 24,
+    color: '#fff',
   },
 });

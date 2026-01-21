@@ -134,7 +134,7 @@ export default function SettingsScreen({ navigation }) {
     <View style={dynamicStyles.container}>
       <View style={dynamicStyles.header}>
         <Text style={dynamicStyles.title}>⚙️ Settings</Text>
-        <Text style={dynamicStyles.subtitle}>Customize your RUKA experience</Text>
+        <Text style={dynamicStyles.subtitle}>Customize your KieliTaika experience</Text>
       </View>
 
       <ScrollView contentContainerStyle={dynamicStyles.content}>

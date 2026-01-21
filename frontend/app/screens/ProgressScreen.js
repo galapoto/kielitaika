@@ -15,8 +15,7 @@ import { radius } from '../styles/radius';
 import { shadows } from '../styles/shadows';
 import { spacing } from '../styles/spacing';
 import { typography } from '../styles/typography';
-
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
+import { HTTP_API_BASE } from '../config/backend';
 
 export default function ProgressScreen() {
   const { colors: themeColors } = useTheme();
@@ -41,7 +40,7 @@ export default function ProgressScreen() {
 
   const loadUsers = async () => {
     try {
-      const res = await fetch(`${API_BASE}/admin/users`);
+      const res = await fetch(`${HTTP_API_BASE}/admin/users`);
       if (!res.ok) throw new Error('Failed to load users');
       const data = await res.json();
       setUsers(data.users || []);
@@ -57,7 +56,7 @@ export default function ProgressScreen() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/admin/users/${userId}/progress`);
+      const res = await fetch(`${HTTP_API_BASE}/admin/users/${userId}/progress`);
       if (!res.ok) throw new Error('Failed to load progress');
       const data = await res.json();
       setProgress(data.report);

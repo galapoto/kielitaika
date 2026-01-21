@@ -1,6 +1,6 @@
 // ProfileScreen - User profile screen
 import { View, Text, StyleSheet } from "react-native";
-import SceneBackground from "../components/background/SceneBackground";
+import SceneBackground from "../components/SceneBackground";
 
 export default function ProfileScreen() {
   return (

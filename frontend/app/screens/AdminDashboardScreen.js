@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:5000';
+import { HTTP_API_BASE } from '../config/backend';
 
 export default function AdminDashboardScreen({ route, navigation }) {
   const [cohorts, setCohorts] = useState([]);
@@ -26,7 +26,7 @@ export default function AdminDashboardScreen({ route, navigation }) {
     setIsLoadingCohorts(true);
     setError('');
     try {
-      const response = await fetch(`${API_BASE}/admin/cohorts`);
+      const response = await fetch(`${HTTP_API_BASE}/admin/cohorts`);
       const data = await response.json();
       const list = data.cohorts || [];
       setCohorts(list);
@@ -45,7 +45,7 @@ export default function AdminDashboardScreen({ route, navigation }) {
   const loadCohortAnalytics = async (cohortId) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/admin/cohorts/${cohortId}/analytics`);
+      const response = await fetch(`${HTTP_API_BASE}/admin/cohorts/${cohortId}/analytics`);
       const data = await response.json();
       setAnalytics(data.analytics);
       setSelectedCohort(cohortId);
@@ -61,7 +61,7 @@ export default function AdminDashboardScreen({ route, navigation }) {
     
     try {
       const response = await fetch(
-        `${API_BASE}/admin/cohorts/${selectedCohort}/report?format=${format}`
+        `${HTTP_API_BASE}/admin/cohorts/${selectedCohort}/report?format=${format}`
       );
       const data = await response.json();
       

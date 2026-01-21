@@ -2,6 +2,16 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { HTTP_API_BASE } from './config/backend';
+
+const runtimeBuildId = new Date().toISOString();
+console.log('RUNTIME BUILD ID (App.js):', runtimeBuildId);
+
+// Verification: Test backend connection on app start
+fetch(`${HTTP_API_BASE}/`)
+  .then(r => r.json().catch(() => ({ status: 'ok' })))
+  .then(d => console.log('Backend OK:', d))
+  .catch(e => console.error('Backend FAIL:', e));
 // Premium 2026 Screens
 import HomeScreen from './screens/HomeScreen';
 import ConversationScreen from './screens/ConversationScreen';
@@ -48,7 +58,7 @@ function Navigation() {
     // Show loading screen while checking auth
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary || '#0A3D62'} />
       </View>
     );
   }
@@ -59,12 +69,12 @@ function Navigation() {
         theme={{
           dark: isDark,
           colors: {
-            primary: colors.primary,
-            background: colors.background,
-            card: colors.surface,
-            text: colors.text,
-            border: colors.border,
-            notification: colors.primary,
+            primary: colors.primary || '#0A3D62',
+            background: colors.background || '#F8FAFC',
+            card: colors.surface || colors.card || '#FFFFFF',
+            text: colors.text || '#1e293b',
+            border: colors.border || '#e2e8f0',
+            notification: colors.primary || '#0A3D62',
           },
         }}
       >

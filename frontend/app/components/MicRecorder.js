@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { TouchableOpacity, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import useWebSocket from '../hooks/useWebSocket';
 import useRecorder from '../hooks/useRecorder';
-
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:5000';
+import { HTTP_API_BASE, WS_API_BASE } from '../config/backend';
 const hasMediaRecorder =
   typeof window !== 'undefined' &&
   typeof MediaRecorder !== 'undefined' &&
@@ -113,7 +112,7 @@ export default function MicRecorder({ onTranscript }) {
       };
 
       // Connect to WebSocket STT endpoint
-      const wsUrl = API_BASE.replace('http', 'ws') + '/voice/stt-stream';
+      const wsUrl = `${WS_API_BASE}/voice/stt-stream`;
       transcriptRef.current = '';
       connect(wsUrl);
 
@@ -169,7 +168,7 @@ export default function MicRecorder({ onTranscript }) {
 
   const sendToAPI = async (audioBlob) => {
     try {
-      const response = await fetch(`${API_BASE}/voice/stt`, {
+      const response = await fetch(`${HTTP_API_BASE}/voice/stt`, {
         method: 'POST',
         headers: { 'Content-Type': 'audio/webm' },
         body: audioBlob,

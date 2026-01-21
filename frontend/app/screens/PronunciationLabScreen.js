@@ -4,14 +4,10 @@
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import SceneBackground from '../../components/SceneBackground';
-import SectionHeader from '../../components/core/SectionHeader';
-import ScoreRing from '../../components/features/PronunciationLab/ScoreRing';
-import PronunciationWaveform from '../../components/features/PronunciationLab/PronunciationWaveform';
-import FeedbackCard from '../../components/features/PronunciationLab/FeedbackCard';
-import MicButton from '../../components/features/ConversationUI/MicButton';
-import { colors } from '../../design/colors';
-import { spacing } from '../../design/spacing';
+import SceneBackground from '../components/SceneBackground';
+import MicButton from '../components/MicButton';
+import { colors } from '../styles/colors';
+import { spacing } from '../styles/spacing';
 
 /**
  * PronunciationLabScreen
@@ -35,7 +31,9 @@ export default function PronunciationLabScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <SceneBackground sceneKey="lapland" orbEmotion="calm" />
-      <SectionHeader title="Pronunciation Lab" />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Pronunciation Lab</Text>
+      </View>
       
       <ScrollView
         style={styles.scrollView}
@@ -43,25 +41,11 @@ export default function PronunciationLabScreen({ navigation }) {
       >
         {/* Score Display */}
         <View style={styles.scoreSection}>
-          <ScoreRing
-            score={score}
-            label="Overall Score"
-            size={150}
-          />
+          <View style={styles.scoreCircle}>
+            <Text style={styles.scoreText}>{score}%</Text>
+            <Text style={styles.scoreLabel}>Overall Score</Text>
+          </View>
         </View>
-
-        {/* Waveform Comparison */}
-        <PronunciationWaveform />
-
-        {/* Feedback */}
-        {feedback && (
-          <FeedbackCard
-            title={feedback.title}
-            feedback={feedback.text}
-            suggestions={feedback.suggestions}
-            score={feedback.score}
-          />
-        )}
 
         {/* Recording Button */}
         <View style={styles.recordSection}>
@@ -74,6 +58,14 @@ export default function PronunciationLabScreen({ navigation }) {
             Hold to record your pronunciation
           </Text>
         </View>
+
+        {/* Feedback */}
+        {feedback && (
+          <View style={styles.feedbackCard}>
+            <Text style={styles.feedbackTitle}>{feedback.title}</Text>
+            <Text style={styles.feedbackText}>{feedback.text}</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -102,6 +94,51 @@ const styles = StyleSheet.create({
   recordHint: {
     color: colors.text.secondary,
     fontSize: 14,
+  },
+  header: {
+    padding: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  scoreCircle: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: '#4CAF50',
+  },
+  scoreText: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  scoreLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+  },
+  feedbackCard: {
+    backgroundColor: '#fff',
+    padding: spacing.md,
+    borderRadius: 12,
+    marginTop: spacing.md,
+  },
+  feedbackTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: spacing.sm,
+  },
+  feedbackText: {
+    fontSize: 14,
+    color: '#666',
   },
 });
 

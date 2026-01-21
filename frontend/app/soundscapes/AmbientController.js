@@ -17,6 +17,7 @@ export function useAmbientController(presetKey = 'nordicCalm') {
         await soundRef.current.stopAsync();
         await soundRef.current.unloadAsync();
       }
+      if (!currentPreset.file) return; // Skip if no sound file
       const { sound } = await Audio.Sound.createAsync(currentPreset.file, {
         isLooping: true,
         volume: currentPreset.baseVolume,

@@ -9,6 +9,19 @@ export const colors = {
   textMain: '#111111',
   textSoft: '#4F4F4F',
   white: '#FFFFFF',
+  surface: '#FFFFFF',
+  background: {
+    surface: '#FFFFFF',
+    secondary: '#F7F7F7',
+  },
+  text: {
+    primary: '#111111',
+    secondary: '#4F4F4F',
+  },
+  primary: {
+    main: '#1B4EDA',
+  },
+  border: '#E3E3E3',
 };
 
 

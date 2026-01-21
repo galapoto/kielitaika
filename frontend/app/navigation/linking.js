@@ -1,5 +1,5 @@
 export const linking = {
-  prefixes: ['ruka://', 'https://ruka.app', 'http://localhost'],
+  prefixes: ['kielitaika://', 'https://dev.kielitaika.fi'],
   config: {
     screens: {
       Tabs: {

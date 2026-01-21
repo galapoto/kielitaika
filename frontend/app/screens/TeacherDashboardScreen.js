@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import SceneBackground from '../components/SceneBackground';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:5000';
+import { HTTP_API_BASE } from '../config/backend';
 
 export default function TeacherDashboardScreen({ route, navigation }) {
   const [students, setStudents] = useState([]);
@@ -33,7 +33,7 @@ export default function TeacherDashboardScreen({ route, navigation }) {
     setError('');
     try {
       const query = selectedCohort ? `?cohort_id=${selectedCohort}` : '';
-      const response = await fetch(`${API_BASE}/admin/users${query}`);
+      const response = await fetch(`${HTTP_API_BASE}/admin/users${query}`);
       const data = await response.json();
       setStudents(data.users || []);
       if ((data.users || []).length > 0) {
@@ -53,7 +53,7 @@ export default function TeacherDashboardScreen({ route, navigation }) {
 
   const loadCohorts = async () => {
     try {
-      const response = await fetch(`${API_BASE}/admin/cohorts`);
+      const response = await fetch(`${HTTP_API_BASE}/admin/cohorts`);
       const data = await response.json();
       setCohorts(data.cohorts || []);
       if ((data.cohorts || []).length > 0) {
@@ -67,7 +67,7 @@ export default function TeacherDashboardScreen({ route, navigation }) {
   const loadStudentReport = async (userId, toggleLoading = true) => {
     if (toggleLoading) setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/admin/users/${userId}/progress`);
+      const response = await fetch(`${HTTP_API_BASE}/admin/users/${userId}/progress`);
       const data = await response.json();
       setStudentReport(data.report);
       setSelectedStudent(userId);

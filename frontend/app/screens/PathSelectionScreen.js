@@ -3,12 +3,10 @@
 // ============================================================================
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import SceneBackground from '../../components/SceneBackground';
-import SectionHeader from '../../components/core/SectionHeader';
-import PathCard from '../../components/core/PathCard';
-import { colors } from '../../design/colors';
-import { spacing } from '../../design/spacing';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import SceneBackground from '../components/SceneBackground';
+import { colors } from '../styles/colors';
+import { spacing } from '../styles/spacing';
 
 /**
  * PathSelectionScreen
@@ -28,18 +26,24 @@ export default function PathSelectionScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <SceneBackground sceneKey="forest" orbEmotion="calm" />
-      <SectionHeader title="Choose Your Path" />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Choose Your Path</Text>
+      </View>
       
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
         {paths.map((path) => (
-          <PathCard
+          <TouchableOpacity
             key={path.id}
-            {...path}
+            style={styles.pathCard}
             onPress={() => navigation.navigate('PathDetails', { pathId: path.id })}
-          />
+          >
+            <Text style={styles.pathIcon}>{path.icon}</Text>
+            <Text style={styles.pathTitle}>{path.title}</Text>
+            <Text style={styles.pathDescription}>{path.description}</Text>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
@@ -56,6 +60,37 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.lg,
     gap: spacing.md,
+  },
+  header: {
+    padding: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  pathCard: {
+    backgroundColor: '#fff',
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  pathIcon: {
+    fontSize: 32,
+    marginBottom: spacing.sm,
+  },
+  pathTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: spacing.xs,
+  },
+  pathDescription: {
+    fontSize: 14,
+    color: '#666',
   },
 });
 

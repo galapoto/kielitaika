@@ -1,7 +1,20 @@
 // Starfield layer (Skia-based). If Skia not present, falls back to empty view.
 import React, { useMemo } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Canvas, Circle, useFrame, useValue } from '@shopify/react-native-skia';
+
+let SkiaAvailable = false;
+let Canvas, Circle, useFrame, useValue;
+
+try {
+  const skia = require('@shopify/react-native-skia');
+  Canvas = skia.Canvas;
+  Circle = skia.Circle;
+  useFrame = skia.useFrame;
+  useValue = skia.useValue;
+  SkiaAvailable = true;
+} catch (e) {
+  SkiaAvailable = false;
+}
 
 export default function Starfield({ count = 220 }) {
   const { width, height } = useWindowDimensions();
@@ -17,14 +30,14 @@ export default function Starfield({ count = 220 }) {
     }));
   }, [count, width, height]);
 
+  if (!SkiaAvailable || !Canvas || !useValue) {
+    return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
+  }
+
   const t = useValue(0);
   useFrame((_c, elapsed) => {
     t.current = elapsed / 1000;
   });
-
-  if (!Canvas) {
-    return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
-  }
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

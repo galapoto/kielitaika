@@ -14,5 +14,5 @@ Be encouraging, patient, and supportive. Use natural Finnish conversation patter
     .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
     .join("\n");
 
-  return base + "\n\nConversation:\n" + transcript + "\n\nRUKA:";
+  return base + "\n\nConversation:\n" + transcript + "\n\nKieliTaika:";
 }

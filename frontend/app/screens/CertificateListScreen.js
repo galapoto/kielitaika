@@ -3,11 +3,9 @@
 // ============================================================================
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import SceneBackground from '../../components/SceneBackground';
-import SectionHeader from '../../components/core/SectionHeader';
-import CertificateCard from '../../components/features/Certificates/CertificateCard';
-import { spacing } from '../../design/spacing';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import SceneBackground from '../components/SceneBackground';
+import { spacing } from '../styles/spacing';
 
 /**
  * CertificateListScreen
@@ -38,18 +36,25 @@ export default function CertificateListScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <SceneBackground sceneKey="lapland" orbEmotion="calm" />
-      <SectionHeader title="My Certificates" />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Certificates</Text>
+      </View>
       
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
         {certificates.map((cert) => (
-          <CertificateCard
+          <TouchableOpacity
             key={cert.id}
-            {...cert}
+            style={styles.certCard}
             onPress={() => navigation.navigate('CertificateDetail', { certificateId: cert.id })}
-          />
+          >
+            <Text style={styles.certTitle}>{cert.title}</Text>
+            <Text style={styles.certLevel}>{cert.level}</Text>
+            <Text style={styles.certDate}>{cert.date}</Text>
+            {cert.verified && <Text style={styles.verified}>✓ Verified</Text>}
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
@@ -66,6 +71,44 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.lg,
     gap: spacing.md,
+  },
+  header: {
+    padding: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  certCard: {
+    backgroundColor: '#fff',
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  certTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: spacing.xs,
+  },
+  certLevel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: spacing.xs,
+  },
+  certDate: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: spacing.xs,
+  },
+  verified: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
   },
 });
 

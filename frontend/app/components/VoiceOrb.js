@@ -7,7 +7,7 @@ import { useVoiceOrbAnimation } from '../hooks/conversationMotion/useVoiceOrbAni
 import OrbOverlaySnow from '../orb/effects/OrbOverlaySnow';
 import OrbEvolutionBurst from '../orb/effects/OrbEvolutionBurst';
 import EvolutionCinematic from '../orb/effects/EvolutionCinematic';
-import FireSpirits from '../orb/effects/FireSpirits';
+import FireSpirits from './orb/effects/FireSpirits';
 import VoiceTrail from './orb/trails/VoiceTrail';
 import OrbGravityField from './orb/lens/OrbGravityField';
 import SpiritLights from './orb/spirit/SpiritLights';

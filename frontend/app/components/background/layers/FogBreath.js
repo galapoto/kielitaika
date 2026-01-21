@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -26,10 +26,11 @@ export default function FogBreath({ intensity = 1, amplitude = 0 }) {
     const baseDrift = interpolate(phase.value, [0, 1], [-12, 12]);
     const push = amp.value * 40;
     const translateX = baseDrift + push;
+    const webFilter = Platform.OS === 'web' ? `blur(${2 + amp.value * 4}px)` : undefined;
     return {
       transform: [{ scale }, { translateX }],
       opacity: 0.18 * intensity,
-      filter: `blur(${2 + amp.value * 4}px)`,
+      ...(webFilter ? { filter: webFilter } : null),
     };
   });
 

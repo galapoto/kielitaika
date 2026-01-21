@@ -18,6 +18,11 @@ import { typography } from '../../styles/typography';
 import { radius } from '../../styles/radius';
 import { shadows } from '../../styles/shadows';
 
+const runtimeBuildId = new Date().toISOString();
+console.log('RUNTIME BUILD ID (LoginScreen.js):', runtimeBuildId);
+const loginBackgroundSource = require('../../assets/backgrounds/metsä_talvi.png');
+console.log('LOGIN BG SOURCE', loginBackgroundSource);
+
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,7 +54,7 @@ export default function LoginScreen({ navigation }) {
       <SceneBackground sceneKey="forest" orbEmotion="calm" />
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome to RUKA</Text>
+          <Text style={styles.title}>Welcome to KieliTaika</Text>
           <Text style={styles.subtitle}>Sign in to continue your Finnish learning journey</Text>
         </View>
 

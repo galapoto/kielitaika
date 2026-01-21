@@ -7,14 +7,14 @@ export default function ThemeToggle() {
 
   return (
     <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[styles.container, { backgroundColor: colors.surface || colors.card || '#FFFFFF', borderColor: colors.border || '#e2e8f0' }]}
       onPress={toggleTheme}
       activeOpacity={0.7}
     >
       <View style={styles.content}>
         <Text style={[styles.label, { color: colors.text }]}>{isDark ? '🌙' : '☀️'}</Text>
         <View style={styles.toggleContainer}>
-          <View style={[styles.toggle, isDark && styles.toggleActive, { backgroundColor: isDark ? colors.primary : colors.border }]}>
+          <View style={[styles.toggle, isDark && styles.toggleActive, { backgroundColor: isDark ? (colors.primary || '#3B82F6') : (colors.border || '#e2e8f0') }]}>
             <View style={[styles.toggleCircle, isDark && styles.toggleCircleActive]} />
           </View>
         </View>

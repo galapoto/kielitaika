@@ -22,9 +22,9 @@ import BreathCondensation from './background/layers/BreathCondensation';
 import { getDayNightState } from '../season/DayNightCycle';
 
 // Scene background images
-const auroraImg = require('../../assets/backgrounds/revontuli.png');
-const forestImg = require('../../assets/backgrounds/metsä_talvi.png');
-const laplandImg = require('../../assets/backgrounds/snow_pile.png');
+const auroraImg = require('../assets/backgrounds/revontuli.png');
+const forestImg = require('../assets/backgrounds/metsä_talvi.png');
+const laplandImg = require('../assets/backgrounds/snow_pile.png');
 
 const emotionMap = {
   calm: 0,

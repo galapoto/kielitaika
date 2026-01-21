@@ -13,12 +13,12 @@ export default function AppNavigator() {
       theme={{
         dark: isDark,
         colors: {
-          primary: colors.primary,
-          background: colors.background,
-          card: colors.surface,
-          text: colors.text,
-          border: colors.border,
-          notification: colors.primary,
+          primary: colors.primary || '#0A3D62',
+          background: colors.background || '#F8FAFC',
+          card: colors.surface || colors.card || '#FFFFFF',
+          text: colors.text || '#1e293b',
+          border: colors.border || '#e2e8f0',
+          notification: colors.primary || '#0A3D62',
         },
       }}
     >

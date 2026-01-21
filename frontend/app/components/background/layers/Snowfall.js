@@ -1,12 +1,32 @@
 // Snowfall particle layer (lightweight, non-Skia fallback)
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Canvas, useFrame, Circle, useValue } from '@shopify/react-native-skia';
 
-// NOTE: Requires @shopify/react-native-skia. If not installed, replace with a no-op View.
+let SkiaAvailable = false;
+let Canvas, useFrame, Circle, useValue;
+
+try {
+  const skia = require('@shopify/react-native-skia');
+  Canvas = skia.Canvas;
+  useFrame = skia.useFrame;
+  Circle = skia.Circle;
+  useValue = skia.useValue;
+  SkiaAvailable = true;
+} catch (e) {
+  SkiaAvailable = false;
+}
 
 export default function Snowfall({ count = 120, intensity = 1 }) {
   const { width, height } = useWindowDimensions();
+  const [time, setTime] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTime(prev => prev + 0.016); // ~60fps
+    }, 16);
+    return () => clearInterval(interval);
+  }, []);
+
   const particles = useMemo(() => {
     return Array.from({ length: count }).map((_, i) => ({
       id: i,
@@ -18,6 +38,11 @@ export default function Snowfall({ count = 120, intensity = 1 }) {
       brightness: 0.4 + Math.random() * 0.6,
     }));
   }, [count, width, height, intensity]);
+
+  // Fallback if Skia isn't available - use simple View
+  if (!SkiaAvailable || !Canvas || !useValue) {
+    return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
+  }
 
   const t = useValue(0);
 
@@ -32,11 +57,6 @@ export default function Snowfall({ count = 120, intensity = 1 }) {
       const opacity = Math.min(1, Math.max(0.2, (p.size - 1.5) / 6));
       return <Circle key={p.id} cx={x} cy={y} r={p.size} color={`rgba(255,255,255,${opacity})`} />;
     });
-
-  // Fallback if Skia isn't available
-  if (!Canvas) {
-    return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
-  }
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

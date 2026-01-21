@@ -21,7 +21,7 @@ export default function OnboardingScreen({ navigation }) {
 
   const steps = [
     {
-      title: 'Welcome to RUKA',
+      title: 'Welcome to KieliTaika',
       subtitle: 'Your AI-powered Finnish learning companion',
       description: 'Master Finnish with personalized lessons, workplace training, and YKI exam preparation.',
       icon: '🇫🇮',

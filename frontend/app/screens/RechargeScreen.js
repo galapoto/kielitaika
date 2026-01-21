@@ -282,7 +282,7 @@ export default function RechargeScreen({ navigation }) {
             <View style={dynamicStyles.section}>
               <Text style={dynamicStyles.sectionTitle}>▶ You're Ready to Speak!</Text>
               <Text style={{ ...typography.bodySm, color: themeColors.textSecondary, marginBottom: spacing.m }}>
-                RUKA will help you use today's vocabulary and grammar in conversation.
+                KieliTaika will help you use today's vocabulary and grammar in conversation.
               </Text>
               <AnimatedCTA
                 label="Start Conversation"
