@@ -3,7 +3,6 @@ export { default as IconBase } from './icons/IconBase';
 
 export { default as RukaButton } from './components/Button';
 export { default as RukaCard } from './components/Card';
-export { default as SearchBar } from './components/SearchBar';
 export { default as Flashcard } from './components/Flashcard';
 export { default as Toggle } from './components/Toggle';
 

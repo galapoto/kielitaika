@@ -251,7 +251,8 @@ export default function Background({
             "rgba(7,9,14,0.12)",
           ] as const);
 
-  const selectedImage = imageVariant ? BACKGROUND_IMAGES[imageVariant] : null;
+  // Background images are optional - using gradients as primary backgrounds
+  const selectedImage = null; // imageVariant ? BACKGROUND_IMAGES[imageVariant] : null;
 
   const TextureOverlay = () => {
     if (colorScheme !== "dark") return null;
