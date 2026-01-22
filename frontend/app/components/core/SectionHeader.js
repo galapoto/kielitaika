@@ -7,7 +7,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { colors } from '../../styles/colors';
 import { spacing } from '../../styles/spacing';
-import { designTokens } from '../../app/styles/designTokens';
+import { designTokens } from '../../styles/designTokens';
 
 /**
  * SectionHeader - Enhanced with animated underline, badge, and action animations
