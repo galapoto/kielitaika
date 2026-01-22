@@ -1,28 +1,74 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { fetchMicroTask, submitMicroTask } from '../utils/api';
-import MicRecorder from '../components/MicRecorder';
-import UpgradeNotice from '../components/UpgradeNotice';
+import { useVoiceStreaming } from '../hooks/useVoiceStreaming';
+import MicButton from '../components/MicButton';
+import WaveformVisualizer from '../components/features/ConversationUI/WaveformVisualizer';
+import SceneBackground from '../components/SceneBackground';
+import { colors } from '../styles/colors';
+import { spacing } from '../styles/spacing';
+import { typography } from '../styles/typography';
+import { radius } from '../styles/radius';
+import { useSound } from '../hooks/useSound';
+import { RukaButton, RukaCard } from '../ui';
+import { IconLightning, IconPlay, IconPause } from '../ui/icons/IconPack';
 
-export default function MicroOutputScreen({ navigation }) {
+export default function MicroOutputScreen() {
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [error, setError] = useState(null);
-  const [transcript, setTranscript] = useState('');
-  const [upgradeReason, setUpgradeReason] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(10);
+  const [timerActive, setTimerActive] = useState(false);
+  const { playTap, playMicOn } = useSound();
+
+  const {
+    isRecording,
+    isProcessing,
+    isListening,
+    transcript,
+    startRecording,
+    stopRecording,
+  } = useVoiceStreaming({
+    onTranscriptComplete: async (finalTranscript) => {
+      if (task && finalTranscript.trim() && timerActive) {
+        await handleSubmit(finalTranscript);
+      }
+    },
+    vadSilenceThreshold: 3000,
+  });
+
+  useEffect(() => {
+    let interval = null;
+    if (timerActive && timeRemaining > 0) {
+      interval = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            setTimerActive(false);
+            stopRecording();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (timeRemaining === 0 && isRecording) {
+      stopRecording();
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerActive, timeRemaining, isRecording, stopRecording]);
 
   const loadTask = async () => {
     try {
       setLoading(true);
       setError(null);
       setFeedback(null);
+      setTimeRemaining(10);
+      setTimerActive(false);
       const data = await fetchMicroTask();
       setTask(data.task || data);
     } catch (err) {
-      if (err?.message?.includes('Upgrade required')) {
-        setUpgradeReason(err.message);
-      }
       setError(err.message || 'Could not load a micro task. Pull to retry.');
     } finally {
       setLoading(false);
@@ -33,83 +79,171 @@ export default function MicroOutputScreen({ navigation }) {
     loadTask();
   }, []);
 
-  const handleSubmit = async () => {
+  const handleStartSpeaking = async () => {
+    try {
+      playMicOn();
+      setTimeRemaining(task?.seconds || 10);
+      setTimerActive(true);
+      setFeedback(null);
+      await startRecording();
+    } catch (err) {
+      setError(err.message || 'Failed to start recording');
+      setTimerActive(false);
+    }
+  };
+
+  const handleStopSpeaking = async () => {
+    try {
+      setTimerActive(false);
+      await stopRecording();
+    } catch (err) {
+      setError(err.message || 'Failed to stop recording');
+    }
+  };
+
+  const handleSubmit = async (transcriptToSubmit = null) => {
     if (!task) return;
+    const transcriptText = transcriptToSubmit || transcript;
+    if (!transcriptText.trim()) return;
+
     try {
       setLoading(true);
-      const result = await submitMicroTask(task.id, transcript);
+      setError(null);
+      const result = await submitMicroTask(task.id, transcriptText);
       setFeedback(result.result || result);
-      setUpgradeReason(null);
     } catch (err) {
-      if (err?.message?.includes('Upgrade required')) {
-        setUpgradeReason(err.message);
-      }
       setError(err.message || 'Failed to submit. Try again.');
     } finally {
       setLoading(false);
+      setTimerActive(false);
     }
   };
 
   return (
     <View style={styles.container}>
+      <SceneBackground sceneKey="aurora" orbEmotion="calm" />
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>10s Output Task</Text>
           <Text style={styles.subtitle}>Fast speaking nudge to build fluency</Text>
         </View>
-        <TouchableOpacity style={styles.reload} onPress={loadTask} disabled={loading}>
-          <Text style={styles.reloadText}>{loading ? '...' : 'New Task'}</Text>
-        </TouchableOpacity>
+        <RukaButton title={loading ? 'Loading...' : 'New Task'} onPress={loadTask} icon={IconLightning} disabled={loading} />
       </View>
 
-      {loading && (
+      {loading && !task && (
         <View style={styles.loadingBlock}>
-          <ActivityIndicator color="#0A3D62" />
+          <ActivityIndicator color={colors.blueMain} />
           <Text style={styles.loadingText}>Preparing task...</Text>
         </View>
       )}
 
       {error && <Text style={styles.error}>{error}</Text>}
-      {upgradeReason && (
-        <UpgradeNotice
-          reason={upgradeReason}
-          onPress={() => navigation.navigate('Subscription')}
-        />
-      )}
 
       {!loading && task && (
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.card}>
-            <Text style={styles.timer}>{task.seconds || 10}s</Text>
-            <Text style={styles.prompt}>{task.prompt}</Text>
-            {task.hints && (
-              <View style={styles.hints}>
+          <RukaCard title={task.title || 'Micro Output'} subtitle={task.prompt} style={styles.card}>
+            <View style={styles.timerSection}>
+              <Text style={styles.timerLabel}>Time remaining:</Text>
+              <Text style={[styles.timer, timerActive && styles.timerActive]}>
+                {timeRemaining}s
+              </Text>
+            </View>
+
+            {task.hints && task.hints.length > 0 && (
+              <View style={styles.hintsSection}>
+                <Text style={styles.hintsLabel}>Hints:</Text>
                 {task.hints.map((hint, idx) => (
                   <Text key={idx} style={styles.hintText}>• {hint}</Text>
                 ))}
               </View>
             )}
-            <MicRecorder onTranscript={setTranscript} />
-            {transcript ? (
-              <Text style={styles.transcript}>You said: {transcript}</Text>
-            ) : (
-              <Text style={styles.hint}>Tap mic and speak for ~10 seconds</Text>
+
+            <View style={styles.stateIndicators}>
+              {isListening && (
+                <View style={styles.stateBadge}>
+                  <ActivityIndicator size="small" color={colors.blueMain} />
+                  <Text style={styles.stateText}>Listening...</Text>
+                </View>
+              )}
+              {isProcessing && (
+                <View style={styles.stateBadge}>
+                  <ActivityIndicator size="small" color={colors.blueMain} />
+                  <Text style={styles.stateText}>Processing...</Text>
+                </View>
+              )}
+              {timerActive && (
+                <View style={styles.stateBadge}>
+                  <View style={styles.recordingDot} />
+                  <Text style={styles.stateText}>Recording...</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.micContainer}>
+              <MicButton
+                onPressIn={handleStartSpeaking}
+                onPressOut={handleStopSpeaking}
+                isRecording={isRecording}
+                audioLevels={[]}
+              />
+              <Text style={styles.micHint}>
+                {timerActive
+                  ? `Speak for ${timeRemaining} more seconds...`
+                  : 'Tap to start your 10-second response'}
+              </Text>
+            </View>
+
+            {isRecording && (
+              <View style={styles.waveformContainer}>
+                <WaveformVisualizer isActive={isRecording} />
+              </View>
             )}
-            <TouchableOpacity style={styles.cta} onPress={() => navigation.navigate('Conversation')}>
-              <Text style={styles.ctaText}>Start Speaking</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryCta} onPress={handleSubmit} disabled={loading || !transcript}>
-              <Text style={styles.secondaryText}>I’m done (log quick check)</Text>
-            </TouchableOpacity>
-          </View>
+
+            {transcript && (
+              <View style={styles.transcriptContainer}>
+                <Text style={styles.transcriptLabel}>You said:</Text>
+                <Text style={styles.transcript}>{transcript}</Text>
+              </View>
+            )}
+
+            {transcript && !feedback && !isProcessing && !timerActive && (
+              <RukaButton
+                title="Submit Response"
+                onPress={() => handleSubmit()}
+                icon={IconPlay}
+              />
+            )}
+          </RukaCard>
 
           {feedback && (
-            <View style={styles.cardAlt}>
-              <Text style={styles.feedbackTitle}>Quick Feedback</Text>
-              <Text style={styles.feedbackText}>{feedback.feedback}</Text>
-              <Text style={styles.feedbackMeta}>Words: {feedback.transcript_word_count}</Text>
-              <Text style={styles.feedbackMeta}>Completeness: {feedback.completeness}</Text>
-            </View>
+            <RukaCard title="Quick Feedback" subtitle={feedback.feedback}>
+              <View style={styles.feedbackMeta}>
+                {feedback.transcript_word_count !== undefined && (
+                  <Text style={styles.feedbackMetaText}>
+                    Words: {feedback.transcript_word_count}
+                  </Text>
+                )}
+                {feedback.completeness !== undefined && (
+                  <Text style={styles.feedbackMetaText}>
+                    Completeness: {feedback.completeness}%
+                  </Text>
+                )}
+                {feedback.fluency !== undefined && (
+                  <Text style={styles.feedbackMetaText}>
+                    Fluency: {feedback.fluency}/5
+                  </Text>
+                )}
+              </View>
+              <RukaButton
+                title="Next Challenge"
+                onPress={() => {
+                  setFeedback(null);
+                  loadTask();
+                }}
+                icon={IconLightning}
+                style={{ marginTop: spacing.m }}
+              />
+            </RukaCard>
           )}
         </ScrollView>
       )}
@@ -120,122 +254,143 @@ export default function MicroOutputScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: colors.grayBg,
   },
   header: {
-    padding: 20,
+    padding: spacing.l,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: colors.grayLine,
   },
   title: {
-    fontSize: 24,
+    ...typography.titleL,
     fontWeight: '700',
-    color: '#0A3D62',
+    color: colors.textMain,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 4,
-  },
-  reload: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#0A3D62',
-    borderRadius: 12,
-  },
-  reloadText: {
-    color: '#fff',
-    fontWeight: '600',
+    ...typography.bodySm,
+    color: colors.textSoft,
+    marginTop: spacing.xs,
   },
   loadingBlock: {
-    padding: 16,
+    padding: spacing.l,
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.s,
   },
   loadingText: {
-    color: '#64748b',
-    marginTop: 8,
+    ...typography.bodySm,
+    color: colors.textSoft,
   },
   error: {
+    ...typography.bodySm,
     color: '#EF4444',
-    padding: 16,
+    padding: spacing.l,
     textAlign: 'center',
   },
   content: {
-    padding: 16,
-    gap: 16,
+    padding: spacing.l,
+    gap: spacing.m,
   },
   card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    gap: 12,
+    width: '100%',
+  },
+  timerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.m,
+    backgroundColor: colors.grayBg,
+    borderRadius: radius.m,
+    marginBottom: spacing.m,
+  },
+  timerLabel: {
+    ...typography.body,
+    color: colors.textSoft,
+    fontWeight: '600',
   },
   timer: {
-    fontSize: 14,
-    color: '#0A3D62',
+    ...typography.titleXL,
     fontWeight: '700',
+    color: colors.textMain,
   },
-  prompt: {
-    fontSize: 18,
-    color: '#0F172A',
-    fontWeight: '700',
+  timerActive: {
+    color: colors.blueMain,
   },
-  hints: {
-    gap: 4,
+  hintsSection: {
+    gap: spacing.xs,
+    marginBottom: spacing.m,
+  },
+  hintsLabel: {
+    ...typography.bodySm,
+    color: colors.textSoft,
+    fontWeight: '600',
   },
   hintText: {
-    color: '#334155',
+    ...typography.bodySm,
+    color: colors.textMain,
+  },
+  stateIndicators: {
+    flexDirection: 'row',
+    gap: spacing.s,
+    marginBottom: spacing.m,
+    flexWrap: 'wrap',
+  },
+  stateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.grayBg,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.s,
+    borderRadius: radius.m,
+  },
+  stateText: {
+    ...typography.bodySm,
+    color: colors.textMain,
+  },
+  recordingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.blueMain,
+  },
+  micContainer: {
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginVertical: spacing.m,
+  },
+  micHint: {
+    ...typography.bodySm,
+    color: colors.textSoft,
+  },
+  waveformContainer: {
+    marginTop: spacing.sm,
+    width: '100%',
+  },
+  transcriptContainer: {
+    marginTop: spacing.m,
+    backgroundColor: colors.grayBg,
+    padding: spacing.m,
+    borderRadius: radius.m,
+  },
+  transcriptLabel: {
+    ...typography.bodySm,
+    color: colors.textSoft,
+    marginBottom: spacing.xs,
   },
   transcript: {
-    color: '#0F172A',
-    fontWeight: '600',
-  },
-  hint: {
-    color: '#94a3b8',
-  },
-  cta: {
-    backgroundColor: '#0A3D62',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  ctaText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  secondaryCta: {
-    backgroundColor: '#E2E8F0',
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  secondaryText: {
-    color: '#0F172A',
-    fontWeight: '600',
-  },
-  cardAlt: {
-    backgroundColor: '#0A3D62',
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  feedbackTitle: {
-    color: '#E2E8F0',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  feedbackText: {
-    color: '#fff',
+    ...typography.body,
+    color: colors.textMain,
   },
   feedbackMeta: {
-    color: '#cbd5e1',
-    fontSize: 12,
+    marginTop: spacing.m,
+    gap: spacing.xs,
+  },
+  feedbackMetaText: {
+    ...typography.bodySm,
+    color: colors.textMain,
   },
 });
