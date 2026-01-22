@@ -124,11 +124,9 @@ interface BackgroundProps {
   modalBlur?: boolean; // If true, fade in a blur overlay (for modal transitions)
 }
 
-const BACKGROUND_IMAGES: Record<ImageVariant, ReturnType<typeof require>> = {
-  home: require('../../../assets/backgrounds/theme1.png'),
-  workplace: require('../../../assets/backgrounds/theme3.png'),
-  lesson: require('../../../assets/backgrounds/theme4.png'),
-};
+// Background images are optional - using gradients as primary backgrounds
+// Images removed as they don't exist in the project
+const BACKGROUND_IMAGES: Record<ImageVariant, any> = {};
 
 const styles = StyleSheet.create({
   imageBackground: {
