@@ -4,11 +4,9 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import GlassCard from './GlassCard';
-import { colors } from '../../design/colors';
-import { typography } from '../../design/typography';
-import { spacing } from '../../design/spacing';
-import ProgressRing from './ProgressRing';
+import { colors } from '../../styles/colors';
+import { typography } from '../../styles/typography';
+import { spacing } from '../../styles/spacing';
 
 /**
  * PathCard - Enhanced with animations, card lift, gradient border, and badges
@@ -52,12 +50,15 @@ export default function PathCard({
     transform: [{ scale: scale.value }],
   }));
 
+  const CardWrapper = onPress ? TouchableOpacity : View;
+  
   return (
     <AnimatedView style={[animatedStyle]}>
-      <GlassCard
+      <CardWrapper
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        activeOpacity={0.8}
         style={[
           styles.card, 
           active && styles.cardActive,
@@ -93,16 +94,13 @@ export default function PathCard({
             </View>
           )}
           <View style={styles.progressContainer}>
-            <ProgressRing
-              progress={progress}
-              size={60}
-              strokeWidth={4}
-              showLabel={false}
-            />
+            <View style={styles.progressRing}>
+              <View style={[styles.progressRingFill, { width: `${progress}%` }]} />
+            </View>
             <Text style={styles.progressText}>{Math.round(progress)}%</Text>
           </View>
         </View>
-      </GlassCard>
+      </CardWrapper>
     </AnimatedView>
   );
 }
@@ -112,6 +110,11 @@ const styles = StyleSheet.create({
     width: 200,
     minHeight: 220,
     overflow: 'hidden',
+    backgroundColor: colors.surface || '#FFFFFF',
+    borderRadius: 16,
+    padding: spacing.md || 16,
+    borderWidth: 1,
+    borderColor: colors.border || '#E3E3E3',
   },
   cardActive: {
     borderWidth: 2,
@@ -173,6 +176,21 @@ const styles = StyleSheet.create({
     ...(typography?.styles?.small || { fontSize: 12 }),
     color: colors.text?.tertiary || '#9CA3AF',
     fontWeight: '600',
+  },
+  progressRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 4,
+    borderColor: colors.border || '#E3E3E3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  progressRingFill: {
+    height: '100%',
+    backgroundColor: colors.primary?.main || '#1B4EDA',
+    borderRadius: 30,
   },
 });
 
