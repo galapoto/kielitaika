@@ -1,56 +1,43 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import SceneBackground from '../components/SceneBackground';
-import { spacing } from '../styles/spacing';
-import { typography } from '../styles/typography';
-import { colors } from '../styles/colors';
 
-// Placeholder skill tree screen
+import Background from '../components/ui/Background';
+import HomeButton from '../components/HomeButton';
+import SectionHeader from '../components/core/SectionHeader';
+
+import { colors } from '../styles/colors';
+import { spacing } from '../styles/spacing';
+
+
 export default function SkillTreeScreen() {
   return (
-    <View style={styles.container}>
-      <SceneBackground sceneKey="lapland" orbEmotion="calm" />
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Skill Tree</Text>
-      <Text style={styles.subtitle}>Future home of interactive nodes and infusion effects.</Text>
-      <View style={styles.box}>
-        <Text style={styles.boxText}>Skill nodes and orb infusion animations will live here.</Text>
-      </View>
+    <Background>
+      <ScrollView contentContainerStyle={styles.container}>
+        <HomeButton />
+        <SectionHeader title="Skill Tree" />
+
+        <View style={styles.card}>
+          <Text style={styles.text}>
+            Skill Tree is temporarily disabled during recovery.
+          </Text>
+        </View>
       </ScrollView>
-    </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    padding: spacing.lg,
   },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: spacing.l,
-    gap: spacing.m,
-  },
-  title: {
-    ...typography.titleL,
-    fontWeight: '700',
-    color: colors.textMain,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSoft,
-  },
-  box: {
-    backgroundColor: colors.white,
+  card: {
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.card,
     borderRadius: 12,
-    padding: spacing.l,
-    borderWidth: 1,
-    borderColor: colors.grayLine,
   },
-  boxText: {
-    ...typography.bodySm,
-    color: colors.textSoft,
+  text: {
+    color: colors.textPrimary,
+    fontSize: 16,
   },
 });
-
