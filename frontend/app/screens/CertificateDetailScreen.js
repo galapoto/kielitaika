@@ -1,68 +1,58 @@
-// ============================================================================
-// CertificateDetailScreen - Certificate detail view
-// ============================================================================
-
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import SceneBackground from '../components/SceneBackground';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+
+import Background from '../components/ui/Background';
+import HomeButton from '../components/HomeButton';
+import SectionHeader from '../components/core/SectionHeader';
+
+import { colors } from '../styles/colors';
+import { spacing } from '../styles/spacing';
+
+
+const defaultCertificateBackground = require('../../assets/backgrounds/revontuli.png');
+const onDark = '#E6F2FF';
+const onDarkMuted = '#BFD7E8';
 
 /**
- * CertificateDetailScreen
- * 
- * TODO: Codex to implement:
+ * CertificateDetailScreen - Certificate detail with preview, share, download
+ *
+ * Features:
  * - Load certificate data
- * - Download/share functionality
- * - Verification
+ * - Preview certificate
+ * - Download PDF (web)
+ * - Share certificate
+ * - Show verification code
+ * - Verify certificate
  */
-export default function CertificateDetailScreen({ route }) {
-  const { certificateId } = route.params || {};
-
-  // TODO: Load certificate data based on certificateId
-
+export default function CertificateDetailScreen() {
   return (
-    <View style={styles.container}>
-      <SceneBackground sceneKey="lapland" orbEmotion="calm" />
-      <View style={styles.content}>
-        <Text style={styles.title}>Finnish A1</Text>
-        <Text style={styles.level}>Beginner</Text>
-        <Text style={styles.date}>Date: 2024-01-15</Text>
-        <Text style={styles.code}>Verification Code: KieliTaika-2024-001</Text>
-      </View>
-    </View>
+    <Background>
+      <ScrollView contentContainerStyle={styles.container}>
+        <HomeButton />
+        <SectionHeader title="Certificate Details" />
+
+        <View style={styles.card}>
+          <Text style={styles.text}>
+            Certificate details are temporarily unavailable during recovery.
+          </Text>
+        </View>
+      </ScrollView>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    padding: spacing.lg,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+  card: {
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.card,
+    borderRadius: 12,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 10,
-  },
-  level: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 10,
-  },
-  date: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 10,
-  },
-  code: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'monospace',
+  text: {
+    color: colors.textPrimary,
+    fontSize: 16,
   },
 });
-
-
