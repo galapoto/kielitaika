@@ -21,10 +21,11 @@ import ShadowAnimals from './background/layers/ShadowAnimals';
 import BreathCondensation from './background/layers/BreathCondensation';
 import { getDayNightState } from '../season/DayNightCycle';
 
-// Scene background images
-const auroraImg = require('../assets/backgrounds/revontuli.png');
-const forestImg = require('../assets/backgrounds/metsä_talvi.png');
-const laplandImg = require('../assets/backgrounds/snow_pile.png');
+// Scene background images - using fallback gradients if images are missing
+// Images are optional - component will work without them
+const auroraImg = null; // require('../../assets/backgrounds/revontuli.png');
+const forestImg = null; // require('../../assets/backgrounds/metsä_talvi.png');
+const laplandImg = null; // require('../../assets/backgrounds/snow_pile.png');
 
 const emotionMap = {
   calm: 0,
@@ -201,12 +202,14 @@ export default function SceneBackground({
       {sceneKey === 'aurora' && (dayState.stars ?? true) && <Starfield />}
       {sceneKey === 'aurora' && <ShadowAnimals opacity={0.08} />}
 
-      <Animated.Image
-        source={chosenImg}
-        resizeMode="cover"
-        style={[styles.image, parallaxStyle, imageBrightness]}
-        animatedProps={imageAnimatedProps}
-      />
+      {chosenImg && (
+        <Animated.Image
+          source={chosenImg}
+          resizeMode="cover"
+          style={[styles.image, parallaxStyle, imageBrightness]}
+          animatedProps={imageAnimatedProps}
+        />
+      )}
 
       {/* Overlays */}
       {sceneKey === 'aurora' && (
