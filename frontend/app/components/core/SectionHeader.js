@@ -5,8 +5,8 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import { colors } from '../../design/colors';
-import { spacing } from '../../design/spacing';
+import { colors } from '../../styles/colors';
+import { spacing } from '../../styles/spacing';
 import { designTokens } from '../../app/styles/designTokens';
 
 /**
