@@ -11,9 +11,8 @@ import Animated, {
   withSpring,
   interpolate
 } from 'react-native-reanimated';
-import { colors } from '../../../design/colors';
+import { colors } from '../../../styles/colors';
 import { LinearGradient } from 'expo-linear-gradient';
-import { gradients } from '../../../design/gradients';
 
 /**
  * WaveformVisualizer - Animated audio waveform with smooth transitions
@@ -86,7 +85,7 @@ function AnimatedBar({ value, maxHeight, index }) {
     <View style={styles.barContainer}>
       <Animated.View style={[styles.barWrapper, animatedStyle]}>
         <LinearGradient
-          colors={gradients.accent.colors}
+          colors={[colors.primary?.main || '#1B4EDA', colors.blueMain || '#1B4EDA']}
           start={{ x: 0, y: 1 }}
           end={{ x: 0, y: 0 }}
           style={styles.bar}
