@@ -25,6 +25,7 @@ import Background from '../components/ui/Background';
 import useOnboardingStore from '../state/useOnboardingStore';
 import PremiumEmbossedButton from '../components/PremiumEmbossedButton';
 import RukaLogo3D from '../components/RukaLogo3D';
+import { PRODUCT_NAME } from '../utils/constants';
 import { createCheckoutSession } from '../services/paymentService';
 import { colors as palette } from '../styles/colors';
 
@@ -202,7 +203,7 @@ export default function OnboardingScreen({ navigation }) {
               <View style={styles.logoContainer}>
                 <RukaLogo3D width={280} height={93} />
               </View>
-              <Text style={styles.welcomeTitle}>Welcome to RUKA</Text>
+              <Text style={styles.welcomeTitle}>Welcome to {PRODUCT_NAME}</Text>
               <Text style={styles.welcomeSubtitle}>
                 Your AI-powered Finnish learning companion
               </Text>
