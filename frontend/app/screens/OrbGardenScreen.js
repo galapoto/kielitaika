@@ -1,9 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { spacing } from '../styles/spacing';
 import { typography } from '../styles/typography';
 import { colors } from '../styles/colors';
 import SkillOrb from '../components/SkillOrb';
+import RukaCard from '../ui/components/Card';
+import RukaButton from '../ui/components/Button';
+import { IconPlay, IconHome } from '../ui/icons/IconPack';
 
 const sampleSkills = [
   { key: 'vocab', label: 'Vocabulary', progress: 0.62, color: '#4EC5FF' },
@@ -23,13 +26,19 @@ export default function OrbGardenScreen({ navigation }) {
           <SkillOrb key={s.key} label={s.label} progress={s.progress} color={s.color} />
         ))}
       </View>
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Skill Tree & Infusions</Text>
-        <Text style={styles.cardText}>Complete nodes to infuse your primary orb with more glow and motion.</Text>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('SkillTree')}>
-          <Text style={styles.buttonText}>Go to Skill Tree</Text>
-        </TouchableOpacity>
-      </View>
+      <RukaCard
+        title="Skill Tree & Infusions"
+        subtitle="Complete nodes to infuse your primary orb with more glow and motion."
+        icon={IconHome}
+        style={styles.card}
+      >
+        <RukaButton
+          title="Go to Skill Tree"
+          icon={IconPlay}
+          onPress={() => navigation.navigate('SkillTree')}
+          style={styles.button}
+        />
+      </RukaCard>
     </ScrollView>
   );
 }
@@ -52,32 +61,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSoft,
   },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: spacing.l,
-    borderWidth: 1,
-    borderColor: colors.grayLine,
-  },
-  cardTitle: {
-    ...typography.titleL,
-    color: colors.textMain,
-    marginBottom: spacing.s,
-  },
-  cardText: {
-    ...typography.bodySm,
-    color: colors.textSoft,
-    marginBottom: spacing.m,
-  },
   button: {
-    backgroundColor: colors.blueMain,
-    paddingVertical: spacing.m,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  buttonText: {
-    ...typography.bodySm,
-    color: colors.white,
-    fontWeight: '700',
+    marginTop: spacing.s,
   },
 });

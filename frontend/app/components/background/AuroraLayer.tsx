@@ -1,13 +1,20 @@
 // AuroraLayer - Skia animated gradient for aurora effect
 import React from "react";
-import { Canvas, Rect, Shader, useClockValue, useDerivedValue } from "@shopify/react-native-skia";
-import { StyleSheet, useWindowDimensions } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { getSkia } from "../../utils/optionalSkia";
 
 export default function AuroraLayer() {
-  const t = useClockValue();
+  const skia = getSkia();
+  const { Canvas, Rect, Shader, useClockValue, useDerivedValue } = skia || {};
+
+  const t = useClockValue ? useClockValue() : { current: 0 };
   const { width, height } = useWindowDimensions();
 
-  const time = useDerivedValue(() => t.current, [t]);
+  const time = useDerivedValue ? useDerivedValue(() => t.current, [t]) : t;
+
+  if (!Canvas || !Rect || !Shader) {
+    return <View style={[styles.canvas, styles.fallback]} />;
+  }
 
   return (
     <Canvas style={styles.canvas}>
@@ -40,4 +47,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+  fallback: {
+    backgroundColor: "rgba(10, 44, 82, 0.35)",
+  },
 });
+
+

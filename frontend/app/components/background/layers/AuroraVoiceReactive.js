@@ -1,48 +1,72 @@
-import React, { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  interpolate,
-  interpolateColor,
-  Easing,
-} from 'react-native-reanimated';
+// AuroraVoiceReactive - Aurora that reacts to voice waveform
+import React from 'react';
+import { StyleSheet, Dimensions, Platform, View } from 'react-native';
 
-export default function AuroraVoiceReactive({ amplitude = 0 }) {
-  const time = useSharedValue(0);
-  const ampShared = useSharedValue(amplitude);
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-  useEffect(() => {
-    time.value = withRepeat(withTiming(1, { duration: 9000, easing: Easing.linear }), -1, false);
-  }, [time]);
+// Skia doesn't work on web
+let Canvas, Rect, Shader, useClockValue;
+if (Platform.OS !== 'web') {
+  try {
+    const skia = require('@shopify/react-native-skia');
+    Canvas = skia.Canvas;
+    Rect = skia.Rect;
+    Shader = skia.Shader;
+    useClockValue = skia.useClockValue;
+  } catch (e) {
+    // Skia not available
+  }
+}
 
-  useEffect(() => {
-    ampShared.value = amplitude;
-  }, [amplitude, ampShared]);
+/**
+ * Aurora that reacts to microphone amplitude
+ * Ripples more when user speaks loudly
+ */
+export default function AuroraVoiceReactive({ amplitude = 0, width = SCREEN_WIDTH, height = SCREEN_HEIGHT }) {
+  // On web, return empty view (Skia not supported)
+  if (Platform.OS === 'web' || !Canvas || !Rect || !Shader || !useClockValue) {
+    return <View style={[styles.canvas, { width, height }]} />;
+  }
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(time.value, [0, 0.5, 1], [-20, 24, -20]);
-    const ripple = Math.sin(ampShared.value * 12);
-    const opacity = 0.12 + ampShared.value * 0.12 + Math.sin(time.value * Math.PI * 2) * 0.06;
-    const tint = interpolateColor(
-      ampShared.value,
-      [0, 1],
-      ['rgba(80,220,230,0.12)', 'rgba(120,255,255,0.25)']
-    );
-    return {
-      opacity,
-      backgroundColor: tint,
-      transform: [{ translateY }, { translateX: ripple * 8 }],
-    };
-  });
+  const t = useClockValue();
 
-  return <Animated.View pointerEvents="none" style={[styles.overlay, animatedStyle]} />;
+  return (
+    <Canvas style={[styles.canvas, { width, height }]}>
+      <Rect x={0} y={0} width={width} height={height}>
+        <Shader
+          source={`
+            uniform float2 resolution;
+            uniform float u_time;
+            uniform float u_wave;  // microphone amplitude envelope
+
+            half4 main(vec2 pos) {
+              float band = sin(pos.y * 0.04 + u_time * 0.3);
+              float voiceRipple = sin(pos.y * 0.12 + u_wave * 12.0);
+
+              float combined = band + voiceRipple * 0.6;
+
+              float g = smoothstep(0.0, 1.0, pos.y / resolution.y);
+              float aurora = g + combined * 0.15;
+
+              return half4(0.1, aurora, 0.75, 0.25);
+            }
+          `}
+          uniforms={{
+            resolution: [width, height],
+            u_time: t.current,
+            u_wave: amplitude,
+          }}
+        />
+      </Rect>
+    </Canvas>
+  );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
+  canvas: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    pointerEvents: 'none',
   },
 });

@@ -30,7 +30,7 @@ export default function SpiritLights({ skills = [], radius = 120 }) {
             opacity: 0.3 + (s.energy ?? 0.5) * 0.6,
           };
         });
-        return <Animated.View key={s.key} style={[styles.light, orbitStyle, { backgroundColor: s.color || colors.mintSoft }]} />;
+        return <Animated.View key={s.key} style={[styles.light, orbitStyle, { backgroundColor: s.color || colors.blueMain }]} />;
       })}
     </View>
   );
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    shadowColor: colors.mintSoft,
+    shadowColor: colors.blueMain,
     shadowOpacity: 0.6,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 0 },

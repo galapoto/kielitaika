@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Canvas, useFrame, Circle } from '@shopify/react-native-skia';
+import { getSkia } from '../../../utils/optionalSkia';
 
 /**
  * Voice-reactive trail emitting from orb center.
@@ -10,9 +10,13 @@ import { Canvas, useFrame, Circle } from '@shopify/react-native-skia';
  *  - maxParticles (default 80)
  */
 export default function VoiceTrail({ amplitude = 0, pitchDelta = 0, maxParticles = 80, centerX = 0, centerY = 0 }) {
+  const skia = getSkia();
+  const Canvas = skia?.Canvas;
+  const Circle = skia?.Circle;
+  const useFrame = skia?.useFrame;
   const particles = useMemo(() => [], []);
 
-  useFrame(() => {
+  useFrame?.(() => {
     // emit when amplitude > 0.05
     if (amplitude > 0.05 && particles.length < maxParticles) {
       const p = {
@@ -40,7 +44,7 @@ export default function VoiceTrail({ amplitude = 0, pitchDelta = 0, maxParticles
       return <Circle key={idx} cx={p.x} cy={p.y} r={p.size} color={`rgba(120,255,255,${alpha})`} />;
     });
 
-  if (!Canvas) return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
+  if (!Canvas || !Circle) return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

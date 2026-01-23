@@ -5,19 +5,15 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  TouchableOpacity,
   Alert,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
-import SceneBackground from '../components/SceneBackground';
 import { submitYkiExam } from '../utils/api';
-import { colors } from '../styles/colors';
-import { spacing } from '../styles/spacing';
-import { typography } from '../styles/typography';
-import { radius } from '../styles/radius';
-import { shadows } from '../styles/shadows';
+import Background from '../components/ui/Background';
+import HomeButton from '../components/HomeButton';
 
-export default function YKIWritingExamScreen({ route, navigation }) {
+export default function YKIWritingExamScreen({ route, navigation } = {}) {
   const tasks = route?.params?.tasks || [];
   const examId = route?.params?.examId;
   const [responses, setResponses] = useState({});
@@ -145,7 +141,6 @@ export default function YKIWritingExamScreen({ route, navigation }) {
   if (tasks.length === 0) {
     return (
       <View style={styles.container}>
-        <SceneBackground sceneKey="lapland" orbEmotion="calm" />
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>No Writing Tasks</Text>
           <Text style={styles.emptyText}>
@@ -153,7 +148,10 @@ export default function YKIWritingExamScreen({ route, navigation }) {
           </Text>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              if (navigation?.canGoBack?.() && navigation.canGoBack()) navigation.goBack();
+              else navigation?.navigate?.('Home');
+            }}
           >
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
@@ -166,392 +164,311 @@ export default function YKIWritingExamScreen({ route, navigation }) {
   const currentResponse = responses[currentTask.id] || '';
   const currentWordCount = wordCount(currentResponse);
   const currentTime = timeRemaining[currentTask.id] || 0;
+  const totalTasks = tasks.length;
+  const currentStep = activeTaskIndex;
+  const totalSteps = totalTasks;
 
   return (
-    <View style={styles.container}>
-      <SceneBackground sceneKey="lapland" orbEmotion="calm" />
-      
-      {/* Header with task navigation */}
+    <Background module="yki_write" variant="blue">
+      <View style={styles.container}>
+      {/* Purple Header - From 7th picture */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => setActiveTaskIndex(Math.max(0, activeTaskIndex - 1))}
-          disabled={activeTaskIndex === 0}
+          onPress={() => {
+            if (navigation?.canGoBack?.() && navigation.canGoBack()) navigation.goBack();
+            else navigation?.navigate?.('Home');
+          }}
+          style={styles.backButton}
         >
-          <Text style={[styles.navButtonText, activeTaskIndex === 0 && styles.navButtonDisabled]}>
-            ← Prev
-          </Text>
+          <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>
-            Task {activeTaskIndex + 1} of {tasks.length}
-          </Text>
-          <Text style={styles.headerSubtitle}>{currentTask.description || 'Writing Task'}</Text>
-        </View>
-        
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => setActiveTaskIndex(Math.min(tasks.length - 1, activeTaskIndex + 1))}
-          disabled={activeTaskIndex === tasks.length - 1}
-        >
-          <Text
-            style={[
-              styles.navButtonText,
-              activeTaskIndex === tasks.length - 1 && styles.navButtonDisabled,
-            ]}
-          >
-            Next →
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>YKI Writing Exam</Text>
+        <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Task Info Card */}
-        <View style={styles.taskInfoCard}>
-          <View style={styles.taskInfoRow}>
-            <View style={styles.infoBadge}>
-              <Text style={styles.infoBadgeLabel}>Time</Text>
-              <Text style={styles.infoBadgeValue}>
-                {currentTime > 0 ? formatTime(currentTime) : '00:00'}
-              </Text>
-            </View>
-            <View style={styles.infoBadge}>
-              <Text style={styles.infoBadgeLabel}>Words</Text>
-              <Text
-                style={[
-                  styles.infoBadgeValue,
-                  currentWordCount >= currentTask.word_limit * 0.8 &&
-                    styles.infoBadgeValueGood,
-                  currentWordCount >= currentTask.word_limit && styles.infoBadgeValueExcellent,
-                ]}
-              >
-                {currentWordCount} / {currentTask.word_limit}
-              </Text>
-            </View>
-            <View style={styles.infoBadge}>
-              <Text style={styles.infoBadgeLabel}>Type</Text>
-              <Text style={styles.infoBadgeValue}>{currentTask.type || 'writing'}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Prompt Card */}
-        <View style={styles.promptCard}>
-          <Text style={styles.promptLabel}>Task Prompt</Text>
-          <Text style={styles.promptText}>{currentTask.prompt}</Text>
-          <View style={styles.promptMeta}>
-            <Text style={styles.promptMetaText}>
-              Target: {currentTask.word_limit} words • Time: {currentTask.time_limit} minutes
-            </Text>
-          </View>
-        </View>
-
-        {/* Writing Input */}
-        <View style={styles.inputCard}>
-          <Text style={styles.inputLabel}>Your Answer</Text>
-          <TextInput
-            style={styles.textInput}
-            multiline
-            placeholder="Write your answer here in Finnish..."
-            placeholderTextColor={colors.textSoft}
-            value={currentResponse}
-            onChangeText={(text) => updateResponse(currentTask.id, text)}
-            textAlignVertical="top"
-            editable={currentTime > 0}
+      {/* Progress Indicator - From 7th picture */}
+      <View style={styles.progressIndicator}>
+        {Array.from({ length: totalSteps }).map((_, step) => (
+          <View
+            key={step}
+            style={[
+              styles.progressDash,
+              step === currentStep && styles.progressDashActive,
+              step < currentStep && styles.progressDashCompleted,
+            ]}
           />
-          <View style={styles.inputFooter}>
-            <Text
-              style={[
+        ))}
+      </View>
+
+      {/* Main Content Card - From 7th picture */}
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.mainCard}>
+          {/* Task Prompt Card - Instead of image card from 7th picture */}
+          <View style={styles.promptCard}>
+            <Text style={styles.promptTitle}>{currentTask.description || 'Writing Task'}</Text>
+            <Text style={styles.promptText}>{currentTask.prompt}</Text>
+            <View style={styles.promptMeta}>
+              <Text style={styles.promptMetaText}>
+                Target: {currentTask.word_limit} words • Time: {formatTime(currentTime)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Instruction Text - From 7th picture */}
+          <Text style={styles.instructionText}>Write your response in Finnish</Text>
+
+          {/* Text Input Area - Instead of answer grid from 7th picture */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
+              multiline
+              placeholder="Type your answer here..."
+              placeholderTextColor="rgba(255,255,255,0.55)"
+              value={currentResponse}
+              onChangeText={(text) => updateResponse(currentTask.id, text)}
+              textAlignVertical="top"
+              editable={currentTime > 0}
+            />
+            <View style={styles.wordCountContainer}>
+              <Text style={[
                 styles.wordCountText,
                 currentWordCount >= currentTask.word_limit * 0.8 && styles.wordCountGood,
                 currentWordCount >= currentTask.word_limit && styles.wordCountExcellent,
-              ]}
-            >
-              {currentWordCount} / {currentTask.word_limit} words
-            </Text>
-            {currentTime === 0 && (
-              <Text style={styles.timeUpText}>⏱ Time's up!</Text>
-            )}
+              ]}>
+                {currentWordCount} / {currentTask.word_limit} words
+              </Text>
+            </View>
           </View>
-        </View>
 
-        {/* Task Progress Indicator */}
-        <View style={styles.progressSection}>
-          <Text style={styles.progressLabel}>Task Progress</Text>
-          <View style={styles.progressDots}>
-            {tasks.map((task, idx) => {
-              const hasResponse = responses[task.id] && wordCount(responses[task.id]) > 0;
-              return (
-                <View
-                  key={task.id}
-                  style={[
-                    styles.progressDot,
-                    idx === activeTaskIndex && styles.progressDotActive,
-                    hasResponse && styles.progressDotCompleted,
-                  ]}
-                />
-              );
-            })}
+          {/* Task Navigation */}
+          <View style={styles.taskNavigation}>
+            <TouchableOpacity
+              style={[styles.navButton, activeTaskIndex === 0 && styles.navButtonDisabled]}
+              onPress={() => setActiveTaskIndex(Math.max(0, activeTaskIndex - 1))}
+              disabled={activeTaskIndex === 0}
+            >
+              <Text style={styles.navButtonText}>Previous</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.navButton, styles.navButtonPrimary]}
+              onPress={() => setActiveTaskIndex(Math.min(tasks.length - 1, activeTaskIndex + 1))}
+              disabled={activeTaskIndex >= tasks.length - 1}
+            >
+              <Text style={styles.navButtonText}>Next</Text>
+            </TouchableOpacity>
           </View>
+
+          {/* Submit Button - Instead of Check button from 7th picture */}
+          <TouchableOpacity
+            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? 'Submitting...' : 'Submit All Tasks'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Footer with Submit Button */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Submit All Tasks</Text>
-          )}
-        </TouchableOpacity>
+      {/* Removed placeholder bottom navigation */}
       </View>
-    </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
+    padding: 24,
   },
   emptyTitle: {
-    ...typography.titleL,
-    color: colors.textMain,
-    marginBottom: spacing.m,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 12,
   },
   emptyText: {
-    ...typography.body,
-    color: colors.textSoft,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.72)',
     textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  backButton: {
-    backgroundColor: colors.blueMain,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.m,
-    borderRadius: radius.l,
-    ...shadows.s,
-  },
-  backButtonText: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '600',
+    marginBottom: 24,
   },
   header: {
+    backgroundColor: 'rgba(10, 14, 39, 0.78)',
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.l,
-    paddingVertical: spacing.m,
-    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.grayLine,
-    ...shadows.s,
+    borderBottomColor: 'rgba(255,255,255,0.10)',
   },
-  navButton: {
-    paddingHorizontal: spacing.m,
-    paddingVertical: spacing.s,
+  backButton: {
+    marginRight: 16,
   },
-  navButtonText: {
-    ...typography.bodySm,
-    color: colors.blueMain,
-    fontWeight: '600',
-  },
-  navButtonDisabled: {
-    color: colors.grayLine,
-    opacity: 0.5,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
+  backIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
   },
   headerTitle: {
-    ...typography.titleM,
-    color: colors.textMain,
+    fontSize: 18,
     fontWeight: '700',
+    color: 'rgba(255,255,255,0.95)',
+    flex: 1,
   },
-  headerSubtitle: {
-    ...typography.bodySm,
-    color: colors.textSoft,
-    marginTop: spacing.xs,
+  homeButtonHeader: {
+    marginLeft: 'auto',
+  },
+  progressIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  progressDash: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  progressDashActive: {
+    backgroundColor: 'rgba(27,78,218,0.92)',
+  },
+  progressDashCompleted: {
+    backgroundColor: 'rgba(27,78,218,0.92)',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.l,
-    gap: spacing.m,
-    paddingBottom: spacing['3xl'],
+    padding: 16,
+    paddingBottom: 100,
   },
-  taskInfoCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
-    padding: spacing.m,
-    ...shadows.s,
-  },
-  taskInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    gap: spacing.s,
-  },
-  infoBadge: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  infoBadgeLabel: {
-    ...typography.micro,
-    color: colors.textSoft,
-    marginBottom: spacing.xs,
-  },
-  infoBadgeValue: {
-    ...typography.body,
-    color: colors.textMain,
-    fontWeight: '700',
-  },
-  infoBadgeValueGood: {
-    color: colors.mintSoft,
-  },
-  infoBadgeValueExcellent: {
-    color: '#10b981',
+  mainCard: {
+    backgroundColor: 'rgba(16, 22, 40, 0.78)',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
   },
   promptCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
-    padding: spacing.l,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.blueMain,
-    ...shadows.s,
+    backgroundColor: 'rgba(16, 22, 40, 0.78)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
-  promptLabel: {
-    ...typography.bodySm,
-    color: colors.textSoft,
-    marginBottom: spacing.s,
-    fontWeight: '600',
+  promptTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.92)',
+    marginBottom: 12,
   },
   promptText: {
-    ...typography.body,
-    color: colors.textMain,
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.80)',
     lineHeight: 24,
-    marginBottom: spacing.m,
+    marginBottom: 12,
   },
   promptMeta: {
-    paddingTop: spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: colors.grayLine,
+    marginTop: 8,
   },
   promptMetaText: {
-    ...typography.bodySm,
-    color: colors.textSoft,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.65)',
   },
-  inputCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
-    padding: spacing.l,
-    ...shadows.s,
+  instructionText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.92)',
+    marginBottom: 24,
+    textAlign: 'left',
   },
-  inputLabel: {
-    ...typography.bodySm,
-    color: colors.textMain,
-    fontWeight: '600',
-    marginBottom: spacing.m,
+  inputContainer: {
+    marginBottom: 24,
   },
   textInput: {
-    ...typography.body,
-    color: colors.textMain,
-    borderWidth: 1,
-    borderColor: colors.grayLine,
-    borderRadius: radius.m,
-    padding: spacing.m,
+    backgroundColor: 'rgba(16, 22, 40, 0.78)',
+    borderRadius: 12,
+    padding: 16,
     minHeight: 200,
-    backgroundColor: colors.grayBg,
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.92)',
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
-  inputFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.m,
-    paddingTop: spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: colors.grayLine,
+  wordCountContainer: {
+    marginTop: 12,
+    alignItems: 'flex-end',
   },
   wordCountText: {
-    ...typography.bodySm,
-    color: colors.textSoft,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.65)',
   },
   wordCountGood: {
-    color: colors.mintSoft,
+    color: 'rgba(255,255,255,0.92)',
     fontWeight: '600',
   },
   wordCountExcellent: {
-    color: '#10b981',
+    color: 'rgba(255,255,255,0.95)',
     fontWeight: '700',
   },
-  timeUpText: {
-    ...typography.bodySm,
-    color: '#dc2626',
-    fontWeight: '600',
-  },
-  progressSection: {
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
-    padding: spacing.l,
-    ...shadows.s,
-  },
-  progressLabel: {
-    ...typography.bodySm,
-    color: colors.textSoft,
-    marginBottom: spacing.m,
-  },
-  progressDots: {
+  taskNavigation: {
     flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  navButton: {
+    flex: 1,
+    backgroundColor: 'rgba(16, 22, 40, 0.78)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.s,
   },
-  progressDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.grayLine,
+  navButtonDisabled: {
+    opacity: 0.5,
   },
-  progressDotActive: {
-    backgroundColor: colors.blueMain,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  navButtonPrimary: {
+    backgroundColor: 'rgba(27,78,218,0.92)',
   },
-  progressDotCompleted: {
-    backgroundColor: '#10b981',
-  },
-  footer: {
-    padding: spacing.l,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.grayLine,
-    ...shadows.l,
+  navButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.92)',
   },
   submitButton: {
-    backgroundColor: colors.blueMain,
-    paddingVertical: spacing.m,
-    borderRadius: radius.l,
+    backgroundColor: 'rgba(27,78,218,0.92)',
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
-    ...shadows.s,
+    justifyContent: 'center',
   },
   submitButtonDisabled: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   submitButtonText: {
-    ...typography.body,
-    color: colors.white,
+    fontSize: 16,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
+  // bottom navigation removed (placeholder)
 });

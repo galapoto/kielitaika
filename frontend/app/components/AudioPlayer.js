@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import useWebSocket from '../hooks/useWebSocket';
-import { WS_API_BASE } from '../config/backend';
+
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:5000';
 
 export default function AudioPlayer({ text, autoPlay = false }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -102,7 +103,7 @@ export default function AudioPlayer({ text, autoPlay = false }) {
 
     try {
       // Connect to TTS WebSocket
-      const wsUrl = `${WS_API_BASE}/voice/tts-stream`;
+      const wsUrl = API_BASE.replace('http', 'ws') + '/voice/tts-stream';
       connect(wsUrl);
 
       const sendPayload = () => {

@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
-import SceneBackground from '../../components/SceneBackground';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../../context/AuthContext';
-import { colors } from '../../styles/colors';
-import { spacing } from '../../styles/spacing';
-import { typography } from '../../styles/typography';
-import { radius } from '../../styles/radius';
-import { shadows } from '../../styles/shadows';
+import GoogleLogo from '../../ui/icons/GoogleLogo';
+import RukaLogo3D from '../../components/RukaLogo3D';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = require('react-native').Dimensions.get('window');
 
 export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState('');
@@ -25,7 +26,16 @@ export default function RegisterScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { register, loginWithGoogle } = useAuth();
+  const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '946481356194-v8t6riiihp9oetqd1fl6gc1onhi2quf1.apps.googleusercontent.com';
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    clientId: googleClientId,
+    iosClientId: googleClientId,
+    androidClientId: googleClientId,
+    expoClientId: googleClientId,
+    responseType: 'id_token',
+  });
 
   const handleRegister = async () => {
     if (!email.trim() || !password.trim()) {
@@ -54,103 +64,144 @@ export default function RegisterScreen({ navigation }) {
     }
   };
 
+  useEffect(() => {
+    const handleGoogleResponse = async () => {
+      if (response?.type === 'success' && response.authentication?.idToken) {
+        try {
+          setGoogleLoading(true);
+          await loginWithGoogle(response.authentication.idToken);
+        } catch (err) {
+          Alert.alert('Google Sign-In Failed', err.message || 'Please try again');
+        } finally {
+          setGoogleLoading(false);
+        }
+      }
+    };
+    handleGoogleResponse();
+  }, [response]);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <SceneBackground sceneKey="forest" orbEmotion="calm" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Start your Finnish learning journey today</Text>
-          </View>
-
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Name (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Your name"
-                placeholderTextColor={colors.textSoft}
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                editable={!loading}
-              />
+      <View style={styles.container}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            {/* Logo */}
+            <View style={styles.logoContainer}>
+              <RukaLogo3D width={280} height={93} />
+            </View>
+            
+            {/* Welcome Text */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Create Account!</Text>
+              <Text style={styles.subtitle}>Please sign up to start your journey</Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="your@email.com"
-                placeholderTextColor={colors.textSoft}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-                editable={!loading}
-              />
-            </View>
+            {/* Registration Form */}
+            <View style={styles.form}>
+              {/* Name Field */}
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Name (Optional)"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  editable={!loading}
+                />
+              </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="At least 6 characters"
-                placeholderTextColor={colors.textSoft}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password-new"
-                editable={!loading}
-              />
-            </View>
+              {/* Email Field */}
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  editable={!loading}
+                />
+              </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm your password"
-                placeholderTextColor={colors.textSoft}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password-new"
-                editable={!loading}
-                onSubmitEditing={handleRegister}
-              />
-            </View>
+              {/* Password Field */}
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password-new"
+                  editable={!loading}
+                />
+              </View>
 
-            <TouchableOpacity
-              style={[styles.registerButton, loading && styles.registerButtonDisabled]}
-              onPress={handleRegister}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.registerButtonText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
+              {/* Confirm Password Field */}
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm Password"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password-new"
+                  editable={!loading}
+                  onSubmitEditing={handleRegister}
+                />
+              </View>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.footerLink}>Sign In</Text>
+              {/* Sign Up Button */}
+              <TouchableOpacity
+                style={[styles.signUpButton, loading && styles.signUpButtonDisabled]}
+                onPress={handleRegister}
+                disabled={loading}
+              >
+                <Text style={styles.signUpButtonText}>
+                  {loading ? 'Creating...' : 'Sign Up'}
+                </Text>
               </TouchableOpacity>
+
+              {/* Google Sign Up */}
+              <TouchableOpacity
+                style={styles.googleButton}
+                onPress={() => {
+                  if (request) promptAsync();
+                }}
+                disabled={googleLoading || !request}
+              >
+                <View style={styles.googleButtonContent}>
+                  <GoogleLogo size={20} />
+                  <Text style={styles.googleButtonText}>
+                    {googleLoading ? 'Connecting...' : 'Sign Up With Google'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Sign In Link */}
+              <View style={styles.signInContainer}>
+                <Text style={styles.signInText}>Already Have An Account? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                  <Text style={styles.signInLink}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -158,79 +209,110 @@ export default function RegisterScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000', // Dark background matching LoginScreen
   },
   scrollContent: {
     flexGrow: 1,
+    minHeight: SCREEN_HEIGHT,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: spacing.xl,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing['3xl'],
+    marginBottom: 40,
   },
   title: {
-    ...typography.titleXL,
-    color: colors.textMain,
+    fontSize: 32,
     fontWeight: '700',
-    marginBottom: spacing.m,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   subtitle: {
-    ...typography.body,
-    color: colors.textSoft,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
   },
   form: {
-    gap: spacing.l,
+    width: '100%',
+    gap: 16,
   },
-  inputGroup: {
-    gap: spacing.s,
-  },
-  label: {
-    ...typography.bodySm,
-    color: colors.textMain,
-    fontWeight: '600',
+  inputContainer: {
+    width: '100%',
+    backgroundColor: 'rgba(40, 40, 40, 0.8)', // Dark gray rounded rectangle
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 12,
   },
   input: {
-    ...typography.body,
-    color: colors.textMain,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.grayLine,
-    borderRadius: radius.m,
-    padding: spacing.m,
-    ...shadows.s,
+    fontSize: 16,
+    color: '#FFFFFF',
+    padding: 0,
   },
-  registerButton: {
-    backgroundColor: colors.blueMain,
-    paddingVertical: spacing.m,
-    borderRadius: radius.l,
+  signUpButton: {
+    width: '100%',
+    backgroundColor: '#4A90E2', // Medium blue
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: spacing.m,
-    ...shadows.s,
-  },
-  registerButtonDisabled: {
-    opacity: 0.7,
-  },
-  registerButtonText: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  footer: {
-    flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: spacing.l,
+    marginTop: 8,
+    marginBottom: 12,
   },
-  footerText: {
-    ...typography.bodySm,
-    color: colors.textSoft,
+  signUpButtonDisabled: {
+    opacity: 0.6,
   },
-  footerLink: {
-    ...typography.bodySm,
-    color: colors.blueMain,
+  signUpButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  googleButton: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(200, 200, 200, 0.5)',
+    marginBottom: 12,
+  },
+  googleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333333',
+  },
+  signInContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  signInText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  signInLink: {
+    fontSize: 14,
+    color: '#4A90E2', // Blue link color
     fontWeight: '600',
   },
 });

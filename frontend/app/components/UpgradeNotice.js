@@ -15,8 +15,8 @@ export default function UpgradeNotice({ reason, onPress }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+    backgroundColor: 'rgba(16, 22, 40, 0.78)',
+    borderColor: 'rgba(27,78,218,0.35)',
     borderWidth: 1,
     padding: 12,
     borderRadius: 12,
@@ -25,20 +25,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   title: {
-    color: '#92400E',
+    color: 'rgba(255,255,255,0.92)',
     fontWeight: '700',
   },
   text: {
-    color: '#92400E',
+    color: 'rgba(255,255,255,0.72)',
   },
   button: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: 'rgba(27,78,218,0.92)',
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',
+    color: 'rgba(255,255,255,0.95)',
     fontWeight: '700',
   },
 });

@@ -6,6 +6,8 @@ export const typography = {
   h4: { fontSize: 18, fontWeight: '600' },
   body: { fontSize: 16, fontWeight: '400' },
   bodySm: { fontSize: 14, fontWeight: '300' },
+  bodyXs: { fontSize: 12, fontWeight: '300' },
+  small: { fontSize: 14, fontWeight: '300' },
   caption: { fontSize: 12, fontWeight: '300' },
   micro: { fontSize: 12, fontWeight: '300' },
   styles: {
@@ -16,9 +18,10 @@ export const typography = {
     h4: { fontSize: 18, fontWeight: '600' },
     body: { fontSize: 16, fontWeight: '400' },
     bodySm: { fontSize: 14, fontWeight: '300' },
+    bodyXs: { fontSize: 12, fontWeight: '300' },
+    small: { fontSize: 14, fontWeight: '300' },
     caption: { fontSize: 12, fontWeight: '300' },
     micro: { fontSize: 12, fontWeight: '300' },
   },
 };
-
 

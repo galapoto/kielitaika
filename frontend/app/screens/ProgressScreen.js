@@ -7,17 +7,14 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import Background from '../components/ui/Background';
 import { useTheme } from '../context/ThemeContext';
-import XPBadge from '../components/XPBadge';
-import StreakFlame from '../components/StreakFlame';
-import { colors } from '../styles/colors';
-import { radius } from '../styles/radius';
-import { shadows } from '../styles/shadows';
 import { spacing } from '../styles/spacing';
-import { typography } from '../styles/typography';
-import { HTTP_API_BASE } from '../config/backend';
+import HomeButton from '../components/HomeButton';
 
-export default function ProgressScreen() {
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
+
+export default function ProgressScreen({ navigation }) {
   const { colors: themeColors } = useTheme();
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -40,7 +37,7 @@ export default function ProgressScreen() {
 
   const loadUsers = async () => {
     try {
-      const res = await fetch(`${HTTP_API_BASE}/admin/users`);
+      const res = await fetch(`${API_BASE}/admin/users`);
       if (!res.ok) throw new Error('Failed to load users');
       const data = await res.json();
       setUsers(data.users || []);
@@ -56,7 +53,7 @@ export default function ProgressScreen() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${HTTP_API_BASE}/admin/users/${userId}/progress`);
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/progress`);
       if (!res.ok) throw new Error('Failed to load progress');
       const data = await res.json();
       setProgress(data.report);
@@ -67,234 +64,329 @@ export default function ProgressScreen() {
     }
   };
 
-  const renderMetric = (label, value, highlight = false, suffix = '') => (
-    <View style={[dynamicStyles.metricCard, highlight && dynamicStyles.metricHighlight]}>
-      <Text style={dynamicStyles.metricLabel}>{label}</Text>
-      <Text style={dynamicStyles.metricValue}>
-        {value}
-        {suffix}
-      </Text>
-    </View>
-  );
+  // Transform progress data into schedule-like items
+  const progressItems = progress ? [
+    {
+      id: '1',
+      time: '8:00',
+      title: 'Vocabulary Practice',
+      subtitle: 'Completed 20 words',
+      status: 'completed',
+    },
+    {
+      id: '2',
+      time: '10:00',
+      title: 'Conversation Session',
+      subtitle: `${progress.messages_count || 0} messages exchanged`,
+      status: 'active',
+    },
+    {
+      id: '3',
+      time: '11:00',
+      title: 'Grammar Review',
+      subtitle: `CEFR Level: ${progress.predicted_cefr || 'A1'}`,
+      status: 'pending',
+    },
+    {
+      id: '4',
+      time: '12:00',
+      title: 'Pronunciation Practice',
+      subtitle: `Score: ${progress.pronunciation_score || 0}/4`,
+      status: 'pending',
+    },
+  ] : [];
 
-  const dynamicStyles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: themeColors.background,
-    },
-    header: {
-      padding: spacing.l,
-      backgroundColor: themeColors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
-    },
-    title: {
-      ...typography.titleXL,
-      color: themeColors.primary,
-      marginBottom: spacing.xs,
-    },
-    subtitle: {
-      ...typography.bodySm,
-      color: themeColors.textSecondary,
-    },
-    content: {
-      padding: spacing.l,
-      gap: spacing.l,
-    },
-    userRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.m,
-      marginBottom: spacing.m,
-    },
-    userChips: {
-      flexDirection: 'row',
-      gap: spacing.s,
-    },
-    userChip: {
-      paddingHorizontal: spacing.m,
-      paddingVertical: spacing.s,
-      borderRadius: radius.m,
-      backgroundColor: themeColors.surface,
-      borderWidth: 1,
-      borderColor: themeColors.border,
-    },
-    userChipActive: {
-      backgroundColor: themeColors.primary,
-      borderColor: themeColors.primary,
-    },
-    userChipText: {
-      ...typography.bodySm,
-      color: themeColors.text,
-    },
-    userChipTextActive: {
-      color: colors.white,
-    },
-    refreshButton: {
-      paddingHorizontal: spacing.m,
-      paddingVertical: spacing.s,
-      borderRadius: radius.m,
-      backgroundColor: themeColors.primary,
-    },
-    refreshText: {
-      ...typography.bodySm,
-      color: colors.white,
-      fontWeight: '600',
-    },
-    metricCard: {
-      flex: 1,
-      minWidth: '45%',
-      backgroundColor: themeColors.surface,
-      padding: spacing.m,
-      borderRadius: radius.l,
-      borderWidth: 1,
-      borderColor: themeColors.border,
-      ...shadows.s,
-    },
-    metricHighlight: {
-      borderColor: themeColors.primary,
-      borderWidth: 2,
-    },
-    metricLabel: {
-      ...typography.micro,
-      color: themeColors.textSecondary,
-      marginBottom: spacing.xs,
-    },
-    metricValue: {
-      ...typography.titleL,
-      fontWeight: '700',
-      color: themeColors.primary,
-    },
-    row: {
-      flexDirection: 'row',
-      gap: spacing.m,
-      flexWrap: 'wrap',
-    },
-    card: {
-      backgroundColor: themeColors.surface,
-      borderRadius: radius.l,
-      padding: spacing.l,
-      borderWidth: 1,
-      borderColor: themeColors.border,
-      ...shadows.s,
-    },
-    sectionTitle: {
-      ...typography.titleL,
-      color: themeColors.text,
-      marginBottom: spacing.m,
-    },
-    listItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: spacing.s,
-      borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
-    },
-    listText: {
-      ...typography.body,
-      color: themeColors.text,
-    },
-    listBadge: {
-      ...typography.bodySm,
-      color: themeColors.primary,
-      fontWeight: '600',
-    },
-    loading: {
-      padding: spacing.xl,
-      alignItems: 'center',
-    },
-    error: {
-      ...typography.body,
-      color: '#EF4444',
-      padding: spacing.m,
-      textAlign: 'center',
-    },
-    footer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: spacing.m,
-      backgroundColor: themeColors.surface,
-      borderTopWidth: 1,
-      borderTopColor: themeColors.border,
-    },
-  });
+  const currentDate = new Date();
+  const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const currentDay = currentDate.getDate();
+  const currentDayName = dayNames[currentDate.getDay()];
 
   return (
-    <View style={dynamicStyles.container}>
-      <View style={dynamicStyles.header}>
-        <Text style={dynamicStyles.title}>📊 Your Progress</Text>
-        <Text style={dynamicStyles.subtitle}>Snapshot of sessions, accuracy, grammar, and workplace tracks</Text>
+    <Background module="home" variant="brown">
+      <View style={styles.container}>
+      {/* Header - Dark Blue */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton}>
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>PROGRESS TRACKING</Text>
+        <View style={styles.headerRight}>
+          <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={dynamicStyles.content}>
-        {/* Quick Stats Footer */}
-        <View style={dynamicStyles.footer}>
-          <StreakFlame streakCount={5} />
-          <XPBadge xp={120} />
+      {/* Date/Day Selection */}
+      <View style={styles.dateSection}>
+        <View style={styles.dateDisplay}>
+          <Text style={styles.dateNumber}>{currentDay}</Text>
+          <Text style={styles.dateDay}>{currentDayName}</Text>
         </View>
+        <View style={styles.tabs}>
+          <TouchableOpacity style={[styles.tab, styles.tabActive]}>
+            <Text style={[styles.tabText, styles.tabTextActive]}>TODAY LIST</Text>
+          </TouchableOpacity>
+          <Text style={styles.taskCount}>{progressItems.length} tasks</Text>
+        </View>
+      </View>
 
-        {error ? <Text style={dynamicStyles.error}>{error}</Text> : null}
-        {loading && !progress ? (
-          <View style={dynamicStyles.loading}>
-            <ActivityIndicator size="large" color={themeColors.primary} />
+      {/* Main Content - White Card */}
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.contentCard}>
+          {/* Time Axis */}
+          <View style={styles.timeAxis}>
+            {['8:00', '10:00', '11:00', '12:00'].map((time, index) => (
+              <View key={time} style={styles.timeMarker}>
+                <Text style={styles.timeText}>{time}</Text>
+                {index === 1 && <View style={styles.currentTimeDot} />}
+              </View>
+            ))}
           </View>
-        ) : null}
 
-        {progress && (
-          <>
-            <View style={dynamicStyles.row}>
-              {renderMetric('Predicted CEFR', progress.predicted_cefr || 'A1', true)}
-              {renderMetric('Sessions', progress.sessions || 0)}
-              {renderMetric('Messages', progress.messages_count || 0)}
-            </View>
-
-            <View style={dynamicStyles.row}>
-              {renderMetric('Accuracy', Math.round((progress.average_accuracy || 0) * 100), false, '%')}
-              {renderMetric('Pronunciation', `${progress.pronunciation_score || 0}/4`)}
-              {renderMetric('Last activity', progress.last_activity || 'N/A')}
-            </View>
-
-            {progress.workplace_performance && Object.keys(progress.workplace_performance).length > 0 && (
-              <View style={dynamicStyles.card}>
-                <Text style={dynamicStyles.sectionTitle}>💼 Workplace Performance</Text>
-                {Object.entries(progress.workplace_performance).map(([field, data]) => (
-                  <View key={field} style={dynamicStyles.listItem}>
-                    <Text style={dynamicStyles.listText}>{field}</Text>
-                    <Text style={dynamicStyles.listBadge}>
-                      {(data.average_score || 0).toFixed(1)}/5
-                    </Text>
+          {/* Progress Items List */}
+          <View style={styles.itemsList}>
+            {loading ? (
+              <ActivityIndicator size="large" color="#1E3A8A" style={styles.loader} />
+            ) : error ? (
+              <Text style={styles.errorText}>{error}</Text>
+            ) : progressItems.length > 0 ? (
+              progressItems.map((item) => (
+                <View key={item.id} style={styles.progressItem}>
+                  <View style={styles.itemContent}>
+                    <Text style={styles.itemTitle}>{item.title}</Text>
+                    <Text style={styles.itemSubtitle}>{item.subtitle}</Text>
                   </View>
-                ))}
-              </View>
+                  <View style={styles.itemStatus}>
+                    {item.status === 'completed' && (
+                      <Text style={styles.statusIcon}>✓</Text>
+                    )}
+                    {item.status === 'active' && (
+                      <Text style={[styles.statusIcon, styles.statusActive]}>★</Text>
+                    )}
+                    {item.status === 'pending' && (
+                      <Text style={[styles.statusIcon, styles.statusPending]}>⚠</Text>
+                    )}
+                    <Text style={styles.moreIcon}>...</Text>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.emptyText}>No progress items yet</Text>
             )}
-
-            {progress.grammar_errors && Object.keys(progress.grammar_errors).length > 0 && (
-              <View style={dynamicStyles.card}>
-                <Text style={dynamicStyles.sectionTitle}>📝 Common Grammar Issues</Text>
-                {Object.entries(progress.grammar_errors)
-                  .slice(0, 6)
-                  .map(([issue, count]) => (
-                    <View key={issue} style={dynamicStyles.listItem}>
-                      <Text style={dynamicStyles.listText}>{issue}</Text>
-                      <Text style={dynamicStyles.listBadge}>{count}×</Text>
-                    </View>
-                  ))}
-              </View>
-            )}
-          </>
-        )}
-
-        {!progress && !loading && (
-          <View style={dynamicStyles.card}>
-            <Text style={dynamicStyles.sectionTitle}>📈 Charts and achievements coming soon.</Text>
-            <Text style={{ ...typography.bodySm, color: themeColors.textSecondary, marginTop: spacing.s }}>
-              Track your speaking minutes, vocabulary growth, and skill progression.
-            </Text>
           </View>
-        )}
+        </View>
       </ScrollView>
-    </View>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity style={styles.fab}>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+      </View>
+    </Background>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  homeButtonHeader: {
+    marginLeft: 8,
+  },
+  header: {
+    backgroundColor: '#1E3A8A', // Dark blue
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+  },
+  calendarButton: {
+    padding: 8,
+  },
+  calendarIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+  dateSection: {
+    backgroundColor: '#1E3A8A',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  dateDisplay: {
+    alignItems: 'center',
+  },
+  dateNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  dateDay: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  tabs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#FFFFFF',
+  },
+  tabText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  taskCount: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  contentCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    minHeight: 400,
+    flexDirection: 'row',
+  },
+  timeAxis: {
+    width: 60,
+    marginRight: 16,
+  },
+  timeMarker: {
+    marginBottom: 40,
+    position: 'relative',
+  },
+  timeText: {
+    fontSize: 12,
+    color: 'rgba(0, 0, 0, 0.5)',
+  },
+  currentTimeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#1E3A8A',
+    position: 'absolute',
+    left: -4,
+    top: 4,
+  },
+  itemsList: {
+    flex: 1,
+  },
+  progressItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  itemContent: {
+    flex: 1,
+  },
+  itemTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  itemSubtitle: {
+    fontSize: 14,
+    color: 'rgba(0, 0, 0, 0.6)',
+  },
+  itemStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusIcon: {
+    fontSize: 18,
+    color: '#22C55E', // Green for completed
+  },
+  statusActive: {
+    color: '#3B82F6', // Blue for active
+  },
+  statusPending: {
+    color: '#F59E0B', // Orange for pending
+  },
+  moreIcon: {
+    fontSize: 18,
+    color: 'rgba(0, 0, 0, 0.4)',
+  },
+  loader: {
+    marginTop: 40,
+  },
+  errorText: {
+    color: '#EF4444',
+    textAlign: 'center',
+    marginTop: 40,
+  },
+  emptyText: {
+    color: 'rgba(0, 0, 0, 0.5)',
+    textAlign: 'center',
+    marginTop: 40,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1E3A8A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  fabText: {
+    fontSize: 24,
+    color: '#FFFFFF',
+    fontWeight: '300',
+  },
+});

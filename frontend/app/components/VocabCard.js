@@ -12,7 +12,7 @@ import { typography } from '../styles/typography';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-export default function VocabCard({ word, translation, example, imageUrl, onPlayAudio, onPress, testID }) {
+export default function VocabCard({ word, translation, example, imageUrl, prompt, onPlayAudio, onPress, testID }) {
   const { colors: themeColors } = useTheme();
   const { animatedStyle, onPressIn, onPressOut } = useScaleOnPress();
   const fadeInStyle = useFadeIn();
@@ -71,6 +71,24 @@ export default function VocabCard({ word, translation, example, imageUrl, onPlay
     audioIcon: {
       fontSize: 20,
     },
+    imageFallback: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.m,
+      backgroundColor: themeColors.surfaceAlt || themeColors.background,
+    },
+    imagePrompt: {
+      ...typography.bodySm,
+      color: themeColors.textSecondary,
+      textAlign: 'center',
+    },
+    fallbackInitial: {
+      ...typography.titleL,
+      color: themeColors.primary,
+      fontWeight: '700',
+      marginBottom: spacing.xs,
+    },
   });
 
   return (
@@ -82,9 +100,16 @@ export default function VocabCard({ word, translation, example, imageUrl, onPlay
       activeOpacity={0.9}
       testID={testID}
     >
-      {imageUrl && (
+      {(imageUrl || prompt) && (
         <View style={dynamicStyles.imageContainer}>
-          <Image source={{ uri: imageUrl }} style={dynamicStyles.image} resizeMode="cover" />
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={dynamicStyles.image} resizeMode="cover" />
+          ) : (
+            <View style={dynamicStyles.imageFallback}>
+              <Text style={dynamicStyles.fallbackInitial}>{word?.[0] || '📚'}</Text>
+              {prompt ? <Text style={dynamicStyles.imagePrompt} numberOfLines={3}>{prompt}</Text> : null}
+            </View>
+          )}
         </View>
       )}
       
@@ -100,5 +125,6 @@ export default function VocabCard({ word, translation, example, imageUrl, onPlay
     </AnimatedTouchable>
   );
 }
+
 
 

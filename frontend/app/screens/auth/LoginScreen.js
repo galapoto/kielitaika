@@ -1,33 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
+  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
-import SceneBackground from '../../components/SceneBackground';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../../context/AuthContext';
-import { colors } from '../../styles/colors';
-import { spacing } from '../../styles/spacing';
-import { typography } from '../../styles/typography';
-import { radius } from '../../styles/radius';
-import { shadows } from '../../styles/shadows';
+import GoogleLogo from '../../ui/icons/GoogleLogo';
+import RukaLogo3D from '../../components/RukaLogo3D';
 
-const runtimeBuildId = new Date().toISOString();
-console.log('RUNTIME BUILD ID (LoginScreen.js):', runtimeBuildId);
-const loginBackgroundSource = require('../../assets/backgrounds/metsä_talvi.png');
-console.log('LOGIN BG SOURCE', loginBackgroundSource);
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const { login, loginWithGoogle } = useAuth();
+  
+  const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '946481356194-v8t6riiihp9oetqd1fl6gc1onhi2quf1.apps.googleusercontent.com';
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    clientId: googleClientId,
+    iosClientId: googleClientId,
+    androidClientId: googleClientId,
+    expoClientId: googleClientId,
+    responseType: 'id_token',
+  });
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -37,8 +43,9 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
+      // Use email as username for now (or update auth service to accept username)
       await login(email.trim(), password);
-      // Navigation will be handled by AuthProvider/AppNavigator
+      navigation.replace('Conversation');
     } catch (error) {
       Alert.alert('Login Failed', error.message || 'Please check your credentials and try again');
     } finally {
@@ -46,147 +53,242 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  useEffect(() => {
+    const handleGoogleResponse = async () => {
+      if (response?.type === 'success' && response.authentication?.idToken) {
+        try {
+          setGoogleLoading(true);
+          await loginWithGoogle(response.authentication.idToken);
+        } catch (err) {
+          Alert.alert('Google Sign-In Failed', err.message || 'Please try again');
+        } finally {
+          setGoogleLoading(false);
+        }
+      }
+    };
+    handleGoogleResponse();
+  }, [response]);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <SceneBackground sceneKey="forest" orbEmotion="calm" />
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome to KieliTaika</Text>
-          <Text style={styles.subtitle}>Sign in to continue your Finnish learning journey</Text>
-        </View>
+      <View style={styles.container}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            {/* Logo */}
+            <View style={styles.logoContainer}>
+              <RukaLogo3D width={280} height={93} />
+            </View>
+            
+            {/* Welcome Text */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Welcome to RUKA</Text>
+              <Text style={styles.subtitle}>Sign in to continue your Finnish learning journey</Text>
+            </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="your@email.com"
-              placeholderTextColor={colors.textSoft}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-              editable={!loading}
-            />
+            {/* Login Form */}
+            <View style={styles.form}>
+              {/* Email Field */}
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="your@email.com"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+              </View>
+
+              {/* Password Field */}
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  editable={!loading}
+                  onSubmitEditing={handleLogin}
+                />
+              </View>
+
+              {/* Forgot Password Link */}
+              <TouchableOpacity style={styles.forgotPasswordContainer}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+
+              {/* Sign In Button */}
+              <TouchableOpacity
+                style={[styles.signInButton, loading && styles.signInButtonDisabled]}
+                onPress={handleLogin}
+                disabled={loading}
+                testID="login-button"
+              >
+                <Text style={styles.signInButtonText}>
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Google Sign In */}
+              <TouchableOpacity
+                style={styles.googleButton}
+                onPress={() => {
+                  if (request) promptAsync();
+                }}
+                disabled={googleLoading || !request}
+              >
+                <View style={styles.googleButtonContent}>
+                  <GoogleLogo size={20} />
+                  <Text style={styles.googleButtonText}>
+                    {googleLoading ? 'Connecting...' : 'Sign In With Google'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Sign Up Link */}
+              <View style={styles.signUpContainer}>
+                <Text style={styles.signUpText}>Don't Have An Account? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                  <Text style={styles.signUpLink}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              placeholderTextColor={colors.textSoft}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="password"
-              editable={!loading}
-              onSubmitEditing={handleLogin}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.footerLink}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        </ScrollView>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000', // Dark background
+  },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: SCREEN_HEIGHT,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: spacing.xl,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing['3xl'],
+    marginBottom: 40,
   },
   title: {
-    ...typography.titleXL,
-    color: colors.textMain,
+    fontSize: 32,
     fontWeight: '700',
-    marginBottom: spacing.m,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   subtitle: {
-    ...typography.body,
-    color: colors.textSoft,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
   },
   form: {
-    gap: spacing.l,
+    width: '100%',
+    gap: 16,
   },
-  inputGroup: {
-    gap: spacing.s,
-  },
-  label: {
-    ...typography.bodySm,
-    color: colors.textMain,
-    fontWeight: '600',
+  inputContainer: {
+    width: '100%',
+    backgroundColor: 'rgba(40, 40, 40, 0.8)', // Dark gray rounded rectangle
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 12,
   },
   input: {
-    ...typography.body,
-    color: colors.textMain,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.grayLine,
-    borderRadius: radius.m,
-    padding: spacing.m,
-    ...shadows.s,
+    fontSize: 16,
+    color: '#FFFFFF',
+    padding: 0,
   },
-  loginButton: {
-    backgroundColor: colors.blueMain,
-    paddingVertical: spacing.m,
-    borderRadius: radius.l,
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginTop: -8,
+    marginBottom: 8,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  signInButton: {
+    width: '100%',
+    backgroundColor: '#4A90E2', // Medium blue
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginTop: spacing.m,
-    ...shadows.s,
-  },
-  loginButtonDisabled: {
-    opacity: 0.7,
-  },
-  loginButtonText: {
-    ...typography.body,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  footer: {
-    flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: spacing.l,
+    marginTop: 8,
+    marginBottom: 12,
   },
-  footerText: {
-    ...typography.bodySm,
-    color: colors.textSoft,
+  signInButtonDisabled: {
+    opacity: 0.6,
   },
-  footerLink: {
-    ...typography.bodySm,
-    color: colors.blueMain,
+  signInButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  googleButton: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(200, 200, 200, 0.5)',
+    marginBottom: 12,
+  },
+  googleButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333333',
+  },
+  signUpContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  signUpText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  signUpLink: {
+    fontSize: 14,
+    color: '#4A90E2', // Blue link color
     fontWeight: '600',
   },
 });

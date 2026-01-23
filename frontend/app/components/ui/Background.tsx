@@ -124,9 +124,8 @@ interface BackgroundProps {
   modalBlur?: boolean; // If true, fade in a blur overlay (for modal transitions)
 }
 
-// Background images are optional - using gradients as primary backgrounds
-// Images removed as they don't exist in the project
-const BACKGROUND_IMAGES: Record<ImageVariant, any> = {};
+// Background images loaded from canonical source: app/assets/images/backgrounds
+import { getBackgroundImage } from '../../lib/backgroundLoader';
 
 const styles = StyleSheet.create({
   imageBackground: {
@@ -249,8 +248,8 @@ export default function Background({
             "rgba(7,9,14,0.12)",
           ] as const);
 
-  // Background images are optional - using gradients as primary backgrounds
-  const selectedImage = null; // imageVariant ? BACKGROUND_IMAGES[imageVariant] : null;
+  // Get background image from canonical source
+  const selectedImage = getBackgroundImage(module, colorScheme as "dark" | "light");
 
   const TextureOverlay = () => {
     if (colorScheme !== "dark") return null;

@@ -1,384 +1,649 @@
-// ============================================================================
-// HomeScreen - Premium 2026 Edition Home Screen
-// ============================================================================
-
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import SceneBackground from '../components/SceneBackground';
-import VoiceOrb from '../components/VoiceOrb';
-import { useRukaStore } from '../state/useRukaStore';
-import BottomSheet from '../components/BottomSheet';
-import { colors } from '../styles/colors';
-import { typography } from '../styles/typography';
-import { spacing } from '../styles/spacing';
-
 /**
- * HomeScreen - Premium redesigned home screen
+ * HomeScreen - Reorganized with logical structure
  * 
- * TODO: Codex to implement:
- * - Connect to real data sources
- * - Implement navigation to screens
- * - Add animations and gestures
- * - Integrate with state management
+ * Structure:
+ * 1. General Finnish (limited features)
+ * 2. Workplace Finnish (all professions + Others)
+ * 3. YKI Exam Preparation (Practice + Mock Exam)
  */
+
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import Background from '../components/ui/Background';
+import { useAuth } from '../context/AuthContext';
+import { fetchSrsQueue } from '../utils/api';
+import ProfileImage from '../components/ProfileImage';
+import PremiumEmbossedButton from '../components/PremiumEmbossedButton';
+import HomeButton from '../components/HomeButton';
+import FloatingActionButton from '../components/FloatingActionButton';
+import SearchBar from '../components/SearchBar';
+import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
+import { useAnalytics } from '../hooks/useAnalytics';
+import { colors as palette } from '../styles/colors';
+import RukaCard from '../components/ui/RukaCard';
+import OfflineIndicator from '../components/OfflineIndicator';
+import { PREMIUM_BROWN } from '../styles/premiumPalette';
+
+const QUICK_ACTION_TYPE_MAP = {
+  Practice: 'speaking',
+  Review: 'listening',
+  Quiz: 'reading',
+  Notes: 'writing',
+  Resources: 'grammar',
+  Assessment: 'speaking',
+};
+
+const GENERAL_FINNISH_OPTIONS = [
+  { id: 'grammar', icon: '📝', label: 'Grammar' },
+  { id: 'listening', icon: '👂', label: 'Listening' },
+  { id: 'reading', icon: '📖', label: 'Reading' },
+  { id: 'writing', icon: '✍️', label: 'Writing' },
+  { id: 'speaking', icon: '🎤', label: 'Speaking' },
+];
+
+const PROFESSIONS = [
+  { id: 'sairaanhoitaja', icon: '👩‍⚕️', label: 'Nurse' },
+  { id: 'laakari', icon: '👨‍⚕️', label: 'Doctor' },
+  { id: 'ict', icon: '💻', label: 'ICT / Software' },
+  { id: 'sahkoinsinoori', icon: '⚡', label: 'Electrical Engineer' },
+  { id: 'hoiva-avustaja', icon: '🤝', label: 'Care Assistant' },
+  { id: 'rakennus', icon: '🏗️', label: 'Construction' },
+  { id: 'siivous', icon: '🧹', label: 'Cleaning' },
+  { id: 'logistiikka', icon: '🚚', label: 'Logistics' },
+  { id: 'ravintola', icon: '🍽️', label: 'Restaurant/Hotel' },
+  { id: 'myynti', icon: '🛒', label: 'Sales' },
+  { id: 'varhaiskasvatus', icon: '👶', label: 'Early Childhood Education' },
+  { id: 'others', icon: '➕', label: 'Others' },
+];
+
+const YKI_PRACTICE_OPTIONS = [
+  { id: 'yki_reading', icon: '📖', label: 'Practice YKI Reading' },
+  { id: 'yki_speaking', icon: '🎤', label: 'Practice YKI Speaking' },
+  { id: 'yki_writing', icon: '✍️', label: 'Practice YKI Writing' },
+  { id: 'yki_listening', icon: '👂', label: 'Practice YKI Listening' },
+];
+
 export default function HomeScreen({ navigation }) {
-  const [bottomSheetVisible, setBottomSheetVisible] = useState(false);
-  const { amplitude, setAmplitude } = useRukaStore();
-  
-  // Simulate amplitude changes for demo
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setAmplitude(Math.random() * 0.5);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [setAmplitude]);
+  const { user } = useAuth();
+  const { trackScreen, trackInteraction } = useAnalytics();
+  const subscription = useSubscriptionStatus() || {};
+  const {
+    tier = 'free',
+    features = {},
+    loading: subscriptionLoading = false,
+    hasAccess: hasAccessFromSubscription,
+    requiresUpgrade: requiresUpgradeFromSubscription,
+  } = subscription;
+  const [snackItems, setSnackItems] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [streak, setStreak] = useState(0);
+  const [xpToday, setXpToday] = useState(0);
+  const hasFeatureAccess = (feature) => features?.[feature]?.available !== false;
+  const requiresFeatureUpgrade = (feature) => features?.[feature]?.available === false;
+  // Back-compat: some older codepaths expect these names.
+  const hasAccess = hasAccessFromSubscription || hasFeatureAccess;
+  const requiresUpgrade = requiresUpgradeFromSubscription || requiresFeatureUpgrade;
 
-  // Mock data - TODO: Replace with real data
-  const quickActions = [
-    { icon: '💬', title: 'Speak', subtitle: 'Practice conversation' },
-    { icon: '🎤', title: 'Pronunciation', subtitle: 'Improve accent' },
-    { icon: '📚', title: 'Vocabulary', subtitle: 'Learn new words' },
-    { icon: '📖', title: 'Grammar', subtitle: 'Master rules' },
-    { icon: '🎯', title: 'YKI Exam', subtitle: 'Test prep' },
-  ];
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetchSrsQueue([], null, 5);
+        if (mounted) {
+          const items = res?.items || res || [];
+          setSnackItems(items);
+        }
+      } catch (err) {
+        console.warn('HomeScreen: Failed to load vocab snack:', err?.message || err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
-  const learningPaths = [
-    { id: 1, title: 'Beginner', description: 'Start your Finnish journey', progress: 65, icon: '🌱' },
-    { id: 2, title: 'Intermediate', description: 'Build fluency', progress: 30, icon: '🌿' },
-    { id: 3, title: 'Advanced', description: 'Master Finnish', progress: 10, icon: '🌳' },
-  ];
+  // Track screen view
+  useEffect(() => {
+    trackScreen?.('HomeScreen', { user_id: user?.id });
+  }, [trackScreen, user?.id]);
 
-  const dailyTasks = [
-    { id: 1, title: 'Vocabulary', icon: '📚', completed: true },
-    { id: 2, title: 'Grammar', icon: '📖', completed: true },
-    { id: 3, title: 'Speaking', icon: '💬', completed: false },
-    { id: 4, title: 'Listening', icon: '👂', completed: false },
-  ];
+  // Load streak and XP data
+  useEffect(() => {
+    // TODO: Load from API or storage
+    // For now, use mock data
+    setStreak(7);
+    setXpToday(125);
+  }, []);
 
-  const handleMorePress = () => {
-    setBottomSheetVisible(true);
+  const handleGeneralFinnishPress = (optionId) => {
+    if (optionId === 'speaking') {
+      navigation?.navigate('GuidedTurn', {
+        source: 'general_finnish',
+        entrypoint: 'home_general_finnish',
+      });
+      return;
+    }
+    navigation?.navigate('LessonDetail', { type: optionId });
   };
 
-  const handleMenuAction = (action) => {
-    setBottomSheetVisible(false);
-    // TODO: Navigate to appropriate screen
-    if (action === 'vocabulary') navigation.navigate('Vocabulary');
-    else if (action === 'lessons') navigation.navigate('Lessons');
-    else if (action === 'certificates') navigation.navigate('Certificates');
-    else if (action === 'pronunciation') navigation.navigate('PronunciationLab');
-    else if (action === 'teacher') navigation.navigate('TeacherDashboard');
-    else if (action === 'settings') navigation.navigate('Settings');
+  const handleWorkplacePress = (professionId) => {
+    const professionMeta = PROFESSIONS.find((p) => p.id === professionId);
+    trackInteraction?.('tap', `workplace_${professionId}`, { profession: professionId });
+    if (requiresFeatureUpgrade('workplace')) {
+      showUpgradePrompt('workplace');
+      return;
+    }
+    
+    if (professionId === 'others') {
+      navigation?.navigate('Workplace', { profession: 'others' });
+    } else {
+      navigation?.navigate('ProfessionDetail', {
+        field: professionId,
+        fieldName: professionMeta?.label || professionId,
+      });
+    }
+  };
+
+  const handleYKIPracticePress = (practiceId) => {
+    trackInteraction?.('tap', `yki_practice_${practiceId}`, { practice: practiceId });
+    // Navigate to specific YKI practice screen
+    const screenMap = {
+      'yki_reading': 'YKIPracticeReading',
+      'yki_speaking': 'YKIPracticeSpeaking',
+      'yki_writing': 'YKIPracticeWriting',
+      'yki_listening': 'YKIPracticeListening',
+    };
+    const screenName = screenMap[practiceId];
+    if (screenName) {
+      navigation?.navigate(screenName);
+    }
+  };
+
+  const handleYKIMockExamPress = () => {
+    trackInteraction?.('tap', 'yki_mock_exam', {});
+    navigation?.navigate('YKI');
+  };
+
+  const showUpgradePrompt = (feature) => {
+    trackInteraction?.('tap', 'upgrade_prompt_shown', { feature });
+    Alert.alert(
+      'Upgrade required',
+      `The ${feature} module requires a higher tier. Please upgrade to continue.`,
+      [
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => trackInteraction?.('tap', 'upgrade_cancelled', { feature })
+        },
+        { 
+          text: 'Upgrade', 
+          onPress: () => {
+            trackInteraction?.('tap', 'upgrade_clicked', { feature });
+            navigation?.navigate('Subscription');
+          }
+        },
+      ]
+    );
+  };
+
+  const handleQuickAction = (action) => {
+    trackInteraction?.('tap', `quick_action_${action}`, { action });
+    const type = QUICK_ACTION_TYPE_MAP[action] || 'grammar';
+    navigation?.navigate('LessonDetail', { type, title: action });
+  };
+
+  const handleSearch = (query) => {
+    trackInteraction?.('search', 'home_search', { query });
+    setSearchQuery(query);
+    // Search service is integrated in SearchBar component
   };
 
   return (
-    <View style={styles.container}>
-      <SceneBackground sceneKey="forest" orbEmotion="calm" />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Hero Section with VoiceOrb */}
-        <View style={styles.heroSection}>
-          <View style={styles.orbContainer}>
-            <VoiceOrb amplitude={amplitude} />
+    <Background module="home" variant="brown" imageVariant="home">
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.settingsIcon}
+            onPress={() => navigation?.navigate('Settings')}
+          >
+            <Text style={styles.settingsIconText}>⚙️</Text>
+          </TouchableOpacity>
+          <View style={styles.profileSection}>
+            <ProfileImage size={50} />
+            <Text style={styles.userName}>{user?.name || 'User'}</Text>
           </View>
-          <View style={styles.welcomeCard}>
-            <Text style={styles.welcomeTitle}>Welcome back!</Text>
-            <Text style={styles.welcomeSubtitle}>Continue your Finnish learning journey</Text>
-          </View>
+          <HomeButton navigation={navigation} style={styles.homeButton} />
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action, idx) => (
-              <TouchableOpacity key={idx} style={styles.actionCard}>
-                <Text style={styles.actionIcon}>{action.icon}</Text>
-                <Text style={styles.actionTitle}>{action.title}</Text>
-                <Text style={styles.actionSubtitle}>{action.subtitle}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Learning Paths */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Learning Paths</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {learningPaths.map((path) => (
-              <View key={path.id} style={styles.pathCard}>
-                <Text style={styles.pathIcon}>{path.icon}</Text>
-                <Text style={styles.pathTitle}>{path.title}</Text>
-                <Text style={styles.pathDescription}>{path.description}</Text>
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${path.progress}%` }]} />
-                </View>
-                <Text style={styles.progressText}>{path.progress}%</Text>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Progress Summary Card */}
+          <RukaCard style={styles.progressCard}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressTitle}>Today's Progress</Text>
+              <View style={styles.streakBadge}>
+                <Text style={styles.streakIcon}>🔥</Text>
+                <Text style={styles.streakText}>{streak} day streak</Text>
               </View>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Daily Journey */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Today's Journey</Text>
-          {dailyTasks.map((task) => (
-            <View key={task.id} style={styles.taskItem}>
-              <Text style={styles.taskIcon}>{task.icon}</Text>
-              <Text style={styles.taskTitle}>{task.title}</Text>
-              <Text style={styles.taskStatus}>{task.completed ? '✓' : '○'}</Text>
             </View>
-          ))}
-        </View>
+            <View style={styles.progressStats}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{xpToday}</Text>
+                <Text style={styles.statLabel}>XP Today</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{snackItems.length}</Text>
+                <Text style={styles.statLabel}>Words to Review</Text>
+              </View>
+            </View>
+          </RukaCard>
 
-        {/* Spacer for FAB */}
-        <View style={styles.spacer} />
-      </ScrollView>
+          {/* Search Bar */}
+          <SearchBar 
+            onSearch={handleSearch}
+            placeholder="Search lessons, vocabulary, grammar..."
+          />
 
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={handleMorePress}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.fabIcon}>➕</Text>
-      </TouchableOpacity>
+          {/* General Finnish Section */}
+          <RukaCard style={[styles.section, styles.sectionCard]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionIcon}>🌱</Text>
+              <Text style={styles.sectionTitle}>General Finnish</Text>
+              {hasFeatureAccess('general_finnish') && (
+                <View style={styles.accessBadge}>
+                  <Text style={styles.accessBadgeText}>✅</Text>
+                </View>
+              )}
+            </View>
+            {features.general_finnish?.message && (
+              <Text style={styles.sectionNote}>
+                {features.general_finnish.message}
+              </Text>
+            )}
+            <View style={styles.optionsGrid}>
+              {GENERAL_FINNISH_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={styles.optionCard}
+                  onPress={() => handleGeneralFinnishPress(option.id)}
+                >
+                  <Text style={styles.optionIcon}>{option.icon}</Text>
+                  <Text style={styles.optionLabel}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </RukaCard>
 
-      {/* Bottom Sheet Menu */}
-      <BottomSheet
-        visible={bottomSheetVisible}
-        onClose={() => setBottomSheetVisible(false)}
-      >
-        <View style={styles.menu}>
-          <Text style={styles.menuTitle}>More Options</Text>
-          <MenuItem
-            icon="📚"
-            title="Vocabulary"
-            onPress={() => handleMenuAction('vocabulary')}
-          />
-          <MenuItem
-            icon="📖"
-            title="Lessons"
-            onPress={() => handleMenuAction('lessons')}
-          />
-          <MenuItem
-            icon="🏆"
-            title="Certificates"
-            onPress={() => handleMenuAction('certificates')}
-          />
-          <MenuItem
-            icon="🎤"
-            title="Pronunciation Lab"
-            onPress={() => handleMenuAction('pronunciation')}
-          />
-          <MenuItem
-            icon="👨‍🏫"
-            title="Teacher Portal"
-            onPress={() => handleMenuAction('teacher')}
-          />
-          <MenuItem
-            icon="⚙️"
-            title="Settings"
-            onPress={() => handleMenuAction('settings')}
-          />
-        </View>
-      </BottomSheet>
-    </View>
+          {/* Workplace Finnish Section */}
+          <RukaCard style={[styles.sectionCard, styles.section]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionIcon}>💼</Text>
+              <Text style={styles.sectionTitle}>Workplace Finnish</Text>
+            </View>
+            <View style={styles.optionsGrid}>
+              {PROFESSIONS.map((profession) => (
+                <TouchableOpacity
+                  key={profession.id}
+                  style={styles.optionCard}
+                  onPress={() => handleWorkplacePress(profession.id)}
+                >
+                  <Text style={styles.optionIcon}>{profession.icon}</Text>
+                  <Text style={styles.optionLabel}>{profession.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </RukaCard>
+
+          {/* YKI Exam Preparation Section */}
+          <RukaCard style={[styles.sectionCard, styles.section, requiresFeatureUpgrade('yki') && styles.sectionLocked]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionIcon}>🎓</Text>
+              <Text style={styles.sectionTitle}>YKI Exam Preparation</Text>
+              {requiresFeatureUpgrade('yki') ? (
+                <View style={styles.lockBadge}>
+                  <Text style={styles.lockBadgeText}>🔒</Text>
+                </View>
+              ) : (
+                <View style={styles.accessBadge}>
+                  <Text style={styles.accessBadgeText}>✅</Text>
+                </View>
+              )}
+            </View>
+            {requiresFeatureUpgrade('yki') ? (
+              <View style={styles.upgradePrompt}>
+                <Text style={styles.upgradePromptText}>
+                  Requires Professional Premium subscription
+                </Text>
+                <PremiumEmbossedButton
+                  title="Upgrade to Unlock"
+                  onPress={() => navigation?.navigate('Subscription')}
+                  variant="primary"
+                  size="medium"
+                  style={styles.upgradeButton}
+                />
+              </View>
+            ) : (
+              features.yki?.message && (
+                <Text style={styles.sectionNote}>
+                  {features.yki.message}
+                </Text>
+              )
+            )}
+            
+            {/* YKI Practice */}
+            <View style={styles.subsection}>
+              <Text style={styles.subsectionTitle}>YKI Practice</Text>
+              <View style={[styles.practiceList, requiresFeatureUpgrade('yki') && styles.practiceListLocked]}>
+                {YKI_PRACTICE_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[styles.practiceItem, requiresFeatureUpgrade('yki') && styles.practiceItemLocked]}
+                    onPress={() => handleYKIPracticePress(option.id)}
+                    disabled={subscriptionLoading || requiresFeatureUpgrade('yki')}
+                  >
+                    <Text style={styles.practiceIcon}>{option.icon}</Text>
+                    <Text style={[styles.practiceLabel, requiresFeatureUpgrade('yki') && styles.practiceLabelLocked]}>
+                      {option.label}
+                    </Text>
+                    <Text style={styles.practiceArrow}>→</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* YKI Mock Exam */}
+            <View style={styles.subsection}>
+              <Text style={styles.subsectionTitle}>YKI Mock Exam</Text>
+              <PremiumEmbossedButton
+                title={requiresFeatureUpgrade('yki') ? "Upgrade to Unlock" : "Generate Full Exam"}
+                onPress={handleYKIMockExamPress}
+                variant={requiresFeatureUpgrade('yki') ? "secondary" : "primary"}
+                size="large"
+                style={styles.mockExamButton}
+              />
+            </View>
+          </RukaCard>
+        </ScrollView>
+        <OfflineIndicator />
+        <FloatingActionButton />
+      </View>
+    </Background>
   );
 }
-
-// Menu Item Component
-function MenuItem({ icon, title, onPress }) {
-  return (
-    <TouchableOpacity
-      style={menuItemStyles.container}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <Text style={menuItemStyles.icon}>{icon}</Text>
-      <Text style={menuItemStyles.title}>{title}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const menuItemStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: colors.background.surface,
-    borderRadius: 16,
-    marginBottom: spacing.sm,
-    gap: spacing.md,
-  },
-  icon: {
-    fontSize: 24,
-  },
-  title: {
-    ...typography.styles.body,
-    color: colors.text.primary,
-    fontWeight: '600',
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  settingsIcon: {
+    padding: 8,
+  },
+  settingsIconText: {
+    fontSize: 20,
+    color: PREMIUM_BROWN?.white || palette?.textPrimary || '#F8F9FA',
+  },
+  profileSection: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: PREMIUM_BROWN?.white || palette?.textPrimary || '#F8F9FA',
+    marginTop: 8,
+  },
+  homeButton: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing['4xl'],
-  },
-  heroSection: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl,
-  },
-  orbContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  spacer: {
-    height: spacing['3xl'],
-  },
-  menu: {
-    gap: spacing.md,
-  },
-  menuTitle: {
-    ...typography.styles.h3,
-    color: colors.text.primary,
-    marginBottom: spacing.lg,
-  },
-  welcomeCard: {
-    backgroundColor: colors.background.surface,
-    padding: spacing.lg,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  welcomeTitle: {
-    ...typography.styles.h2,
-    color: colors.text.primary,
-    marginBottom: spacing.sm,
-  },
-  welcomeSubtitle: {
-    ...typography.styles.body,
-    color: colors.text.secondary,
+    padding: 20,
+    paddingBottom: 40,
   },
   section: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl,
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionIcon: {
+    fontSize: 24,
+    marginRight: 8,
   },
   sectionTitle: {
-    ...typography.styles.h3,
-    color: colors.text.primary,
-    marginBottom: spacing.md,
+    fontSize: 22,
+    fontWeight: '700',
+    color: PREMIUM_BROWN?.white || palette?.textPrimary || '#F8F9FA',
   },
-  quickActionsGrid: {
+  sectionNote: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  actionCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: colors.background.surface,
-    padding: spacing.md,
-    borderRadius: 12,
+  optionCard: {
+    width: '31%',
+    aspectRatio: 1,
+    backgroundColor: PREMIUM_BROWN?.medium || palette?.backgroundSecondary || '#2D2418',
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    // Embossed effect
+    shadowColor: '#000000',
+    shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  actionIcon: {
+  optionIcon: {
     fontSize: 32,
-    marginBottom: spacing.sm,
+    marginBottom: 8,
   },
-  actionTitle: {
-    ...typography.styles.body,
+  optionLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  actionSubtitle: {
-    ...typography.styles.caption,
-    color: colors.text.secondary,
+    color: PREMIUM_BROWN?.white || palette?.textPrimary || '#F8F9FA',
     textAlign: 'center',
   },
-  pathCard: {
-    width: 200,
-    backgroundColor: colors.background.surface,
-    padding: spacing.md,
-    borderRadius: 12,
-    marginRight: spacing.md,
+  subsection: {
+    marginTop: 16,
+    marginBottom: 24,
   },
-  pathIcon: {
-    fontSize: 32,
-    marginBottom: spacing.sm,
+  subsectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: PREMIUM_BROWN?.white || palette?.textPrimary || '#F8F9FA',
+    marginBottom: 12,
   },
-  pathTitle: {
-    ...typography.styles.h4,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
+  practiceList: {
+    gap: 12,
   },
-  pathDescription: {
-    ...typography.styles.caption,
-    color: colors.text.secondary,
-    marginBottom: spacing.md,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: colors.background.secondary,
-    borderRadius: 2,
-    marginBottom: spacing.xs,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary.main,
-    borderRadius: 2,
-  },
-  progressText: {
-    ...typography.styles.caption,
-    color: colors.text.secondary,
-  },
-  taskItem: {
+  practiceItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.surface,
-    padding: spacing.md,
+    backgroundColor: PREMIUM_BROWN?.medium || palette?.backgroundSecondary || '#2D2418',
     borderRadius: 12,
-    marginBottom: spacing.sm,
-    gap: spacing.md,
+    padding: 16,
+    // Embossed effect
+    shadowColor: '#000000',
+    shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  taskIcon: {
+  practiceIcon: {
     fontSize: 24,
+    marginRight: 12,
   },
-  taskTitle: {
-    ...typography.styles.body,
-    color: colors.text.primary,
+  practiceLabel: {
     flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: PREMIUM_BROWN?.white || palette?.textPrimary || '#F8F9FA',
   },
-  taskStatus: {
-    fontSize: 20,
-    color: colors.primary.main,
+  practiceArrow: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.6)',
   },
-  fab: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    right: spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary.main,
-    justifyContent: 'center',
+  mockExamButton: {
+    width: '100%',
+  },
+  progressCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    marginHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    marginBottom: 12,
   },
-  fabIcon: {
+  progressTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: PREMIUM_BROWN?.white || palette?.textPrimary || '#F8F9FA',
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 87, 34, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 87, 34, 0.3)',
+  },
+  streakIcon: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  streakText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF5722',
+  },
+  progressStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
     fontSize: 24,
-    color: '#fff',
+    fontWeight: '700',
+    color: PREMIUM_BROWN?.white || palette?.textPrimary || '#F8F9FA',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginHorizontal: 16,
+  },
+  // Subscription status indicators
+  accessBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.4)',
+  },
+  accessBadgeText: {
+    fontSize: 12,
+  },
+  lockBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255, 152, 0, 0.2)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 152, 0, 0.4)',
+  },
+  lockBadgeText: {
+    fontSize: 12,
+  },
+  // Locked section styles
+  sectionLocked: {
+    opacity: 0.85,
+  },
+  upgradePrompt: {
+    backgroundColor: 'rgba(255, 152, 0, 0.15)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 152, 0, 0.3)',
+    alignItems: 'center',
+  },
+  upgradePromptText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    marginBottom: 12,
+    fontWeight: '600',
+  },
+  upgradeButton: {
+    width: '100%',
+    maxWidth: 250,
+  },
+  optionsGridLocked: {
+    opacity: 0.6,
+  },
+  optionCardLocked: {
+    backgroundColor: 'rgba(58, 42, 30, 0.5)',
+  },
+  optionLabelLocked: {
+    color: 'rgba(255, 255, 255, 0.5)',
+  },
+  practiceListLocked: {
+    opacity: 0.6,
+  },
+  practiceItemLocked: {
+    backgroundColor: 'rgba(58, 42, 30, 0.5)',
+  },
+  practiceLabelLocked: {
+    color: 'rgba(255, 255, 255, 0.5)',
   },
 });

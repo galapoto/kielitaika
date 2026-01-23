@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import Background from '../components/ui/Background';
+import HomeButton from '../components/HomeButton';
 import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../hooks/useNotifications';
-import { colors } from '../styles/colors';
-import { radius } from '../styles/radius';
-import { shadows } from '../styles/shadows';
-import { spacing } from '../styles/spacing';
-import { typography } from '../styles/typography';
 
 export default function NotificationSettingsScreen({ navigation }) {
   const { colors: themeColors } = useTheme();
@@ -24,154 +21,265 @@ export default function NotificationSettingsScreen({ navigation }) {
     }
   }, [morningEnabled, afternoonEnabled, eveningEnabled]);
 
-  const dynamicStyles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: themeColors.background,
-    },
-    header: {
-      padding: spacing.l,
-      backgroundColor: themeColors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
-    },
-    title: {
-      ...typography.titleXL,
-      color: themeColors.primary,
-      marginBottom: spacing.xs,
-    },
-    subtitle: {
-      ...typography.bodySm,
-      color: themeColors.textSecondary,
-    },
-    content: {
-      padding: spacing.l,
-      gap: spacing.l,
-    },
-    section: {
-      backgroundColor: themeColors.surface,
-      borderRadius: radius.l,
-      padding: spacing.l,
-      ...shadows.s,
-      borderWidth: 1,
-      borderColor: themeColors.border,
-    },
-    sectionTitle: {
-      ...typography.titleL,
-      color: themeColors.text,
-      marginBottom: spacing.m,
-    },
-    settingRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: spacing.m,
-      borderBottomWidth: 1,
-      borderBottomColor: themeColors.border,
-    },
-    settingRowLast: {
-      borderBottomWidth: 0,
-    },
-    settingLabel: {
-      ...typography.body,
-      color: themeColors.text,
-      flex: 1,
-    },
-    settingDescription: {
-      ...typography.bodySm,
-      color: themeColors.textSecondary,
-      marginTop: spacing.xs,
-    },
-    infoText: {
-      ...typography.bodySm,
-      color: themeColors.textSecondary,
-      marginTop: spacing.m,
-      fontStyle: 'italic',
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    backgroundColor: '#1E3A8A',
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  profileImageSmall: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileImageSmallText: {
+    fontSize: 16,
+  },
+  headerEmail: {
+    fontSize: 12,
+    color: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  notificationSection: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 16,
+  },
+  notificationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  notificationIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1E3A8A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  notificationIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  notificationDescription: {
+    fontSize: 14,
+    color: 'rgba(0, 0, 0, 0.6)',
+    marginBottom: 8,
+  },
+  notificationTime: {
+    fontSize: 12,
+    color: 'rgba(0, 0, 0, 0.5)',
+  },
+  settingsSection: {
+    marginBottom: 24,
+  },
+  settingItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  settingItemLeft: {
+    flex: 1,
+  },
+  settingItemLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  settingItemDescription: {
+    fontSize: 14,
+    color: 'rgba(0, 0, 0, 0.6)',
+  },
+  infoText: {
+    fontSize: 14,
+    color: 'rgba(0, 0, 0, 0.6)',
+    fontStyle: 'italic',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+});
 
+  // Using 18th picture design - Notification settings screen
   return (
-    <View style={dynamicStyles.container}>
-      <View style={dynamicStyles.header}>
-        <Text style={dynamicStyles.title}>🔔 Notifications</Text>
-        <Text style={dynamicStyles.subtitle}>Control your daily reminders</Text>
+    <Background module="home" variant="brown">
+      <View style={styles.container}>
+      {/* Header - Dark Blue from 6th picture */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Notification</Text>
+        <View style={styles.headerRight}>
+          <View style={styles.profileImageSmall}>
+            <Text style={styles.profileImageSmallText}>👤</Text>
+          </View>
+          <Text style={styles.headerEmail}>user@example.com</Text>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={dynamicStyles.content}>
-        {/* Daily Reminders Section */}
-        <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>Daily Reminders</Text>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Today Section - Notification cards from 6th picture */}
+        <View style={styles.notificationSection}>
+          <Text style={styles.sectionHeader}>Today</Text>
           
-          <View style={dynamicStyles.settingRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={dynamicStyles.settingLabel}>Morning (8:00)</Text>
-              <Text style={dynamicStyles.settingDescription}>
+          <View style={styles.notificationCard}>
+            <View style={styles.notificationIconContainer}>
+              <Text style={styles.notificationIcon}>✓</Text>
+            </View>
+            <View style={styles.notificationContent}>
+              <Text style={styles.notificationTitle}>Your booking has been successfully</Text>
+              <Text style={styles.notificationDescription}>
+                Your notification settings have been updated successfully.
+              </Text>
+              <Text style={styles.notificationTime}>20 Jun 2023 08:30 PM</Text>
+            </View>
+          </View>
+
+          <View style={styles.notificationCard}>
+            <View style={styles.notificationIconContainer}>
+              <Text style={styles.notificationIcon}>🏷️</Text>
+            </View>
+            <View style={styles.notificationContent}>
+              <Text style={styles.notificationTitle}>Don't miss out on discounted flights!</Text>
+              <Text style={styles.notificationDescription}>
+                Special offers available for premium users.
+              </Text>
+              <Text style={styles.notificationTime}>20 Jun 2023 10:15 AM</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Notification Settings - Toggle switches */}
+        <View style={styles.settingsSection}>
+          <Text style={styles.sectionHeader}>Notification Preferences</Text>
+          
+          <View style={styles.settingItem}>
+            <View style={styles.settingItemLeft}>
+              <Text style={styles.settingItemLabel}>Morning (8:00)</Text>
+              <Text style={styles.settingItemDescription}>
                 "Here are 3 words to warm up your Finnish today!"
               </Text>
             </View>
             <Switch
               value={morningEnabled}
               onValueChange={setMorningEnabled}
-              trackColor={{ false: themeColors.border, true: themeColors.primary }}
-              thumbColor={colors.white}
+              trackColor={{ false: '#767577', true: '#1E3A8A' }}
+              thumbColor={morningEnabled ? '#FFFFFF' : '#f4f3f4'}
             />
           </View>
 
-          <View style={dynamicStyles.settingRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={dynamicStyles.settingLabel}>Afternoon (13:00)</Text>
-              <Text style={dynamicStyles.settingDescription}>
+          <View style={styles.settingItem}>
+            <View style={styles.settingItemLeft}>
+              <Text style={styles.settingItemLabel}>Afternoon (13:00)</Text>
+              <Text style={styles.settingItemDescription}>
                 "Your grammar snack is ready 🍪"
               </Text>
             </View>
             <Switch
               value={afternoonEnabled}
               onValueChange={setAfternoonEnabled}
-              trackColor={{ false: themeColors.border, true: themeColors.primary }}
-              thumbColor={colors.white}
+              trackColor={{ false: '#767577', true: '#1E3A8A' }}
+              thumbColor={afternoonEnabled ? '#FFFFFF' : '#f4f3f4'}
             />
           </View>
 
-          <View style={[dynamicStyles.settingRow, dynamicStyles.settingRowLast]}>
-            <View style={{ flex: 1 }}>
-              <Text style={dynamicStyles.settingLabel}>Evening (19:00)</Text>
-              <Text style={dynamicStyles.settingDescription}>
+          <View style={styles.settingItem}>
+            <View style={styles.settingItemLeft}>
+              <Text style={styles.settingItemLabel}>Evening (19:00)</Text>
+              <Text style={styles.settingItemDescription}>
                 "10-second speaking challenge awaits!"
               </Text>
             </View>
             <Switch
               value={eveningEnabled}
               onValueChange={setEveningEnabled}
-              trackColor={{ false: themeColors.border, true: themeColors.primary }}
-              thumbColor={colors.white}
+              trackColor={{ false: '#767577', true: '#1E3A8A' }}
+              thumbColor={eveningEnabled ? '#FFFFFF' : '#f4f3f4'}
             />
           </View>
-        </View>
 
-        {/* Streak Notifications Section */}
-        <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>Streak & Engagement</Text>
-          
-          <View style={[dynamicStyles.settingRow, dynamicStyles.settingRowLast]}>
-            <View style={{ flex: 1 }}>
-              <Text style={dynamicStyles.settingLabel}>Streak Preserving Alerts</Text>
-              <Text style={dynamicStyles.settingDescription}>
+          <View style={styles.settingItem}>
+            <View style={styles.settingItemLeft}>
+              <Text style={styles.settingItemLabel}>Streak Preserving Alerts</Text>
+              <Text style={styles.settingItemDescription}>
                 Get notified if you're about to break your streak
               </Text>
             </View>
             <Switch
               value={streakEnabled}
               onValueChange={setStreakEnabled}
-              trackColor={{ false: themeColors.border, true: themeColors.primary }}
-              thumbColor={colors.white}
+              trackColor={{ false: '#767577', true: '#1E3A8A' }}
+              thumbColor={streakEnabled ? '#FFFFFF' : '#f4f3f4'}
             />
           </View>
         </View>
 
-        <Text style={dynamicStyles.infoText}>
+        <Text style={styles.infoText}>
           Notifications help you build a daily learning habit. You can change these settings anytime.
         </Text>
       </ScrollView>
-    </View>
+      </View>
+    </Background>
   );
 }

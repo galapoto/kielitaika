@@ -7,12 +7,17 @@ import { radius } from '../styles/radius';
 import { shadows } from '../styles/shadows';
 import { useBubbleAppear } from '../hooks/conversationMotion/useBubbleAppear';
 
-export default function UserBubble({ text }) {
+function UserBubble({ text }) {
   const animatedStyle = useBubbleAppear({ type: 'user' });
 
   const AnimatedView = Animated.createAnimatedComponent(View);
   return (
-    <AnimatedView style={[styles.container, animatedStyle]}>
+    <AnimatedView 
+      style={[styles.container, animatedStyle]}
+      accessibilityRole="text"
+      accessibilityLabel={`Your message: ${text}`}
+      testID="user-bubble"
+    >
       <Text style={styles.text}>{text}</Text>
     </AnimatedView>
   );
@@ -35,4 +40,9 @@ const styles = StyleSheet.create({
     color: colors.textMain,
   },
 });
+
+export default React.memo(UserBubble);
+
+
+
 

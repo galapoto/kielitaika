@@ -1,21 +1,26 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Canvas, Path, Skia, useFrame } from '@shopify/react-native-skia';
+import { getSkia } from '../../../utils/optionalSkia';
 
 /**
  * Draws constellation-like links between spirit orbs during mastery events.
  * Expects positions computed externally; falls back to no-op if unavailable.
  */
 export default function ConstellationLinks({ nodes = [], active = false, color = 'rgba(255,255,255,0.35)' }) {
+  const skia = getSkia();
+  const Canvas = skia?.Canvas;
+  const Path = skia?.Path;
+  const Skia = skia?.Skia;
+  const useFrame = skia?.useFrame;
   const progress = useMemo(() => ({ value: 0 }), []);
 
-  useFrame((_canvas, time) => {
+  useFrame?.((_canvas, time) => {
     if (!active) return;
     progress.value = (time / 1600) % 1;
   });
 
   const buildPaths = () => {
-    if (!nodes.length || !active) return null;
+    if (!nodes.length || !active || !Skia || !Path) return null;
     const paths = [];
     for (let i = 0; i < nodes.length; i++) {
       const a = nodes[i];

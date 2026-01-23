@@ -1,11 +1,16 @@
 import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Canvas, Path, Skia, useFrame } from '@shopify/react-native-skia';
+import { getSkia } from '../../utils/optionalSkia';
 
 /**
  * Airy rune-like glyphs that animate when grammar practice is active.
  */
 export default function WindGlyphs({ mood = 'calm', active = false }) {
+  const skia = getSkia();
+  const Canvas = skia?.Canvas;
+  const Path = skia?.Path;
+  const Skia = skia?.Skia;
+  const useFrame = skia?.useFrame;
   const glyphs = useMemo(() => [], []);
 
   useEffect(() => {
@@ -18,7 +23,7 @@ export default function WindGlyphs({ mood = 'calm', active = false }) {
     unsure: 'rgba(63,160,255,0.1)',
   }[mood] || 'rgba(101,247,215,0.12)';
 
-  useFrame((_canvas, time) => {
+  useFrame?.((_canvas, time) => {
     if (!active) return;
     if (glyphs.length < 6 && Math.random() > 0.9) {
       const p = Skia.Path.Make();
@@ -36,7 +41,7 @@ export default function WindGlyphs({ mood = 'calm', active = false }) {
     }
   });
 
-  if (!Canvas) return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
+  if (!Canvas || !Path || !Skia) return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

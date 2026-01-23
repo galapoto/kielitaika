@@ -1,301 +1,407 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
-import { fetchWorkplaceLesson } from '../utils/api';
-import ConversationScreen from './ConversationScreen';
-import UpgradeNotice from '../components/UpgradeNotice';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import Background from '../components/ui/Background';
+import { useAuth } from '../context/AuthContext';
+import ProfileImage from '../components/ProfileImage';
+import HomeButton from '../components/HomeButton';
+import { Ionicons } from '@expo/vector-icons';
+import { colors as palette } from '../styles/colors';
+import { designTokens } from '../styles/designTokens';
+import RukaCard from '../components/ui/RukaCard';
 
-export default function ProfessionDetailScreen({ route, navigation }) {
-  const { field, fieldName } = route?.params || {};
-  const [lesson, setLesson] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showConversation, setShowConversation] = useState(false);
-  const [error, setError] = useState(null);
-  const [upgradeReason, setUpgradeReason] = useState(null);
+const MODULES = [
+  { id: 'Vocabulary', type: 'vocabulary', description: 'Study key terminology' },
+  { id: 'Listening', type: 'listening', description: 'Tune your ear' },
+  { id: 'Roleplay', screen: 'Roleplay', description: 'Practice live dialogue' },
+  { id: 'Grammar', type: 'grammar', description: 'Master structures' },
+  { id: 'Practice', screen: 'PracticeRound', description: 'Integrated skill round' },
+  { id: 'Review', type: 'review', description: 'Spaced review for this profession' },
+  { id: 'Dashboard', screen: 'CompetenceDashboard', description: 'View your progress' },
+  { id: 'Quiz', type: 'reading', description: 'Test comprehension' },
+  { id: 'Notes', type: 'writing', description: 'Capture notes' },
+  { id: 'Resources', type: 'grammar', description: 'Extra materials' },
+];
 
-  useEffect(() => {
-    if (field) {
-      loadLesson();
+const MODULE_ICONS = {
+  Vocabulary: 'book-outline',
+  Listening: 'headset',
+  Roleplay: 'chatbubble-ellipses',
+  Grammar: 'text',
+  Practice: 'mic-outline',
+  Review: 'refresh-circle',
+  Dashboard: 'stats-chart',
+  Quiz: 'help-circle',
+  Notes: 'create-outline',
+  Resources: 'library-outline',
+  Assessment: 'analytics-outline',
+};
+
+const { typography = {}, spacing = {}, textColor = {} } = designTokens || {};
+
+export default function ProfessionDetailScreen({ route, navigation } = {}) {
+  const { user } = useAuth();
+  const field = route?.params?.field || route?.params?.professionId || route?.params?.professionId;
+  const fieldName = route?.params?.fieldName || 'Profession';
+  const profession = route?.params?.profession || { title: fieldName, description: 'Learn profession-specific Finnish' };
+  const handleModulePress = (module) => {
+    if (module.screen === 'Roleplay') {
+      navigation?.navigate('Roleplay', { field, fieldName });
+      return;
     }
-  }, [field]);
 
-  const loadLesson = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetchWorkplaceLesson(field, 'B1');
-      setLesson(response.lesson || response);
-      setUpgradeReason(null);
-    } catch (err) {
-      console.error('Error loading lesson:', err);
-      if (err?.message?.includes('Upgrade required')) {
-        setUpgradeReason(err.message);
-      }
-      setError(err.message || 'Failed to load lesson');
-    } finally {
-      setIsLoading(false);
+    if (module.screen === 'PracticeRound') {
+      navigation?.navigate('PracticeRound', { 
+        profession: field, 
+        field, 
+        level: 'B1' 
+      });
+      return;
     }
-  };
 
-  const handleStartPractice = () => {
-    setShowConversation(true);
-  };
+    if (module.screen === 'CompetenceDashboard') {
+      navigation?.navigate('CompetenceDashboard', { 
+        profession: field, 
+        field 
+      });
+      return;
+    }
 
-  const handleStartRoleplay = () => {
-    navigation.navigate('Roleplay', {
-      field: field,
-      scenarioTitle: lesson.title,
-      level: 'B1',
+    if (module.id === 'Vocabulary') {
+      navigation?.navigate('Vocabulary', { path: 'workplace', field });
+      return;
+    }
+
+    if (module.id === 'Quiz') {
+      navigation?.navigate('Quiz', {
+        path: 'workplace',
+        field,
+        sourceType: module.type || 'reading',
+        level: module.level || 'B1',
+        type: module.type || 'reading',
+      });
+      return;
+    }
+
+    if (module.id === 'Notes') {
+      navigation?.navigate('Notes', {
+        path: 'workplace',
+        field,
+        sourceType: module.type || 'writing',
+        level: module.level || 'B1',
+        title: `${fieldName} Notes`,
+      });
+      return;
+    }
+
+    navigation?.navigate('LessonDetail', {
+      type: module.type || 'grammar',
+      level: module.level || 'B1',
+      path: 'workplace',
+      field,
+      professionLabel: fieldName,
+      title: module.id,
     });
   };
 
-  if (showConversation) {
-    return (
-      <ConversationScreen
-        route={{ params: { level: 'B1', path: 'workplace', profession: field } }}
-        navigation={navigation}
-      />
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0A3D62" />
-        <Text style={styles.loadingText}>Loading lesson...</Text>
-      </View>
-    );
-  }
-
-  if (error || !lesson) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{error || 'Lesson not found'}</Text>
-        {upgradeReason && (
-          <UpgradeNotice
-            reason={upgradeReason}
-            onPress={() => navigation.navigate('Subscription')}
-          />
-        )}
-        <TouchableOpacity style={styles.retryButton} onPress={loadLesson}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
+  // Combine all designs: Header from 2nd picture, Flight booking cards from 6th picture, Schedule from 3rd picture
   return (
-    <ScrollView style={styles.container}>
+    <Background module="workplace" variant="brown" imageVariant="workplace">
+      <View style={styles.container}>
+      {/* Header - Dark Blue/Purple from 6th picture */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{fieldName || lesson.field}</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            onPress={() => {
+              if (navigation?.canGoBack?.() && navigation.canGoBack()) navigation.goBack();
+              else navigation?.navigate?.('Home');
+            }}
+            style={styles.backButton}
+          >
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <ProfileImage size={40} />
+          <Text style={styles.headerGreeting}>{fieldName}</Text>
+        </View>
+        <HomeButton navigation={navigation} style={styles.homeButtonHeader} homeType="workplace" />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Lesson: {lesson.title}</Text>
-          <Text style={styles.prompt}>{lesson.prompt}</Text>
+      {/* Main Title */}
+      <View style={styles.titleSection}>
+        <Text style={styles.mainTitle}>Securely Learn {fieldName}</Text>
+      </View>
+
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Profession Info Card - Flight Booking Style from 6th picture */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoCardLeft}>
+            <Text style={styles.infoCardTitle}>{profession.title || fieldName}</Text>
+            <Text style={styles.infoCardDescription}>{profession.description || 'Workplace Finnish training'}</Text>
+            <Text style={styles.infoCardProgress}>Progress: 45%</Text>
+          </View>
+          <View style={styles.infoCardRight}>
+            <Text style={styles.infoCardTime}>30 min</Text>
+          </View>
         </View>
 
-        {lesson.vocabulary && lesson.vocabulary.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Key Vocabulary</Text>
-            <View style={styles.vocabGrid}>
-              {lesson.vocabulary.map((word, idx) => (
-                <View key={idx} style={styles.vocabItem}>
-                  <Text style={styles.vocabText}>{word}</Text>
+        {/* Learning Modules - Card Grid from 2nd picture */}
+        <View style={styles.modulesSection}>
+          <Text style={styles.sectionTitle}>Learning Modules</Text>
+          <View style={styles.modulesGrid}>
+            {MODULES.map((module) => (
+              <TouchableOpacity
+                key={module.id}
+                style={styles.moduleCard}
+                onPress={() => handleModulePress(module)}
+                activeOpacity={0.85}
+              >
+                <RukaCard style={styles.moduleInnerCard}>
+                  <View style={styles.moduleIconWrapper}>
+                    <Ionicons
+                      name={MODULE_ICONS[module.id] || 'sparkles'}
+                      size={28}
+                      color={palette.accentPrimary}
+                    />
+                  </View>
+                  <Text style={styles.moduleLabel}>{module.id}</Text>
+                  {module.description && (
+                    <Text style={styles.moduleDescription}>{module.description}</Text>
+                  )}
+                </RukaCard>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Schedule - From 3rd picture */}
+        <View style={styles.scheduleSection}>
+          <View style={styles.scheduleHeader}>
+            <Text style={styles.scheduleTitle}>UPCOMING SESSIONS</Text>
+          </View>
+
+          <View style={styles.scheduleCard}>
+            <View style={styles.timeAxis}>
+              {['10:00', '14:00'].map((time) => (
+                <View key={time} style={styles.timeMarker}>
+                  <Text style={styles.timeText}>{time}</Text>
                 </View>
               ))}
             </View>
-          </View>
-        )}
 
-        {lesson.grammar_tip && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Grammar Tip</Text>
-            <View style={styles.tipContainer}>
-              <Text style={styles.tipText}>{lesson.grammar_tip}</Text>
+            <View style={styles.sessionsList}>
+              <View style={styles.sessionItem}>
+                <View style={styles.sessionContent}>
+                  <Text style={styles.sessionTitle}>Vocabulary Review</Text>
+                  <Text style={styles.sessionSubtitle}>20 new words</Text>
+                </View>
+                <Text style={styles.statusIcon}>⚠</Text>
+              </View>
             </View>
           </View>
-        )}
-
-        {lesson.writing_task && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Writing Task</Text>
-            <View style={styles.taskContainer}>
-              <Text style={styles.taskText}>{lesson.writing_task}</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={handleStartPractice}
-          >
-            <Text style={styles.startButtonText}>Start Practice Conversation</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={styles.roleplayButton}
-            onPress={handleStartRoleplay}
-          >
-            <Text style={styles.roleplayButtonText}>Start Roleplay Scenario</Text>
-          </TouchableOpacity>
         </View>
+      </ScrollView>
+
+      {/* Removed placeholder bottom navigation */}
       </View>
-    </ScrollView>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: palette.backgroundPrimary,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+  homeButtonHeader: {
+    marginLeft: 'auto',
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    backgroundColor: palette.accentSecondary,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
-    marginBottom: 8,
+    padding: spacing?.sm || 8,
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#0A3D62',
-    fontWeight: '600',
+  backIcon: {
+    fontSize: 20,
+    color: textColor?.primary || palette.textPrimary,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#0A3D62',
+  headerGreeting: {
+    fontSize: typography.scale.body.size,
+    fontWeight: typography.scale.body.weight,
+    color: textColor?.primary || palette.textPrimary,
+    marginLeft: spacing.sm,
+    fontFamily: typography.fontFamily,
   },
-  content: {
-    padding: 20,
+  titleSection: {
+    backgroundColor: palette.backgroundSecondary,
+    paddingHorizontal: spacing?.lg || 24,
+    paddingTop: spacing?.lg || 24,
+    paddingBottom: spacing?.md || 16,
   },
-  section: {
-    marginBottom: 24,
+  mainTitle: {
+    fontSize: typography?.scale?.hero?.size || 32,
+    fontWeight: typography?.scale?.hero?.weight || '700',
+    color: textColor?.primary || palette.textPrimary,
+    fontFamily: designTokens?.typography?.displayFont || 'Inter',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: spacing?.lg || 24,
+    paddingBottom: 140,
+  },
+  infoCard: {
+    backgroundColor: palette.surface,
+    borderRadius: designTokens?.borderRadius?.lg || 16,
+    padding: spacing?.lg || 24,
+    marginBottom: spacing?.xl || 32,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: palette.divider,
+    shadowColor: 'rgba(0,0,0,0.25)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  infoCardLeft: {
+    flex: 1,
+  },
+  infoCardTitle: {
+    fontSize: typography?.scale?.body?.size || 16,
+    fontWeight: typography?.scale?.body?.weight || '400',
+    color: textColor?.primary || palette.textPrimary,
+    marginBottom: spacing?.xs || 4,
+    fontFamily: typography?.fontFamily || 'Inter',
+  },
+  infoCardDescription: {
+    fontSize: typography?.scale?.small?.size || 14,
+    color: textColor?.secondary || palette.textSecondary,
+    marginBottom: spacing?.xs || 4,
+    fontFamily: typography?.fontFamily || 'Inter',
+  },
+  infoCardProgress: {
+    fontSize: typography?.scale?.small?.size || 14,
+    color: textColor?.muted || palette.textMuted,
+  },
+  infoCardRight: {
+    alignItems: 'flex-end',
+  },
+  infoCardTime: {
+    fontSize: typography?.scale?.h3?.size || 20,
+    fontWeight: typography?.scale?.h3?.weight || '600',
+    color: palette.accentPrimary,
+  },
+  modulesSection: {
+    marginBottom: spacing?.xl || 32,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 12,
+    fontSize: typography?.scale?.h3?.size || 20,
+    fontWeight: typography?.scale?.h3?.weight || '600',
+    color: textColor?.primary || palette.textPrimary,
+    marginBottom: spacing?.md || 16,
   },
-  prompt: {
-    fontSize: 16,
-    color: '#1e293b',
-    lineHeight: 24,
-    backgroundColor: '#f1f5f9',
-    padding: 16,
-    borderRadius: 8,
-  },
-  vocabGrid: {
+  modulesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
   },
-  vocabItem: {
-    backgroundColor: '#eef2ff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
+  moduleCard: {
+    width: '48%',
+    marginBottom: spacing?.lg || 24,
   },
-  vocabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0A3D62',
-  },
-  tipContainer: {
-    backgroundColor: '#fef3c7',
-    padding: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F6C400',
-  },
-  tipText: {
-    fontSize: 14,
-    color: '#1e293b',
-    lineHeight: 20,
-  },
-  taskContainer: {
-    backgroundColor: '#f0fdf4',
-    padding: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#24CBA4',
-  },
-  taskText: {
-    fontSize: 14,
-    color: '#1e293b',
-    lineHeight: 20,
-  },
-  buttonContainer: {
-    gap: 12,
-    marginTop: 8,
-  },
-  startButton: {
-    backgroundColor: '#0A3D62',
-    padding: 16,
-    borderRadius: 12,
+  moduleInnerCard: {
     alignItems: 'center',
+    paddingVertical: spacing?.md || 16,
   },
-  startButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+  moduleIconWrapper: {
+    marginBottom: spacing?.sm || 8,
   },
-  roleplayButton: {
-    backgroundColor: '#24CBA4',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  roleplayButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#64748b',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#dc2626',
-    marginBottom: 16,
+  moduleLabel: {
+    fontSize: typography.scale.body.size,
+    fontWeight: typography.scale.body.weight,
+    color: textColor?.primary || palette.textPrimary,
     textAlign: 'center',
   },
-  retryButton: {
-    backgroundColor: '#0A3D62',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  moduleDescription: {
+    fontSize: typography.scale.small.size,
+    fontWeight: typography.scale.small.weight,
+    color: textColor.secondary,
+    textAlign: 'center',
+    marginTop: spacing?.xs || 4,
   },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  scheduleSection: {
+    marginBottom: spacing?.xl || 32,
+  },
+  scheduleHeader: {
+    marginBottom: spacing?.sm || 8,
+  },
+  scheduleTitle: {
+    fontSize: typography?.scale?.cardTitle?.size || 18,
+    fontWeight: typography?.scale?.cardTitle?.weight || '600',
+    color: textColor?.primary || palette.textPrimary,
+  },
+  scheduleCard: {
+    backgroundColor: palette.surface,
+    borderRadius: designTokens?.borderRadius?.xl || 20,
+    padding: spacing?.lg || 24,
+    minHeight: 200,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: palette.divider,
+  },
+  timeAxis: {
+    width: 60,
+    marginRight: spacing?.md || 16,
+  },
+  timeMarker: {
+    marginBottom: spacing?.lg || 24,
+  },
+  timeText: {
+    fontSize: typography?.scale?.small?.size || 14,
+    color: textColor?.secondary || palette.textSecondary,
+  },
+  sessionsList: {
+    flex: 1,
+  },
+  sessionItem: {
+    backgroundColor: palette.backgroundSecondary,
+    borderRadius: designTokens?.borderRadius?.lg || 16,
+    padding: spacing.md,
+    marginBottom: spacing?.md || 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: palette.divider,
+  },
+  sessionContent: {
+    flex: 1,
+  },
+  sessionTitle: {
+    fontSize: typography?.scale?.body?.size || 16,
+    fontWeight: typography?.scale?.body?.weight || '400',
+    color: textColor?.primary || palette.textPrimary,
+    marginBottom: spacing?.xs || 4,
+  },
+  sessionSubtitle: {
+    fontSize: typography?.scale?.small?.size || 14,
+    color: textColor?.secondary || palette.textSecondary,
+  },
+  statusIcon: {
+    fontSize: 18,
+    color: palette.accentWarning,
   },
 });

@@ -26,10 +26,12 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.mintSoft,
+    backgroundColor: 'rgba(16, 22, 40, 0.78)',
     paddingHorizontal: spacing.s,
     paddingVertical: spacing.xs,
     borderRadius: radius.m,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   label: {
     fontWeight: '700',
@@ -41,5 +43,8 @@ const styles = StyleSheet.create({
     color: colors.textMain,
   },
 });
+
+
+
 
 

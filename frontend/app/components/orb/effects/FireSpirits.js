@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Canvas, Circle, useFrame } from '@shopify/react-native-skia';
+import { getSkia } from '../../../utils/optionalSkia';
 
 /**
  * Warm ember particles swirling around the orb when the learner speaks quickly.
@@ -13,9 +13,13 @@ export default function FireSpirits({
   centerY = 0,
   enabled = true,
 }) {
+  const skia = getSkia();
+  const Canvas = skia?.Canvas;
+  const Circle = skia?.Circle;
+  const useFrame = skia?.useFrame;
   const particles = useMemo(() => [], []);
 
-  useFrame((_canvas, _time) => {
+  useFrame?.((_canvas, _time) => {
     if (!enabled) return;
     const intensity = Math.max(0, amplitude - 0.4) + Math.max(0, speechSpeed - 2) * 0.15;
     const emitCount = intensity > 0 ? Math.min(4 + Math.floor(intensity * 14), 14) : 0;
@@ -50,7 +54,7 @@ export default function FireSpirits({
       return <Circle key={idx} cx={x} cy={y} r={p.size} color={color} />;
     });
 
-  if (!Canvas) return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
+  if (!Canvas || !Circle) return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

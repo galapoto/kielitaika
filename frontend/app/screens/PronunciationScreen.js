@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { analyzePronunciation, fetchPronunciationNudge } from '../utils/api';
 import MicRecorder from '../components/MicRecorder';
+import RukaButton from '../ui/components/Button';
+import RukaCard from '../ui/components/Card';
+import { IconMic, IconPlay, IconSettings } from '../ui/icons/IconPack';
+
+const onDark = '#E6F2FF';
+const onDarkMuted = '#BFD7E8';
 
 export default function PronunciationScreen() {
   const [expectedText, setExpectedText] = useState('Minä menen kauppaan');
@@ -80,15 +79,13 @@ export default function PronunciationScreen() {
           <Text style={styles.label}>Expected Text (Finnish):</Text>
           <View style={styles.textInputContainer}>
             <Text style={styles.textInput}>{expectedText}</Text>
-            <TouchableOpacity
+            <RukaButton
+              title="Edit"
+              icon={IconSettings}
+              onPress={() => alert('Edit functionality coming soon')}
               style={styles.editButton}
-              onPress={() => {
-                // TODO: Add text input modal
-                alert('Edit functionality coming soon');
-              }}
-            >
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
+              textStyle={styles.editButtonText}
+            />
           </View>
         </View>
 
@@ -105,28 +102,24 @@ export default function PronunciationScreen() {
           )}
         </View>
 
-        <TouchableOpacity
-          style={[styles.analyzeButton, (!transcript || isAnalyzing) && styles.analyzeButtonDisabled]}
+        <RukaButton
+          title={isAnalyzing ? 'Analyzing...' : 'Analyze Pronunciation'}
+          icon={IconPlay}
           onPress={handleAnalyze}
           disabled={!transcript || isAnalyzing}
-        >
-          {isAnalyzing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.analyzeButtonText}>Analyze Pronunciation</Text>
-          )}
-        </TouchableOpacity>
+          style={styles.analyzeButton}
+        />
 
-        <TouchableOpacity
-          style={[styles.nudgeButton, (!transcript || isAnalyzing) && styles.analyzeButtonDisabled]}
+        <RukaButton
+          title="Mini Pronunciation Nudge"
+          icon={IconSettings}
           onPress={handleNudge}
           disabled={!transcript || isAnalyzing}
-        >
-          <Text style={styles.nudgeButtonText}>Mini Pronunciation Nudge</Text>
-        </TouchableOpacity>
+          style={styles.nudgeButton}
+        />
 
         {score !== null && (
-          <View style={styles.resultsContainer}>
+          <RukaCard title="Your Results" icon={IconMic} style={styles.resultsContainer}>
             <View style={[styles.scoreCircle, { borderColor: getScoreColor(score) }]}>
               <Text style={[styles.scoreText, { color: getScoreColor(score) }]}>
                 {score}/4
@@ -203,7 +196,7 @@ export default function PronunciationScreen() {
                 <Text style={styles.nudgeText}>Harjoitus: {nudge.phrase}</Text>
               </View>
             )}
-          </View>
+          </RukaCard>
         )}
       </View>
     </ScrollView>
@@ -253,15 +246,11 @@ const styles = StyleSheet.create({
     color: '#1e293b',
   },
   editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#0A3D62',
-    borderRadius: 8,
+    marginLeft: 12,
+    width: 120,
   },
   editButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
   },
   transcriptContainer: {
     marginTop: 12,
@@ -287,26 +276,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   analyzeButton: {
-    backgroundColor: '#0A3D62',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  analyzeButtonDisabled: {
-    backgroundColor: '#cbd5e1',
-  },
-  analyzeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    marginBottom: 16,
   },
   resultsContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    marginTop: 8,
   },
   scoreCircle: {
     width: 120,
@@ -324,24 +297,24 @@ const styles = StyleSheet.create({
   },
   scoreLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: onDarkMuted,
     marginTop: 4,
   },
   feedbackContainer: {
     marginBottom: 20,
     padding: 16,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
   },
   feedbackTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0A3D62',
+    color: onDark,
     marginBottom: 8,
   },
   feedbackText: {
     fontSize: 16,
-    color: '#1e293b',
+    color: onDark,
     lineHeight: 22,
   },
   issuesContainer: {
@@ -350,72 +323,64 @@ const styles = StyleSheet.create({
   issuesTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#dc2626',
+    color: onDark,
     marginBottom: 12,
   },
   issueItem: {
     padding: 12,
-    backgroundColor: '#fef2f2',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
     marginBottom: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#dc2626',
+    borderLeftColor: '#7EDBFF',
   },
   issueWord: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#dc2626',
+    color: onDark,
     marginBottom: 4,
   },
   issueDetail: {
     fontSize: 13,
-    color: '#64748b',
+    color: onDarkMuted,
     marginBottom: 4,
   },
   issueExample: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: onDarkMuted,
     fontStyle: 'italic',
   },
   rhythmContainer: {
     padding: 12,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
     marginBottom: 12,
   },
   rhythmTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0A3D62',
+    color: onDark,
     marginBottom: 4,
   },
   rhythmText: {
     fontSize: 14,
-    color: '#1e293b',
+    color: onDarkMuted,
   },
   successContainer: {
     padding: 12,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
   },
   successText: {
     fontSize: 14,
-    color: '#24CBA4',
+    color: onDark,
     fontWeight: '600',
   },
   nudgeButton: {
-    backgroundColor: '#24CBA4',
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center',
     marginBottom: 24,
   },
-  nudgeButtonText: {
-    color: '#0F172A',
-    fontWeight: '700',
-  },
   nudgeCard: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     padding: 12,
     borderRadius: 10,
     marginTop: 12,
@@ -423,9 +388,9 @@ const styles = StyleSheet.create({
   },
   nudgeTitle: {
     fontWeight: '700',
-    color: '#0F172A',
+    color: onDark,
   },
   nudgeText: {
-    color: '#334155',
+    color: onDarkMuted,
   },
 });

@@ -1,544 +1,650 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  TouchableOpacity,
+  FlatList,
   ActivityIndicator,
-  TextInput,
-  Alert,
 } from 'react-native';
-import { fetchRoleplay, evaluateRoleplay } from '../utils/api';
 import MicButton from '../components/MicButton';
-import { usePath } from '../context/PathContext';
-import UpgradeNotice from '../components/UpgradeNotice';
-import { useAudioRecorder } from '../hooks/useAudioRecorder';
-import { transcribeAudio } from '../services/sttService';
-import { useSound } from '../hooks/useSound';
+import Background from '../components/ui/Background';
+import SpeakingDebugPanel from '../components/dev/SpeakingDebugPanel';
+import { useVoiceStreaming } from '../hooks/useVoiceStreaming';
+import { useVoice } from '../hooks/useVoice';
+import { colors } from '../styles/colors';
+import { spacing } from '../styles/spacing';
+import { Audio } from 'expo-av';
+import {
+  loadSpeakingAttempts,
+  persistSpeakingAttempt,
+} from '../utils/speakingAttempts';
+import { getRubricExplanation, getRubricLabel, normalizeRubricDimension } from '../utils/feedbackRubric';
+import { generateSpeakingTurn } from '../utils/speakingTurnEngine';
 
-export default function RoleplayScreen({ route, navigation }) {
-  const { field, scenarioTitle, level = 'B1' } = route?.params || {};
-  const { profession: ctxProfession } = usePath();
-  const activeField = field || ctxProfession;
-  
-  const [scenario, setScenario] = useState(null);
-  const [userResponse, setUserResponse] = useState('');
-  const [evaluation, setEvaluation] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEvaluating, setIsEvaluating] = useState(false);
+const TASKS = [
+  { id: 'shop', title: 'Shop for coffee', prompt: 'Tilaa kahvi ja kysy, onko tarjouksia.', level: 'A2', goal: 'ask about deals' },
+  { id: 'clinic', title: 'Clinic check-in', prompt: 'Kysy vastaanottoajasta ja mainitse oireesi.', level: 'B1', goal: 'describe issue' },
+  { id: 'neighbor', title: 'Neighbor chat', prompt: 'Kerro naapuriin tervetulos ja sovi tapaamisesta.', level: 'A2', goal: 'suggest meetup' },
+  { id: 'appointment', title: 'Doctor call', prompt: 'Soita lääkäriin ja peru varaamasi aika.', level: 'B2', goal: 'cancel appointment' },
+];
+
+const GOAL_RULES = {
+  shop: {
+    requiredAll: [[/kahvi/i], [/tarjous|alennus|tarjouksia/i]],
+    hintFi: 'Mainitse kahvi + kysy tarjouksista (tarjous/alennus).',
+  },
+  clinic: {
+    requiredAll: [[/aika|vastaanotto/i], [/kipu|kuume|ysk|flunss|oire/i]],
+    hintFi: 'Kysy ajasta ja mainitse yksi oire (esim. kuume, yskä, kipu).',
+  },
+  neighbor: {
+    requiredAll: [[/tervetuloa|moi|hei/i], [/kahville|tavata|tapaaminen|nähd/i]],
+    hintFi: 'Tervehdi + ehdota tapaamista (esim. kahville / nähdään).',
+  },
+  appointment: {
+    requiredAll: [[/peru|peruut/i], [/aika|ajan/i]],
+    hintFi: 'Sano että peruutat ajan (peru/peruutan + aika).',
+  },
+};
+
+const evaluateGoal = (taskId, transcript) => {
+  const rules = GOAL_RULES[taskId];
+  if (!rules) {
+    return { met: true, hintFi: '' };
+  }
+  const normalized = (transcript || '').toLowerCase().trim();
+  const met = rules.requiredAll.every((group) => group.some((rx) => rx.test(normalized)));
+  return { met, hintFi: rules.hintFi };
+};
+
+const formatDuration = (ms = 0) => {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${minutes}:${remainder.toString().padStart(2, '0')}`;
+};
+
+const formatFeedback = (feedback) =>
+  feedback ? (
+    <View>
+      <Text style={styles.feedbackText}>{feedback.one_big_win}</Text>
+      <Text style={styles.feedbackText}>{feedback.one_fix_now}</Text>
+      <Text style={styles.feedbackText}>{feedback.better_version_fi}</Text>
+      <Text style={styles.feedbackText}>Micro drills:</Text>
+      {feedback.micro_drill?.map((drill) => (
+        <Text key={drill} style={styles.feedbackText}>
+          • {drill}
+        </Text>
+      ))}
+      <Text style={styles.feedbackText}>Dimension: {feedback.dimension}</Text>
+      <Text style={styles.feedbackText}>
+        Level suggestion: {feedback.level_adjustment || 'stay'}
+      </Text>
+    </View>
+  ) : (
+    <Text style={styles.feedbackText}>No feedback yet.</Text>
+  );
+
+export default function RoleplayScreen() {
+  const [taskIndex, setTaskIndex] = useState(0);
+  const [transcript, setTranscript] = useState('');
+  const [aiReply, setAiReply] = useState('');
+  const [feedback, setFeedback] = useState(null);
+  const [feedbackExpanded, setFeedbackExpanded] = useState(false);
+  const [goalMet, setGoalMet] = useState(null);
+  const [goalHintFi, setGoalHintFi] = useState('');
+  const [history, setHistory] = useState([]);
+  const [statusMessage, setStatusMessage] = useState('Hold to talk');
+  const [micPermission, setMicPermission] = useState('unknown');
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isProcessingAttempt, setIsProcessingAttempt] = useState(false);
   const [error, setError] = useState(null);
-  const [upgradeReason, setUpgradeReason] = useState(null);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  
-  const { startRecording, stopRecording, isRecording } = useAudioRecorder();
-  const { playMicOn } = useSound();
+  const [debugInfo, setDebugInfo] = useState({
+    micPermission: 'unknown',
+    recordingState: 'idle',
+    sttRequests: 0,
+    ttsRequests: 0,
+    lastTranscript: '',
+    lastReply: '',
+    playbackState: 'idle',
+    errorLog: null,
+  });
+  const [debugEntries, setDebugEntries] = useState([]);
+  const [waveformHeights, setWaveformHeights] = useState([24, 32, 28, 40, 30, 25]);
+  const [ttsFailure, setTtsFailure] = useState(null);
+  const recordingStartRef = useRef(null);
+  const recordingTimerRef = useRef(null);
+
+  const { speak } = useVoice();
+  const currentTask = useMemo(() => TASKS[taskIndex], [taskIndex]);
+
+  const handlePermissionStatus = useCallback(async () => {
+    try {
+      const status = await Audio.getPermissionsAsync();
+      setMicPermission(status.status);
+      setDebugInfo((prev) => ({ ...prev, micPermission: status.status }));
+    } catch (err) {
+      setDebugInfo((prev) => ({ ...prev, micPermission: 'unknown' }));
+    }
+  }, []);
 
   useEffect(() => {
-    if (activeField) {
-      loadScenario();
-    }
-  }, [activeField, scenarioTitle, level]);
+    handlePermissionStatus();
+  }, [handlePermissionStatus]);
 
-  const loadScenario = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetchRoleplay(activeField, scenarioTitle, level);
-      setScenario(response);
-      setUpgradeReason(null);
-    } catch (err) {
-      console.error('Error loading roleplay:', err);
-      if (err?.message?.includes('Upgrade required')) {
-        setUpgradeReason(err.message);
+  const loadHistory = useCallback(async () => {
+    const attempts = await loadSpeakingAttempts();
+    setHistory(Array.isArray(attempts) ? attempts : []);
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  const persistAttempt = useCallback(async (attempt) => {
+    const updated = await persistSpeakingAttempt(attempt);
+    if (Array.isArray(updated)) {
+      setHistory(updated);
+    }
+  }, []);
+
+  const playAiReply = useCallback(
+    async (text) => {
+      setDebugInfo((prev) => ({
+        ...prev,
+        ttsRequests: prev.ttsRequests + 1,
+        playbackState: 'playing',
+      }));
+      try {
+        await speak(text, 'conversation');
+        setDebugInfo((prev) => ({
+          ...prev,
+          playbackState: 'idle',
+          lastReply: text,
+        }));
+      } catch (ttsError) {
+        const message = ttsError?.message || 'TTS error';
+        setError(message);
+        setTtsFailure(ttsError);
+        setDebugInfo((prev) => ({ ...prev, playbackState: 'error', errorLog: message }));
       }
-      setError(err.message || 'Failed to load roleplay scenario');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [speak],
+  );
 
-  const handleMicPressIn = async () => {
-    try {
-      playMicOn();
-      await startRecording();
-    } catch (err) {
-      Alert.alert('Recording Error', err.message || 'Failed to start recording');
+  const handleVoiceState = useCallback((state) => {
+    if (state.isRecording) {
+      setStatusMessage('Listening…');
+    } else if (state.isProcessing) {
+      setStatusMessage('Processing…');
+    } else if (state.isSpeaking) {
+      setStatusMessage('Playing AI voice…');
+    } else {
+      setStatusMessage('Hold to talk');
     }
-  };
+    setDebugInfo((prev) => ({
+      ...prev,
+      recordingState: state.isRecording
+        ? 'recording'
+        : state.isProcessing
+        ? 'processing'
+        : state.isSpeaking
+        ? 'playing'
+        : 'idle',
+    }));
+  }, []);
 
-  const handleMicPressOut = async () => {
-    try {
-      const audioUri = await stopRecording();
-      if (audioUri) {
-        setIsTranscribing(true);
-        try {
-          const result = await transcribeAudio(audioUri);
-          const transcript = result?.transcript || result?.text || '';
-          if (transcript.trim()) {
-            setUserResponse(transcript);
-          } else {
-            Alert.alert('No Speech Detected', 'Please try speaking again.');
-          }
-        } catch (err) {
-          Alert.alert('Transcription Error', err.message || 'Failed to transcribe audio');
-        } finally {
-          setIsTranscribing(false);
+  const handleTranscriptComplete = useCallback(
+    async (value) => {
+      const sttText = typeof value === 'string' ? value : value?.text;
+      const sttMeta = typeof value === 'object' && value ? value.meta : null;
+      const normalized = (sttText || '').trim();
+      if (!normalized) return;
+      setTranscript(normalized);
+      setStatusMessage('Processing…');
+      const goalEval = evaluateGoal(currentTask.id, normalized);
+      setGoalMet(goalEval.met);
+      setGoalHintFi(goalEval.hintFi);
+      if (!goalEval.met) {
+        setError(`Goal unmet. Try again: ${goalEval.hintFi}`);
+      } else {
+        setError(null);
+      }
+      const attemptDuration = recordingStartRef.current
+        ? Date.now() - recordingStartRef.current
+        : 0;
+      setRecordingDuration(attemptDuration);
+      setIsProcessingAttempt(true);
+      try {
+        const result = generateSpeakingTurn({
+          user_transcript: normalized,
+          level: currentTask.level,
+          mode: 'roleplay',
+          user_state: {
+            mode_tag: 'Mode B',
+            target_text: currentTask.prompt,
+            task_id: currentTask.id,
+            task_goal: currentTask.goal,
+            history,
+          },
+        });
+        setAiReply(result.ai_reply_fi);
+        setFeedback(result.feedback);
+        setFeedbackExpanded(false);
+        setDebugInfo((prev) => ({
+          ...prev,
+          sttRequests: prev.sttRequests + 1,
+          lastTranscript: normalized,
+        }));
+        const attemptId = `${Date.now()}-${currentTask.id}-${Math.random().toString(36).slice(2, 8)}`;
+        const attemptRecord = {
+          id: attemptId,
+          user_audio_url: '',
+          transcript: normalized,
+          stt: { text: normalized, meta: sttMeta },
+          target_text: currentTask.prompt,
+          ai_reply_text: result.ai_reply_fi,
+          feedback: result.feedback,
+          level_tag: currentTask.level,
+          mode_tag: 'Mode B',
+          duration_ms: attemptDuration,
+          timestamp: Date.now(),
+          low_confidence_stt: result.flags?.low_confidence_stt ?? false,
+          needs_practice:
+            result.level_adjustment === 'down' || result.flags?.low_confidence_stt,
+          audio_duration_ms: attemptDuration,
+          recording_state: 'complete',
+          task_id: currentTask.id,
+          task_goal: currentTask.goal,
+          goal_met: goalEval.met,
+          remediation_required: !goalEval.met,
+          remediation_hint_fi: goalEval.met ? '' : goalEval.hintFi,
+        };
+        await persistAttempt(attemptRecord);
+        if (result.ai_reply_fi) {
+          await playAiReply(result.ai_reply_fi);
         }
+        if (!goalEval.met && goalEval.hintFi) {
+          await playAiReply(`Yritä uudestaan. ${goalEval.hintFi}`);
+        }
+        setStatusMessage('Playing AI voice…');
+      } catch (err) {
+        const message = err?.message || 'Palvelinvirhe';
+        setError(message);
+        setDebugInfo((prev) => ({ ...prev, errorLog: message }));
+        setStatusMessage('Error');
+      } finally {
+        setIsProcessingAttempt(false);
+        setTimeout(() => setStatusMessage('Hold to talk'), 400);
       }
-    } catch (err) {
-      Alert.alert('Recording Error', err.message || 'Failed to stop recording');
-      setIsTranscribing(false);
-    }
+    },
+    [currentTask, history, persistAttempt, playAiReply],
+  );
+
+  const { startRecording, stopRecording, isRecording } = useVoiceStreaming({
+    onStateChange: handleVoiceState,
+    onTranscriptComplete: handleTranscriptComplete,
+    vadSilenceThreshold: 2200,
+  });
+
+  const handleRecordStart = () => {
+    recordingStartRef.current = Date.now();
+    startRecording?.();
+    setDebugInfo((prev) => ({ ...prev, recordingState: 'recording' }));
   };
 
-  const handleEvaluate = async () => {
-    if (!userResponse.trim()) {
-      alert('Please provide a response first');
+  const handleRecordEnd = () => {
+    stopRecording?.();
+    setDebugInfo((prev) => ({ ...prev, recordingState: 'processing' }));
+  };
+
+  useEffect(() => {
+    if (isRecording) {
+      recordingTimerRef.current = setInterval(() => {
+        if (recordingStartRef.current) {
+          setRecordingDuration(Date.now() - recordingStartRef.current);
+        }
+      }, 200);
+    } else if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, [isRecording]);
+
+  const filteredHistory = useMemo(
+    () => history.filter((attempt) => attempt.mode_tag === 'Mode B'),
+    [history],
+  );
+
+  useEffect(() => {
+    setDebugEntries([
+      { label: 'Mic', value: micPermission },
+      { label: 'Record', value: debugInfo.recordingState },
+      { label: 'STT', value: `${debugInfo.sttRequests}` },
+      { label: 'TTS', value: `${debugInfo.ttsRequests}` },
+      { label: 'Last transcript', value: debugInfo.lastTranscript || '—' },
+      { label: 'Last reply', value: debugInfo.lastReply || '—' },
+      { label: 'Playback', value: debugInfo.playbackState },
+      { label: 'Errors', value: debugInfo.errorLog || 'none' },
+    ]);
+  }, [micPermission, debugInfo]);
+
+  const nextTask = () => {
+    if (goalMet === false) {
+      setError('Goal not met — complete the remediation turn first.');
       return;
     }
-
-    try {
-      setIsEvaluating(true);
-      const response = await evaluateRoleplay(activeField, userResponse);
-      setEvaluation(response);
-      setUpgradeReason(null);
-    } catch (err) {
-      console.error('Error evaluating roleplay:', err);
-      if (err?.message?.includes('Upgrade required')) {
-        setUpgradeReason(err.message);
-      }
-      alert(err.message || 'Failed to evaluate response');
-    } finally {
-      setIsEvaluating(false);
-    }
+    setTaskIndex((prev) => (prev + 1) % TASKS.length);
+    setTranscript('');
+    setAiReply('');
+    setFeedback(null);
+    setFeedbackExpanded(false);
+    setGoalMet(null);
+    setGoalHintFi('');
   };
 
-  const handleReset = () => {
-    setUserResponse('');
-    setEvaluation(null);
-  };
-
-  if (isLoading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0A3D62" />
-        <Text style={styles.loadingText}>Loading roleplay scenario...</Text>
-      </View>
-    );
-  }
-
-  if (error || !scenario) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{error || 'Scenario not found'}</Text>
-        {upgradeReason && (
-          <UpgradeNotice
-            reason={upgradeReason}
-            onPress={() => navigation.navigate('Subscription')}
-          />
-        )}
-        <TouchableOpacity style={styles.retryButton} onPress={loadScenario}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const renderWaveform = () => (
+    <View style={styles.waveform}>
+      {waveformHeights.map((height, index) => (
+        <View key={`${height}-${index}`} style={[styles.waveformBar, { height }]} />
+      ))}
+    </View>
+  );
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Roleplay: {scenario.title}</Text>
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.scenarioSection}>
-          <Text style={styles.sectionTitle}>Scenario</Text>
-          <View style={styles.promptContainer}>
-            <Text style={styles.promptText}>{scenario.roleplay_prompt}</Text>
-          </View>
+    <Background>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Roleplay Conversation</Text>
+          <Text style={styles.subtitle}>{currentTask.title}</Text>
+          <Text style={styles.prompt}>{currentTask.prompt}</Text>
+          <Text style={styles.goal}>Goal: {currentTask.goal}</Text>
+          {goalMet === false ? (
+            <Text style={styles.goalWarning}>Goal unmet · remediation required</Text>
+          ) : goalMet === true ? (
+            <Text style={styles.goalOk}>Goal met ✓</Text>
+          ) : null}
         </View>
 
-        {scenario.key_phrases && scenario.key_phrases.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Key Phrases to Use</Text>
-            <View style={styles.phrasesContainer}>
-              {scenario.key_phrases.map((phrase, idx) => (
-                <View key={idx} style={styles.phraseChip}>
-                  <Text style={styles.phraseText}>{phrase}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
+        <View style={styles.statusRow}>
+          <Text style={[styles.statusLabel, { color: colors.primary }]}>Status</Text>
+          <Text style={styles.statusMessage}>{statusMessage}</Text>
+          <Text style={styles.statusLabel}>Mic {micPermission}</Text>
+        </View>
 
-        {scenario.grammar_tip && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Grammar Tip</Text>
-            <View style={styles.tipContainer}>
-              <Text style={styles.tipText}>{scenario.grammar_tip}</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.responseSection}>
-          <Text style={styles.sectionTitle}>Your Response</Text>
-          <View style={styles.audioInputContainer}>
-            <MicButton 
-              onPressIn={handleMicPressIn} 
-              onPressOut={handleMicPressOut} 
-              disabled={isEvaluating || isTranscribing}
-            />
-            {isTranscribing && (
-              <Text style={styles.transcribingText}>Transcribing...</Text>
-            )}
-          </View>
-          <TextInput
-            style={styles.textInput}
-            value={userResponse}
-            onChangeText={setUserResponse}
-            placeholder="Type or speak your response in Finnish..."
-            multiline
-            numberOfLines={4}
-            editable={!isTranscribing}
+        <View style={styles.recorder}>
+          <Text style={styles.hintText}>Hold to talk · release to submit</Text>
+          <MicButton
+            onPressIn={handleRecordStart}
+            onPressOut={handleRecordEnd}
+            isActive={isRecording}
+            disabled={isProcessingAttempt}
           />
+          <Text style={styles.timerText}>{formatDuration(recordingDuration)}</Text>
+          {renderWaveform()}
         </View>
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.evaluateButton, (!userResponse.trim() || isEvaluating || isTranscribing) && styles.buttonDisabled]}
-            onPress={handleEvaluate}
-            disabled={!userResponse.trim() || isEvaluating || isTranscribing}
-          >
-            {isEvaluating ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.evaluateButtonText}>Evaluate Response</Text>
-            )}
-          </TouchableOpacity>
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Transcript</Text>
+          <Text style={styles.panelText}>{transcript || 'Record to see the transcript.'}</Text>
+        </View>
 
-          {evaluation && (
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>AI reply</Text>
+          <Text style={styles.panelText}>{aiReply || 'AI reply will show here.'}</Text>
+          {aiReply ? (
             <TouchableOpacity
-              style={styles.resetButton}
-              onPress={handleReset}
+              style={styles.replayButton}
+              onPress={() => playAiReply(aiReply)}
             >
-              <Text style={styles.resetButtonText}>Try Again</Text>
+              <Text style={styles.replayLabel}>Replay AI voice</Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
 
-        {evaluation && (
-          <View style={styles.evaluationSection}>
-            <Text style={styles.sectionTitle}>Evaluation Results</Text>
-            
-            <View style={styles.scoresContainer}>
-              <View style={styles.scoreItem}>
-                <Text style={styles.scoreLabel}>Coverage</Text>
-                <Text style={styles.scoreValue}>{evaluation.scores?.coverage || 0}/3</Text>
-              </View>
-              <View style={styles.scoreItem}>
-                <Text style={styles.scoreLabel}>Clarity</Text>
-                <Text style={styles.scoreValue}>{evaluation.scores?.clarity || 0}/3</Text>
-              </View>
-              <View style={styles.scoreItem}>
-                <Text style={styles.scoreLabel}>Politeness</Text>
-                <Text style={styles.scoreValue}>{evaluation.scores?.politeness || 0}/1</Text>
-              </View>
-              <View style={[styles.scoreItem, styles.totalScore]}>
-                <Text style={styles.scoreLabel}>Total</Text>
-                <Text style={styles.scoreValue}>{evaluation.scores?.total || 0}/5</Text>
-              </View>
+        <View style={styles.feedbackPanel}>
+          <Text style={styles.panelTitle}>Feedback Rubric</Text>
+          {formatFeedback(feedback)}
+          {feedback ? (
+            <>
+              <TouchableOpacity
+                style={styles.whyButton}
+                onPress={() => setFeedbackExpanded((prev) => !prev)}
+              >
+                <Text style={styles.replayLabel}>
+                  {feedbackExpanded ? 'Hide' : 'Why this feedback?'} (
+                  {getRubricLabel(normalizeRubricDimension(feedback.dimension))})
+                </Text>
+              </TouchableOpacity>
+              {feedbackExpanded ? (
+                <Text style={styles.feedbackText}>
+                  {getRubricExplanation(feedback.dimension)}
+                </Text>
+              ) : null}
+            </>
+          ) : null}
+          {!goalMet && goalHintFi ? (
+            <Text style={styles.feedbackText}>Remediation: {goalHintFi}</Text>
+          ) : null}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.nextButton, goalMet === false && styles.nextButtonDisabled]}
+          onPress={nextTask}
+          disabled={goalMet === false}
+        >
+          <Text style={styles.nextButtonText}>Next roleplay</Text>
+        </TouchableOpacity>
+
+        <View style={styles.historyHeader}>
+          <Text style={styles.panelTitle}>Attempts (Mode B)</Text>
+        </View>
+        <FlatList
+          data={filteredHistory}
+          keyExtractor={(item) => item.id}
+          style={styles.historyList}
+          ListEmptyComponent={() => (
+            <Text style={styles.panelText}>No attempts saved yet.</Text>
+          )}
+          renderItem={({ item }) => (
+            <View style={styles.historyRow}>
+              <Text style={styles.historyTitle}>{item.transcript}</Text>
+              <Text style={styles.historyMeta}>
+                {new Date(item.timestamp).toLocaleString()}
+              </Text>
+              <Text style={styles.historyMeta}>
+                Duration: {formatDuration(item.duration_ms)} · Level {item.level_tag}
+              </Text>
             </View>
+          )}
+        />
 
-            {evaluation.feedback && evaluation.feedback.length > 0 && (
-              <View style={styles.feedbackContainer}>
-                <Text style={styles.feedbackTitle}>Feedback:</Text>
-                {evaluation.feedback.map((item, idx) => (
-                  <View key={idx} style={styles.feedbackItem}>
-                    <Text style={styles.feedbackBullet}>•</Text>
-                    <Text style={styles.feedbackText}>{item}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {evaluation.missing_phrases && evaluation.missing_phrases.length > 0 && (
-              <View style={styles.missingContainer}>
-                <Text style={styles.missingTitle}>Missing Key Phrases:</Text>
-                <View style={styles.missingPhrases}>
-                  {evaluation.missing_phrases.map((phrase, idx) => (
-                    <View key={idx} style={styles.missingChip}>
-                      <Text style={styles.missingText}>{phrase}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
+        {isProcessingAttempt && (
+          <View style={styles.overlay}>
+            <ActivityIndicator size="large" color="#fff" />
+            <Text style={styles.overlayText}>Saving & evaluating…</Text>
           </View>
         )}
+
+        <SpeakingDebugPanel entries={debugEntries} visible={__DEV__} />
       </View>
-    </ScrollView>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+    padding: spacing.medium,
   },
   header: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  backButton: {
-    marginBottom: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#0A3D62',
-    fontWeight: '600',
+    marginBottom: spacing.medium,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#0A3D62',
+    color: colors.white,
   },
-  content: {
-    padding: 20,
-  },
-  scenarioSection: {
-    marginBottom: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 12,
-  },
-  promptContainer: {
-    backgroundColor: '#f1f5f9',
-    padding: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#0A3D62',
-  },
-  promptText: {
+  subtitle: {
     fontSize: 16,
-    color: '#1e293b',
-    lineHeight: 24,
+    marginTop: spacing.small,
+    color: colors.surface,
   },
-  phrasesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  prompt: {
+    fontSize: 15,
+    color: colors.surface,
+    marginTop: spacing.small,
   },
-  phraseChip: {
-    backgroundColor: '#eef2ff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-  },
-  phraseText: {
+  goal: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#0A3D62',
+    color: '#b2b6c0',
   },
-  tipContainer: {
-    backgroundColor: '#fef3c7',
-    padding: 16,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#F6C400',
+  goalWarning: {
+    marginTop: spacing.xsmall,
+    color: '#ff6b6b',
+    fontSize: 13,
   },
-  tipText: {
-    fontSize: 14,
-    color: '#1e293b',
-    lineHeight: 20,
-  },
-  responseSection: {
-    marginBottom: 24,
-  },
-  audioInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  transcribingText: {
-    fontSize: 14,
-    color: '#64748b',
-    fontStyle: 'italic',
-  },
-  textInput: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    minHeight: 100,
-    textAlignVertical: 'top',
-    backgroundColor: '#fff',
-  },
-  buttonContainer: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  evaluateButton: {
-    backgroundColor: '#0A3D62',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#cbd5e1',
-  },
-  evaluateButtonText: {
-    color: '#fff',
-    fontSize: 18,
+  goalOk: {
+    marginTop: spacing.xsmall,
+    color: '#8ac926',
+    fontSize: 13,
     fontWeight: '600',
   },
-  resetButton: {
-    backgroundColor: '#64748b',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  resetButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  evaluationSection: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  scoresContainer: {
+  statusRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 20,
-  },
-  scoreItem: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#f1f5f9',
-    padding: 16,
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    marginBottom: spacing.small,
     alignItems: 'center',
   },
-  totalScore: {
-    backgroundColor: '#eef2ff',
-    borderWidth: 2,
-    borderColor: '#0A3D62',
-  },
-  scoreLabel: {
+  statusLabel: {
     fontSize: 12,
-    color: '#64748b',
-    marginBottom: 4,
+    color: colors.primary,
     textTransform: 'uppercase',
-    fontWeight: '600',
+    letterSpacing: 0.5,
   },
-  scoreValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#0A3D62',
-  },
-  feedbackContainer: {
-    marginBottom: 16,
-  },
-  feedbackTitle: {
+  statusMessage: {
+    color: colors.surface,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 12,
   },
-  feedbackItem: {
+  recorder: {
+    alignItems: 'center',
+    marginBottom: spacing.small,
+  },
+  hintText: {
+    color: '#9ea3b7',
+    marginBottom: spacing.small,
+  },
+  timerText: {
+    marginTop: spacing.small,
+    color: colors.surface,
+  },
+  waveform: {
     flexDirection: 'row',
-    marginBottom: 8,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    marginTop: spacing.small,
   },
-  feedbackBullet: {
-    fontSize: 16,
-    color: '#0A3D62',
-    marginRight: 8,
+  waveformBar: {
+    width: 6,
+    marginHorizontal: 2,
+    backgroundColor: '#ffffff55',
+    borderRadius: 3,
+  },
+  panel: {
+    backgroundColor: '#1E1B25',
+    borderRadius: 14,
+    padding: spacing.medium,
+    marginVertical: spacing.small,
+  },
+  panelTitle: {
+    fontSize: 12,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xsmall,
+    letterSpacing: 0.5,
+  },
+  panelText: {
+    color: colors.surface,
+  },
+  feedbackPanel: {
+    backgroundColor: '#11141d',
+    borderRadius: 14,
+    padding: spacing.medium,
   },
   feedbackText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#1e293b',
-    lineHeight: 20,
+    color: colors.surface,
+    marginTop: spacing.xsmall,
   },
-  missingContainer: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-  },
-  missingTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#dc2626',
-    marginBottom: 12,
-  },
-  missingPhrases: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  missingChip: {
-    backgroundColor: '#fef2f2',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+  replayButton: {
+    marginTop: spacing.small,
+    paddingVertical: spacing.xsmall,
+    paddingHorizontal: spacing.small,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#dc2626',
+    borderColor: colors.primary,
+    alignSelf: 'flex-start',
   },
-  missingText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#dc2626',
+  replayLabel: {
+    color: colors.primary,
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#64748b',
+  whyButton: {
+    marginTop: spacing.small,
+    paddingVertical: spacing.xsmall,
+    paddingHorizontal: spacing.small,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignSelf: 'flex-start',
   },
-  errorText: {
-    fontSize: 16,
-    color: '#dc2626',
-    marginBottom: 16,
-    textAlign: 'center',
+  nextButton: {
+    marginTop: spacing.small,
+    paddingVertical: spacing.small,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
   },
-  retryButton: {
-    backgroundColor: '#0A3D62',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  nextButtonDisabled: {
+    opacity: 0.5,
   },
-  retryButtonText: {
+  nextButtonText: {
     color: '#fff',
-    fontSize: 16,
+  },
+  historyHeader: {
+    marginTop: spacing.small,
+    marginBottom: spacing.xsmall,
+  },
+  historyList: {
+    flexGrow: 0,
+    maxHeight: 180,
+  },
+  historyRow: {
+    backgroundColor: '#171820',
+    borderRadius: 12,
+    padding: spacing.small,
+    marginBottom: spacing.xsmall,
+  },
+  historyTitle: {
+    color: colors.surface,
     fontWeight: '600',
+  },
+  historyMeta: {
+    color: '#777',
+    fontSize: 12,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overlayText: {
+    marginTop: spacing.small,
+    color: '#fff',
   },
 });

@@ -1,53 +1,81 @@
-// Starfield layer (Skia-based). If Skia not present, falls back to empty view.
+// Starfield - Parallax star layer behind aurora
 import React, { useMemo } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Dimensions, Platform, View } from 'react-native';
 
-let SkiaAvailable = false;
-let Canvas, Circle, useFrame, useValue;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-try {
-  const skia = require('@shopify/react-native-skia');
-  Canvas = skia.Canvas;
-  Circle = skia.Circle;
-  useFrame = skia.useFrame;
-  useValue = skia.useValue;
-  SkiaAvailable = true;
-} catch (e) {
-  SkiaAvailable = false;
+// Skia doesn't work on web
+let Canvas, Circle, useFrame;
+if (Platform.OS !== 'web') {
+  try {
+    const skia = require('@shopify/react-native-skia');
+    Canvas = skia.Canvas;
+    Circle = skia.Circle;
+    useFrame = skia.useFrame;
+  } catch (e) {
+    // Skia not available
+  }
 }
 
-export default function Starfield({ count = 220 }) {
-  const { width, height } = useWindowDimensions();
-  const stars = useMemo(() => {
-    return Array.from({ length: count }).map((_, i) => ({
-      id: i,
-      x: Math.random() * width,
-      y: Math.random() * height,
-      size: 0.6 + Math.random() * 1.2,
-      brightness: 0.4 + Math.random() * 0.6,
-      parallaxDepth: 0.2 + Math.random() * 0.8,
-      twinkleRate: 0.5 + Math.random() * 1.2,
-    }));
-  }, [count, width, height]);
-
-  if (!SkiaAvailable || !Canvas || !useValue) {
-    return <View pointerEvents="none" style={StyleSheet.absoluteFill} />;
+/**
+ * Starfield with 200-300 micro-stars
+ * Slow parallax drifting, occasional twinkle
+ */
+export default function Starfield({ starCount = 250 }) {
+  // On web, return empty view (Skia not supported)
+  if (Platform.OS === 'web' || !Canvas || !Circle || !useFrame) {
+    return <View style={styles.canvas} />;
   }
 
-  const t = useValue(0);
-  useFrame((_c, elapsed) => {
-    t.current = elapsed / 1000;
+  const stars = useMemo(() => {
+    return Array.from({ length: starCount }).map((_, i) => ({
+      id: i,
+      x: Math.random() * SCREEN_WIDTH,
+      y: Math.random() * SCREEN_HEIGHT,
+      size: Math.random() * 1.2 + 0.6, // 0.6-1.8px
+      brightness: Math.random() * 0.6 + 0.4, // 0.4-1.0
+      parallaxDepth: Math.random() * 0.8 + 0.2, // 0.2-1.0
+      twinkleRate: Math.random() * 0.02 + 0.01, // 0.01-0.03
+    }));
+  }, [starCount]);
+
+  useFrame(({ time }) => {
+    stars.forEach(star => {
+      // Parallax drift
+      star.x += 0.005 * star.parallaxDepth;
+      
+      // Wrap when passing edge
+      if (star.x > SCREEN_WIDTH) {
+        star.x = 0;
+      }
+      
+      // Twinkle animation
+      const twinkle = Math.sin(time * star.twinkleRate) * 0.12;
+      star.currentBrightness = star.brightness + twinkle;
+    });
   });
 
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <Canvas style={StyleSheet.absoluteFill}>
-        {stars.map((s) => {
-          const x = (s.x + t.current * 0.005 * s.parallaxDepth * width) % width;
-          const opacity = s.brightness + Math.sin(t.current * s.twinkleRate) * 0.12;
-          return <Circle key={s.id} cx={x} cy={s.y} r={s.size} color={`rgba(255,255,255,${opacity})`} />;
-        })}
-      </Canvas>
-    </View>
+    <Canvas style={styles.canvas}>
+      {stars.map(star => (
+        <Circle
+          key={star.id}
+          cx={star.x}
+          cy={star.y}
+          r={star.size}
+          color={`rgba(255, 255, 255, ${star.currentBrightness || star.brightness})`}
+        />
+      ))}
+    </Canvas>
   );
 }
+
+const styles = StyleSheet.create({
+  canvas: {
+    position: 'absolute',
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    zIndex: -2,
+    pointerEvents: 'none',
+  },
+});

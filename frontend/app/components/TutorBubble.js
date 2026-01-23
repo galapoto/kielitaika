@@ -11,7 +11,7 @@ import { spacing } from '../styles/spacing';
 import { typography } from '../styles/typography';
 import { useBubbleAppear } from '../hooks/conversationMotion/useBubbleAppear';
 
-export default function TutorBubble({
+function TutorBubble({
   message,
   maskedMessage,
   supportLevel,
@@ -23,13 +23,8 @@ export default function TutorBubble({
   const slideInStyle = useBubbleAppear({ type: 'tutor' });
   const typingStyle = useTypingIndicatorAnimation();
   const leftGlow = useAnimatedStyle(() => {
-    const animatedColor = interpolateColor(
-      Math.random(), // subtle random hue per render
-      [0, 1],
-      [colors.mintSoft, colors.blueMain]
-    );
     return {
-      backgroundColor: animatedColor,
+      backgroundColor: colors.blueMain,
     };
   });
   const [showFull, setShowFull] = useState(false);
@@ -48,12 +43,16 @@ export default function TutorBubble({
 
   const dynamicStyles = StyleSheet.create({
     container: {
-      backgroundColor: colors.blueMain,
+      backgroundColor: 'rgba(16, 22, 40, 0.78)',
       padding: spacing.m,
       borderRadius: radius.l,
       marginVertical: spacing.s,
       alignSelf: 'flex-start',
       maxWidth: '85%',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.12)',
+      overflow: 'hidden',
+      position: 'relative',
       ...shadows.s,
     },
     header: {
@@ -77,7 +76,7 @@ export default function TutorBubble({
       opacity: 0.8,
     },
     supportBadge: {
-      backgroundColor: colors.mintSoft,
+      backgroundColor: colors.whiteSoft,
       paddingHorizontal: spacing.s,
       paddingVertical: spacing.xs,
       borderRadius: radius.s,
@@ -85,7 +84,7 @@ export default function TutorBubble({
     supportText: {
       ...typography.micro,
       fontWeight: '600',
-      color: themeColors.primary,
+      color: colors.white,
     },
     messageContainer: {
       marginBottom: spacing.s,
@@ -118,10 +117,10 @@ export default function TutorBubble({
     fullTextContainer: {
       marginTop: spacing.s,
       padding: spacing.s,
-      backgroundColor: colors.white + '20',
+      backgroundColor: 'rgba(255,255,255,0.08)',
       borderRadius: radius.s,
       borderLeftWidth: 3,
-      borderLeftColor: colors.mintSoft,
+      borderLeftColor: colors.blueMain,
     },
     fullTextLabel: {
       ...typography.micro,
@@ -162,10 +161,15 @@ export default function TutorBubble({
   });
 
   return (
-    <AnimatedView style={[dynamicStyles.container, slideInStyle]}>
+    <AnimatedView 
+      style={[dynamicStyles.container, slideInStyle]}
+      accessibilityRole="text"
+      accessibilityLabel={`Tutor message: ${displayText}${grammar && grammar.mistakes && grammar.mistakes.length > 0 ? `. ${grammar.mistakes.length} grammar note${grammar.mistakes.length > 1 ? 's' : ''} available.` : ''}`}
+      testID="tutor-bubble"
+    >
       <Animated.View style={[dynamicStyles.leftAccent, leftGlow]} />
       <View style={dynamicStyles.header}>
-        <Text style={dynamicStyles.name}>SuomiTutor</Text>
+        <Text style={dynamicStyles.name} accessibilityRole="text" accessibilityLabel="Suomi Tutor">SuomiTutor</Text>
         {supportLevel !== undefined && supportLevel > 0 && (
           <View style={dynamicStyles.supportBadge}>
             <Text style={dynamicStyles.supportText}>
@@ -189,6 +193,9 @@ export default function TutorBubble({
               <TouchableOpacity
                 style={dynamicStyles.toggleButton}
                 onPress={() => setShowFull(!showFull)}
+                accessibilityRole="button"
+                accessibilityLabel={showFull ? "Show masked text" : "Show full text"}
+                accessibilityHint="Toggle between masked and full text view"
               >
                 <Text style={dynamicStyles.toggleText}>
                   {showFull ? 'Show masked' : 'Show full text'}
@@ -221,3 +228,5 @@ export default function TutorBubble({
     </AnimatedView>
   );
 }
+
+export default React.memo(TutorBubble);

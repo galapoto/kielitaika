@@ -1,58 +1,69 @@
-// AuroraRipple: simplified ripple overlay; replace with Skia shader when available.
-import React, { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  interpolate,
-  interpolateColor,
-  Easing,
-} from 'react-native-reanimated';
+// AuroraRipple - Electromagnetic ripple layer for aurora scene
+import React from 'react';
+import { StyleSheet, Platform, View } from 'react-native';
+
+// Skia doesn't work on web
+let Canvas, Rect, Shader, useClockValue;
+if (Platform.OS !== 'web') {
+  try {
+    const skia = require('@shopify/react-native-skia');
+    Canvas = skia.Canvas;
+    Rect = skia.Rect;
+    Shader = skia.Shader;
+    useClockValue = skia.useClockValue;
+  } catch (e) {
+    // Skia not available
+  }
+}
 
 /**
- * Props:
- *  - intensity: 0-1
- *  - emotion: 'calm' | 'confident' | 'unsure' | 'overloaded'
+ * Aurora physics ripple using Skia shader
+ * Creates vertical gradient bands with sine-based electromagnetic ripple
  */
-export default function AuroraRipple({ intensity = 0.3, emotion = 'calm', wave = 0 }) {
-  const time = useSharedValue(0);
-  const waveShared = useSharedValue(wave);
+export default function AuroraRipple({ intensity = 1.0, height, width }) {
+  // On web, return empty view (Skia not supported)
+  if (Platform.OS === 'web' || !Canvas || !Rect || !Shader || !useClockValue) {
+    return <View style={[styles.canvas, { width, height }]} />;
+  }
 
-  useEffect(() => {
-    time.value = withRepeat(withTiming(1, { duration: 8000, easing: Easing.linear }), -1, false);
-  }, [time]);
+  const t = useClockValue();
 
-  useEffect(() => {
-    waveShared.value = wave;
-  }, [wave, waveShared]);
+  return (
+    <Canvas style={[styles.canvas, { width, height }]}>
+      <Rect x={0} y={0} width={width} height={height}>
+        <Shader
+          source={`
+            uniform float2 resolution;
+            uniform float u_time;
+            uniform float u_intensity;
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(time.value, [0, 0.5, 1], [-30, 20, -30]);
-    const translateX = interpolate(time.value, [0, 1], [-40, 40]);
-    const baseOpacity =
-      interpolate(time.value, [0, 0.5, 1], [0.05, 0.22, 0.05]) * intensity +
-      waveShared.value * 0.1;
-    const emoValue =
-      emotion === 'confident' ? 1 : emotion === 'unsure' ? 0.4 : emotion === 'overloaded' ? 0.2 : 0;
-    const tint = interpolateColor(
-      emoValue,
-      [0, 1],
-      ['rgba(100,255,230,0.1)', 'rgba(120,255,255,0.25)']
-    );
-    return {
-      opacity: baseOpacity,
-      backgroundColor: tint,
-      transform: [{ translateY }, { translateX }, { translateY: waveShared.value * 8 }],
-    };
-  });
-
-  return <Animated.View pointerEvents="none" style={[styles.overlay, animatedStyle]} />;
+            half4 main(vec2 pos) {
+              float ripple = sin(pos.y * 0.04 + u_time * 0.6) 
+                           + sin(pos.y * 0.07 + u_time * 0.9) * 0.5;
+              
+              float shift = ripple * u_intensity * 0.15;
+              
+              float g = smoothstep(0.0, 1.0, pos.y / resolution.y);
+              float aurora = g + shift;
+              
+              return half4(0.1, aurora, 0.75, 0.22);
+            }
+          `}
+          uniforms={{
+            resolution: [width || 400, height || 800],
+            u_time: t.current,
+            u_intensity: intensity,
+          }}
+        />
+      </Rect>
+    </Canvas>
+  );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
+  canvas: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
 });

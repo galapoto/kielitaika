@@ -1,38 +1,93 @@
-// Frost edge animation placeholder (non-Skia shader fallback).
-import React, { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-  withSequence,
-  Easing,
-} from 'react-native-reanimated';
+// FrostEdges - Mystical frost growth on screen edges during story unlocks
+import React from 'react';
+import { StyleSheet, Dimensions, Platform, View } from 'react-native';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Skia doesn't work on web
+let Canvas, Rect, Shader, useClockValue;
+if (Platform.OS !== 'web') {
+  try {
+    const skia = require('@shopify/react-native-skia');
+    Canvas = skia.Canvas;
+    Rect = skia.Rect;
+    Shader = skia.Shader;
+    useClockValue = skia.useClockValue;
+  } catch (e) {
+    // Skia not available
+  }
+}
 
 /**
- * Props:
- *  - growth: 0-1
+ * Frost edge animation using fractal noise shader
+ * Grows on screen edges during story mode unlocks
  */
-export default function FrostEdges({ growth = 0 }) {
-  const shimmer = useSharedValue(0);
+export default function FrostEdges({ growth = 0, enabled = false }) {
+  if (!enabled || growth <= 0) return null;
 
-  useEffect(() => {
-    shimmer.value = withRepeat(withSequence(withTiming(1, { duration: 1200 }), withTiming(0, { duration: 1200 })), -1);
-  }, [shimmer]);
+  // On web, return empty view (Skia not supported)
+  if (Platform.OS === 'web' || !Canvas || !Rect || !Shader || !useClockValue) {
+    return <View style={styles.canvas} />;
+  }
 
-  const frostStyle = useAnimatedStyle(() => ({
-    opacity: growth * 0.35 + shimmer.value * 0.05,
-    backgroundColor: 'rgba(200,230,255,0.2)',
-  }));
+  const t = useClockValue();
 
-  return <Animated.View pointerEvents="none" style={[styles.overlay, frostStyle]} />;
+  return (
+    <Canvas style={styles.canvas}>
+      <Rect x={0} y={0} width={SCREEN_WIDTH} height={SCREEN_HEIGHT}>
+        <Shader
+          source={`
+            uniform float2 resolution;
+            uniform float u_time;
+            uniform float u_growth;
+
+            // Simple noise function
+            float noise(vec2 p) {
+              return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+            }
+
+            // Fractal Brownian Motion
+            float fbm(vec2 pos) {
+              float value = 0.0;
+              float amplitude = 0.5;
+              for(int i = 0; i < 4; i++) {
+                value += amplitude * noise(pos);
+                pos *= 2.0;
+                amplitude *= 0.5;
+              }
+              return value;
+            }
+
+            half4 main(vec2 pos) {
+              float edge = min(
+                min(pos.x, resolution.x - pos.x),
+                min(pos.y, resolution.y - pos.y)
+              );
+              
+              float noise = fbm(pos * 0.02 + u_time * 0.1);
+              float frost = smoothstep(50.0, 0.0, edge - noise * 20.0);
+              frost *= u_growth;
+              
+              return half4(0.8, 0.9, 1.0, frost * 0.35);
+            }
+          `}
+          uniforms={{
+            resolution: [SCREEN_WIDTH, SCREEN_HEIGHT],
+            u_time: t.current,
+            u_growth: growth,
+          }}
+        />
+      </Rect>
+    </Canvas>
+  );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 8,
-    borderColor: 'rgba(210,230,255,0.3)',
+  canvas: {
+    position: 'absolute',
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    pointerEvents: 'none',
+    zIndex: 10,
   },
 });

@@ -8,8 +8,6 @@ import SectionHeader from '../components/core/SectionHeader';
 import { colors } from '../styles/colors';
 import { spacing } from '../styles/spacing';
 
-
-const defaultCertificateBackground = require('../../assets/backgrounds/revontuli.png');
 const onDark = '#E6F2FF';
 const onDarkMuted = '#BFD7E8';
 

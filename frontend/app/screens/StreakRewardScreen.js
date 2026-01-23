@@ -3,15 +3,18 @@ import { View, Text, StyleSheet } from 'react-native';
 import AnimatedCTA from '../components/AnimatedCTA';
 import StreakFlame from '../components/StreakFlame';
 import XPBadge from '../components/XPBadge';
+import { RukaCard, RukaButton } from '../ui';
+import { IconPlay } from '../ui/icons/IconPack';
 
-export default function StreakRewardScreen({ navigation, route }) {
+export default function StreakRewardScreen({ navigation, route } = {}) {
   const { streak = 0, xp = 0 } = route?.params || {};
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>You're on fire!</Text>
-      <StreakFlame streakCount={streak} />
-      <XPBadge xp={xp} />
-      <AnimatedCTA label="Back to Home" onPress={() => navigation.navigate('Home')} />
+      <RukaCard title="You're on fire!" subtitle={`Streak: ${streak} • XP: ${xp}`} icon={IconPlay} style={{ width: '100%', alignItems: 'center', gap: 16 }}>
+        <StreakFlame streakCount={streak} />
+        <XPBadge xp={xp} />
+      </RukaCard>
+      <RukaButton title="Back to Home" onPress={() => navigation.navigate('Home')} icon={IconPlay} />
     </View>
   );
 }

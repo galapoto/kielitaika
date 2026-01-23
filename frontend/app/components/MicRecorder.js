@@ -1,21 +1,26 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { TouchableOpacity, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import useWebSocket from '../hooks/useWebSocket';
-import useRecorder from '../hooks/useRecorder';
-import { HTTP_API_BASE, WS_API_BASE } from '../config/backend';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
+import { handleSTTFailure, handleNetworkError, handlePermissionError, handleEmptyRecording, YKIError, YKIErrorType } from '../services/ykiErrorService';
+
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
 const hasMediaRecorder =
   typeof window !== 'undefined' &&
   typeof MediaRecorder !== 'undefined' &&
   typeof navigator !== 'undefined' &&
   navigator?.mediaDevices?.getUserMedia;
+const isWeb = Platform.OS === 'web';
 
-export default function MicRecorder({ onTranscript }) {
+export default function MicRecorder({ onTranscript, minSeconds = 0 }) {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [errorText, setErrorText] = useState('');
   const transcriptRef = useRef('');
+  const { startRecording: startNativeRecording, stopRecording: stopNativeRecording } = useAudioRecorder();
+
   const handleWsMessage = useCallback(
     (data) => {
       if (typeof data === 'string') {
@@ -38,14 +43,6 @@ export default function MicRecorder({ onTranscript }) {
     handleWsError,
     { autoReconnect: true, maxRetries: 3, retryDelayMs: 400 }
   );
-  const {
-    isRecording: fallbackRecording,
-    audioBlob: fallbackAudioBlob,
-    audioUrl: fallbackAudioUrl,
-    startRecording: startFallbackRecording,
-    stopRecording: stopFallbackRecording,
-    error: recorderError,
-  } = useRecorder();
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
@@ -59,14 +56,28 @@ export default function MicRecorder({ onTranscript }) {
   }, [close]);
 
   const startRecording = async () => {
-    // Fallback path: environments without MediaRecorder (or native)
-    if (!hasMediaRecorder) {
-      setIsProcessing(true);
-      setTranscript('');
-      setIsRecording(true);
-      setStatusText('Listening (native)…');
-      await startFallbackRecording();
-      setIsProcessing(false);
+    // Native: Expo recorder (reliable on Android/iOS)
+    if (!isWeb || !hasMediaRecorder) {
+      try {
+        setErrorText('');
+        setTranscript('');
+        setIsProcessing(false);
+        setStatusText('Listening…');
+        setIsRecording(true);
+        await startNativeRecording();
+      } catch (error) {
+        console.error('Error starting native recording:', error);
+        setIsRecording(false);
+        setStatusText('');
+        // Handle permission errors properly
+        const errorMsg = error?.message?.toLowerCase() || '';
+        if (errorMsg.includes('permission') || errorMsg.includes('denied') || errorMsg.includes('access')) {
+          const ykiError = handlePermissionError(error, 'microphone');
+          setErrorText(ykiError.userMessage);
+        } else {
+          setErrorText(error?.message || 'Failed to access microphone. Check permissions.');
+        }
+      }
       return;
     }
 
@@ -112,7 +123,7 @@ export default function MicRecorder({ onTranscript }) {
       };
 
       // Connect to WebSocket STT endpoint
-      const wsUrl = `${WS_API_BASE}/voice/stt-stream`;
+      const wsUrl = API_BASE.replace('http', 'ws') + '/voice/stt-stream';
       transcriptRef.current = '';
       connect(wsUrl);
 
@@ -124,35 +135,46 @@ export default function MicRecorder({ onTranscript }) {
       setStatusText('Listening…');
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('Failed to access microphone. Please check permissions.');
+      // Handle permission errors properly
+      const errorMsg = error?.message?.toLowerCase() || '';
+      if (errorMsg.includes('permission') || errorMsg.includes('denied') || errorMsg.includes('notallowed')) {
+        const ykiError = handlePermissionError(error, 'microphone');
+        setErrorText(ykiError.userMessage);
+      } else {
+        setErrorText('Failed to access microphone. Please check permissions.');
+      }
     }
   };
 
   const stopRecording = async () => {
-    if (!hasMediaRecorder) {
+    // Native: stop + upload the file bytes
+    if (!isWeb || !hasMediaRecorder) {
       setIsRecording(false);
       setIsProcessing(true);
-      setStatusText('Wrapping up recording…');
-      const result = await stopFallbackRecording();
-      const blob = result?.audioBlob || fallbackAudioBlob;
-
-      if (blob) {
-        await sendToAPI(blob);
-      } else if (result?.audioUrl || fallbackAudioUrl) {
-        // Fetch the URI into a blob for upload
-        try {
-          const uri = result?.audioUrl || fallbackAudioUrl;
-          const resp = await fetch(uri);
-          const fetchedBlob = await resp.blob();
-          await sendToAPI(fetchedBlob);
-        } catch (err) {
-          console.error('Failed to fetch native URI', err);
-          setErrorText('Could not upload recording. Please retry.');
+      setStatusText('Processing…');
+      setErrorText('');
+      try {
+        const result = await stopNativeRecording();
+        const uri = typeof result === 'string' ? result : result?.uri;
+        const durationMs = typeof result === 'object' ? (result?.durationMs || 0) : 0;
+        if (!uri) {
+          setErrorText('No recording available. Please try again.');
+          return;
         }
-      } else {
-        setErrorText('No recording available. Please try again.');
+        if (minSeconds && durationMs && durationMs < minSeconds * 1000) {
+          setErrorText(`Recording too short. Speak for at least ${minSeconds}s and try again.`);
+          return;
+        }
+        const resp = await fetch(uri);
+        const blob = await resp.blob();
+        await sendToAPI(blob, uri);
+      } catch (err) {
+        console.error('Native STT failed:', err);
+        setErrorText('STT failed. Please try again.');
+      } finally {
+        setIsProcessing(false);
+        setStatusText('');
       }
-      setIsProcessing(false);
       return;
     }
 
@@ -166,11 +188,18 @@ export default function MicRecorder({ onTranscript }) {
     }
   };
 
-  const sendToAPI = async (audioBlob) => {
+  const sendToAPI = async (audioBlob, uriHint) => {
     try {
-      const response = await fetch(`${HTTP_API_BASE}/voice/stt`, {
+      const audioFormat =
+        typeof uriHint === 'string' && uriHint.includes('.')
+          ? uriHint.split('.').pop()
+          : 'webm';
+      const response = await fetch(`${API_BASE}/voice/stt`, {
         method: 'POST',
-        headers: { 'Content-Type': 'audio/webm' },
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'x-audio-format': audioFormat || 'webm',
+        },
         body: audioBlob,
       });
 
@@ -180,6 +209,15 @@ export default function MicRecorder({ onTranscript }) {
 
       const result = await response.json();
       const text = result?.transcript || '';
+      
+      // Check for empty transcript
+      if (!text || !text.trim()) {
+        const emptyError = handleEmptyRecording();
+        setIsProcessing(false);
+        setErrorText(emptyError.userMessage);
+        return;
+      }
+      
       transcriptRef.current = text;
       setTranscript(text);
       if (onTranscript) {
@@ -189,6 +227,20 @@ export default function MicRecorder({ onTranscript }) {
     } catch (error) {
       console.error('Error sending audio:', error);
       setIsProcessing(false);
+      
+      // Handle different error types
+      let errorMessage = 'STT failed. Please try again.';
+      const errorStr = error?.message?.toLowerCase() || '';
+      
+      if (errorStr.includes('network') || errorStr.includes('connection') || errorStr.includes('fetch')) {
+        const ykiError = handleNetworkError(error, 'STT transcription');
+        errorMessage = ykiError.userMessage;
+      } else {
+        const ykiError = handleSTTFailure(error);
+        errorMessage = ykiError.userMessage;
+      }
+      
+      setErrorText(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -223,14 +275,11 @@ export default function MicRecorder({ onTranscript }) {
       {connectionError && (
         <Text style={styles.connectionErrorText}>Connection issue. Retrying...</Text>
       )}
-      {recorderError && (
-        <Text style={styles.connectionErrorText}>{recorderError}</Text>
-      )}
       {errorText ? <Text style={styles.connectionErrorText}>{errorText}</Text> : null}
       {statusText ? (
         <Text style={styles.statusText}>{statusText}</Text>
       ) : null}
-      {!isRecording && (recorderError || errorText) ? (
+      {!isRecording && errorText ? (
         <TouchableOpacity
           style={styles.retryButton}
           onPress={() => {

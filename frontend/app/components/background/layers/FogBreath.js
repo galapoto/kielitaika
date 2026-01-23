@@ -1,45 +1,92 @@
-import React, { useEffect } from 'react';
-import { Platform, StyleSheet } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
+// FogBreath - Breathing fog layer for forest & lapland scenes
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
   withTiming,
   interpolate,
-  Easing,
+  Easing
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Dimensions } from 'react-native';
 
-export default function FogBreath({ intensity = 1, amplitude = 0 }) {
-  const phase = useSharedValue(0);
-  const amp = useSharedValue(amplitude);
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-  useEffect(() => {
-    phase.value = withRepeat(withTiming(1, { duration: 12000, easing: Easing.inOut(Easing.quad) }), -1, true);
-  }, [phase]);
+/**
+ * Breathing fog that expands and contracts like breath
+ * Drifts slowly horizontally
+ */
+export default function FogBreath() {
+  const scenePhase = useSharedValue(0);
+  const fogOffsetX = useSharedValue(0);
 
-  useEffect(() => {
-    amp.value = amplitude;
-  }, [amplitude, amp]);
+  React.useEffect(() => {
+    // Breathing cycle
+    scenePhase.value = withRepeat(
+      withTiming(1, { duration: 8000, easing: Easing.inOut(Easing.cubic) }),
+      -1,
+      true
+    );
 
-  const fogStyle = useAnimatedStyle(() => {
-    const scale = interpolate(phase.value, [0, 0.5, 1], [1, 1.08, 1]) * intensity;
-    const baseDrift = interpolate(phase.value, [0, 1], [-12, 12]);
-    const push = amp.value * 40;
-    const translateX = baseDrift + push;
-    const webFilter = Platform.OS === 'web' ? `blur(${2 + amp.value * 4}px)` : undefined;
+    // Horizontal drift
+    fogOffsetX.value = withRepeat(
+      withTiming(1, { duration: 20000, easing: Easing.linear }),
+      -1,
+      false
+    );
+  }, [scenePhase, fogOffsetX]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    const fogScale = interpolate(
+      scenePhase.value,
+      [0, 0.5, 1],
+      [1.0, 1.08, 1.0]
+    );
+
+    const offsetX = interpolate(
+      fogOffsetX.value,
+      [0, 1],
+      [-12, 12]
+    );
+
     return {
-      transform: [{ scale }, { translateX }],
-      opacity: 0.18 * intensity,
-      ...(webFilter ? { filter: webFilter } : null),
+      transform: [
+        { scale: fogScale },
+        { translateX: offsetX },
+      ],
     };
   });
 
-  return <Animated.View pointerEvents="none" style={[styles.fog, fogStyle]} />;
+  return (
+    <Animated.View style={[styles.container, animatedStyle]} pointerEvents="none">
+      <LinearGradient
+        colors={[
+          'rgba(255,255,255,0)',
+          'rgba(255,255,255,0.12)',
+          'rgba(255,255,255,0.20)',
+          'rgba(255,255,255,0.12)',
+          'rgba(255,255,255,0)',
+        ]}
+        start={{ x: 0.5, y: 1 }}
+        end={{ x: 0.5, y: 0 }}
+        style={styles.gradient}
+      />
+    </Animated.View>
+  );
 }
 
 const styles = StyleSheet.create({
-  fog: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+  container: {
+    position: 'absolute',
+    bottom: -SCREEN_HEIGHT * 0.3,
+    left: -SCREEN_WIDTH * 0.2,
+    width: SCREEN_WIDTH * 1.4,
+    height: SCREEN_HEIGHT * 0.6,
+  },
+  gradient: {
+    flex: 1,
+    borderRadius: SCREEN_WIDTH * 0.7,
   },
 });
