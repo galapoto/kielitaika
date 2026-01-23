@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
+import { PRODUCT_NAME } from '../utils/constants';
 
 /**
  * RUKA 3D Logo - Premium SVG with advanced 3D illusion
@@ -10,9 +11,15 @@ import { SvgXml } from 'react-native-svg';
  * - Embossed texture matching app design
  * - Dynamic lighting that responds to depth
  */
-export default function RukaLogo3D({ width = 420, height = 140, style }) {
+export default function RukaLogo3D({
+  width = 420,
+  height = 140,
+  style,
+  label = PRODUCT_NAME,
+}) {
   // NOTE: We use `SvgXml` here because it avoids occasional named-export mismatches
   // with `react-native-svg` components in Hermes/Metro builds.
+  const logoText = label || PRODUCT_NAME;
   const xml = useMemo(
     () => `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 140">
@@ -72,14 +79,14 @@ export default function RukaLogo3D({ width = 420, height = 140, style }) {
 
   <!-- Wordmark -->
   <g transform="translate(150 88)">
-    <text x="2" y="2" font-size="44" font-weight="700" letter-spacing="4" fill="url(#iceBack)" opacity="0.5" font-family="system-ui, -apple-system, sans-serif">RUKA</text>
-    <text x="1" y="1" font-size="44" font-weight="700" letter-spacing="4" fill="url(#iceMid)" opacity="0.75" font-family="system-ui, -apple-system, sans-serif">RUKA</text>
-    <text x="0" y="0" font-size="44" font-weight="700" letter-spacing="4" fill="url(#iceFront)" font-family="system-ui, -apple-system, sans-serif">RUKA</text>
-    <text x="0" y="0" font-size="44" font-weight="700" letter-spacing="4" fill="url(#embossHighlight)" opacity="0.35" font-family="system-ui, -apple-system, sans-serif">RUKA</text>
+    <text x="2" y="2" font-size="44" font-weight="700" letter-spacing="4" fill="url(#iceBack)" opacity="0.5" font-family="system-ui, -apple-system, sans-serif">${logoText}</text>
+    <text x="1" y="1" font-size="44" font-weight="700" letter-spacing="4" fill="url(#iceMid)" opacity="0.75" font-family="system-ui, -apple-system, sans-serif">${logoText}</text>
+    <text x="0" y="0" font-size="44" font-weight="700" letter-spacing="4" fill="url(#iceFront)" font-family="system-ui, -apple-system, sans-serif">${logoText}</text>
+    <text x="0" y="0" font-size="44" font-weight="700" letter-spacing="4" fill="url(#embossHighlight)" opacity="0.35" font-family="system-ui, -apple-system, sans-serif">${logoText}</text>
   </g>
 </svg>
 `,
-    []
+    [logoText]
   );
 
   return (
