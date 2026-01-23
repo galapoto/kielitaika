@@ -1,6 +1,36 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { login, register, refreshToken, getCurrentUser } from '../services/authService';
+
+// Use AsyncStorage for native, localStorage for web
+let AsyncStorage;
+if (Platform.OS === 'web') {
+  AsyncStorage = {
+    getItem: async (key) => {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        return null;
+      }
+    },
+    setItem: async (key, value) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.error('Error saving to localStorage:', e);
+      }
+    },
+    removeItem: async (key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.error('Error removing from localStorage:', e);
+      }
+    },
+  };
+} else {
+  AsyncStorage = require('@react-native-async-storage/async-storage').default;
+}
 
 const AuthContext = createContext(null);
 
