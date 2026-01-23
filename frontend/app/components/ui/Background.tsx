@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, useColorScheme, ImageBackground } from 'react-native';
+import { View, StyleSheet, useColorScheme, ImageBackground, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Animated, { 
@@ -385,21 +385,47 @@ export default function Background({
 
       {/* Optional Blur for text-heavy screens */}
       {needsBlur && (
-        <BlurView
-          intensity={25}
-          tint={colorScheme}
-          style={StyleSheet.absoluteFill}
-        />
+        Platform.OS === 'web' ? (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: colorScheme === 'dark' 
+                  ? 'rgba(0, 0, 0, 0.4)' 
+                  : 'rgba(255, 255, 255, 0.4)',
+              },
+            ]}
+          />
+        ) : (
+          <BlurView
+            intensity={25}
+            tint={colorScheme}
+            style={StyleSheet.absoluteFill}
+          />
+        )
       )}
 
       {/* Modal transition blur */}
       {modalBlur && (
         <Animated.View style={[StyleSheet.absoluteFill, blurStyle]} pointerEvents="none">
-          <BlurView
-            intensity={40}
-            tint={colorScheme}
-            style={StyleSheet.absoluteFill}
-          />
+          {Platform.OS === 'web' ? (
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: colorScheme === 'dark' 
+                    ? 'rgba(0, 0, 0, 0.5)' 
+                    : 'rgba(255, 255, 255, 0.5)',
+                },
+              ]}
+            />
+          ) : (
+            <BlurView
+              intensity={40}
+              tint={colorScheme}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
         </Animated.View>
       )}
 

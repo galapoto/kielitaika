@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
@@ -32,11 +32,20 @@ export default function GlossySurface({
       ]}
     >
       {variant === 'glass' && (
-        <BlurView
-          intensity={intensity}
-          tint="dark"
-          style={[StyleSheet.absoluteFill, { borderRadius }]}
-        />
+        Platform.OS === 'web' ? (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { borderRadius, backgroundColor: 'rgba(0, 0, 0, 0.3)' },
+            ]}
+          />
+        ) : (
+          <BlurView
+            intensity={intensity}
+            tint="dark"
+            style={[StyleSheet.absoluteFill, { borderRadius }]}
+          />
+        )
       )}
 
       {/* Base gradient */}
