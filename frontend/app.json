@@ -22,9 +22,10 @@
       "bundleIdentifier": "fi.kielitaika.app"
     },
     "android": {
+      "icon": "./app/assets/logo/taika_logo_2.png",
       "adaptiveIcon": {
         "foregroundImage": "./app/assets/logo/taika_logo_2.png",
-        "backgroundColor": "#0A3D62"
+        "backgroundColor": "#000000"
       },
       "permissions": ["AUDIO_RECORDING"],
       "package": "fi.kielitaika.app"
