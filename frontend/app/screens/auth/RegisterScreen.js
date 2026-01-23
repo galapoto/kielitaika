@@ -35,6 +35,7 @@ export default function RegisterScreen({ navigation }) {
     androidClientId: googleClientId,
     expoClientId: googleClientId,
     responseType: 'id_token',
+    webClientId: googleClientId, // Required for Web platform
   });
 
   const handleRegister = async () => {

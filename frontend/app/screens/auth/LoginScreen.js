@@ -34,6 +34,7 @@ export default function LoginScreen({ navigation }) {
     androidClientId: googleClientId,
     expoClientId: googleClientId,
     responseType: 'id_token',
+    webClientId: googleClientId, // Required for Web platform
   });
 
   const handleLogin = async () => {
@@ -145,7 +146,12 @@ export default function LoginScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.googleButton}
                 onPress={() => {
-                  if (request) promptAsync();
+                  if (request && promptAsync) {
+                    promptAsync().catch(err => {
+                      console.error('Google sign-in error:', err);
+                      Alert.alert('Sign-In Error', 'Unable to start Google sign-in. Please try again.');
+                    });
+                  }
                 }}
                 disabled={googleLoading || !request}
               >
