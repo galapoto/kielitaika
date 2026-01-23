@@ -1,17 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { HTTP_API_BASE } from './config/backend';
 
 const runtimeBuildId = new Date().toISOString();
-console.log('RUNTIME BUILD ID (App.js):', runtimeBuildId);
-
-// Verification: Test backend connection on app start
-fetch(`${HTTP_API_BASE}/`)
-  .then(r => r.json().catch(() => ({ status: 'ok' })))
-  .then(d => console.log('Backend OK:', d))
-  .catch(e => console.error('Backend FAIL:', e));
 // Premium 2026 Screens
 import HomeScreen from './screens/HomeScreen';
 import ConversationScreen from './screens/ConversationScreen';
@@ -50,18 +43,21 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 const Stack = createNativeStackNavigator();
 
+function BootScreen() {
+  const { colors } = useTheme();
+
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary || '#0A3D62'} />
+    </View>
+  );
+}
+
 function Navigation() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    // Show loading screen while checking auth
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary || '#0A3D62'} />
-      </View>
-    );
-  }
+  const initialRouteName = loading ? 'Boot' : isAuthenticated ? 'Home' : 'Login';
+  const navigatorKey = loading ? 'loading' : isAuthenticated ? 'auth' : 'guest';
 
   return (
     <PathProvider>
@@ -79,28 +75,19 @@ function Navigation() {
         }}
       >
         <Stack.Navigator
-          initialRouteName={isAuthenticated ? "Home" : "Login"}
+          key={navigatorKey}
+          initialRouteName={initialRouteName}
           screenOptions={{
             headerShown: false,
           }}
         >
-          {/* Auth Screens */}
-          {!isAuthenticated && (
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Register" component={RegisterScreen} />
-            </>
-          )}
-
-          {/* Onboarding */}
-          {isAuthenticated && (
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          )}
+          <Stack.Screen name="Boot" component={BootScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
 
           {/* Premium 2026 Screens */}
-          {isAuthenticated && (
-            <>
-              <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
           <Stack.Screen name="PronunciationLab" component={PronunciationLabScreen} />
           <Stack.Screen name="PathSelection" component={PathSelectionScreen} />
@@ -127,8 +114,6 @@ function Navigation() {
           <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
           <Stack.Screen name="YKISpeakingExam" component={YKISpeakingExamScreen} />
           <Stack.Screen name="YKIWritingExam" component={YKIWritingExamScreen} />
-            </>
-          )}
         </Stack.Navigator>
       </NavigationContainer>
     </PathProvider>
@@ -145,6 +130,15 @@ const styles = StyleSheet.create({
 });
 
 export default function App() {
+  useEffect(() => {
+    console.log('RUNTIME BUILD ID (App.js):', runtimeBuildId);
+    // Verification: Test backend connection on app start
+    fetch(`${HTTP_API_BASE}/`)
+      .then(r => r.json().catch(() => ({ status: 'ok' })))
+      .then(d => console.log('Backend OK:', d))
+      .catch(e => console.error('Backend FAIL:', e));
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
