@@ -16,6 +16,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../../context/AuthContext';
 import GoogleLogo from '../../ui/icons/GoogleLogo';
 import RukaLogo3D from '../../components/RukaLogo3D';
+import { PRODUCT_NAME } from '../../utils/constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -88,7 +89,7 @@ export default function LoginScreen({ navigation }) {
             
             {/* Welcome Text */}
             <View style={styles.header}>
-              <Text style={styles.title}>Welcome to RUKA</Text>
+              <Text style={styles.title}>Welcome to {PRODUCT_NAME}</Text>
               <Text style={styles.subtitle}>Sign in to continue your Finnish learning journey</Text>
             </View>
 
