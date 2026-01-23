@@ -4,12 +4,13 @@ import { SvgXml } from 'react-native-svg';
 import { PRODUCT_NAME } from '../utils/constants';
 
 /**
- * RUKA 3D Logo - Premium SVG with advanced 3D illusion
+ * Kieli Taika 3D Logo - Premium SVG with advanced 3D illusion
  * Features:
  * - Multi-layer depth with shadow/light effects
  * - Animated rotation and perspective transforms
  * - Embossed texture matching app design
  * - Dynamic lighting that responds to depth
+ * - Uses PRODUCT_NAME constant for consistent branding
  */
 export default function RukaLogo3D({
   width = 420,
