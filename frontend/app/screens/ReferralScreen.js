@@ -18,6 +18,7 @@ import { typography } from '../styles/typography';
 import { spacing } from '../styles/spacing';
 import { shadows } from '../styles/shadows';
 import { designTokens } from '../styles/designTokens';
+import { PRODUCT_NAME } from '../utils/constants';
 
 // Safe fallbacks for spacing in case of circular dependency issues
 const safeSpacing = spacing || designTokens?.spacing || {
@@ -59,11 +60,11 @@ export default function ReferralScreen({ navigation }) {
 
     try {
       // Create share message
-      const shareMessage = `Join me on RUKA - Learn Finnish with AI! Use my referral code: ${referralCode}\n\nDownload the app and start your Finnish journey today! 🇫🇮`;
+      const shareMessage = `Join me on ${PRODUCT_NAME} - Learn Finnish with AI! Use my referral code: ${referralCode}\n\nDownload the app and start your Finnish journey today! 🇫🇮`;
 
       const result = await Share.share({
         message: shareMessage,
-        title: 'Join RUKA',
+        title: `Join ${PRODUCT_NAME}`,
       });
 
       if (result.action === Share.sharedAction) {
@@ -113,7 +114,7 @@ export default function ReferralScreen({ navigation }) {
       >
         <Text style={styles.title}>Invite Friends</Text>
         <Text style={styles.subtitle}>
-          Share RUKA with friends and earn rewards!
+          Share {PRODUCT_NAME} with friends and earn rewards!
         </Text>
 
         {/* Referral Code Box */}
