@@ -17,11 +17,15 @@ class Settings(BaseSettings):
     # ElevenLabs
     eleven_api_key: str | None = None
     eleven_default_voice: str | None = None
+    # ElevenLabs — multi-voice support
+    eleven_voice_ids: list[str] = []
 
     # Azure Speech
     azure_speech_key: str | None = None
     azure_speech_region: str | None = None
     azure_default_voice: str | None = None
+    # Azure Speech — multi-voice support
+    azure_speech_voices: list[str] = []
 
     class Config:
         env_file = ".env"
