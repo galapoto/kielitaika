@@ -52,7 +52,7 @@ kill_port() {
             # For backend ports, only kill PUHIS-related processes
             elif [[ "$cmd" == *"uvicorn"* ]] || [[ "$cmd" == *"expo"* ]] || [[ "$cmd" == *"node"* ]] || \
                  [[ "$cmdline" == *"expo"* ]] || [[ "$cmdline" == *"node"* ]] || \
-                 [[ "$cmdline" == *"metro"* ]] || [[ "$cmdline" == *"react-native"* ]]; then
+                 [[ "$cmdline" == *"metro"* ]]; then
                 echo -e "${YELLOW}⚠️  Killing PUHIS process on port $port (PID: $pid, CMD: $cmd)${NC}"
                 kill -9 $pid 2>/dev/null || true
             else
