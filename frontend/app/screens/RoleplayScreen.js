@@ -216,7 +216,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
           <MicButton
             onPressIn={() => {
               if (sessionStatus === 'completed') return;
-              startRecording();
+              startRecording({ userInitiated: true, userGesture: true });
             }}
             onPressOut={() => {
               if (sessionStatus === 'completed') return;

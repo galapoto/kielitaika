@@ -3,6 +3,7 @@ import { TouchableOpacity, View, Text, StyleSheet, ActivityIndicator, Platform }
 import useWebSocket from '../hooks/useWebSocket';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { handleSTTFailure, handleNetworkError, handlePermissionError, handleEmptyRecording, YKIError, YKIErrorType } from '../services/ykiErrorService';
+import { assertSpeakingSessionActive } from '../utils/speakingAttempts';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
 const hasMediaRecorder =
@@ -56,6 +57,7 @@ export default function MicRecorder({ onTranscript, minSeconds = 0 }) {
   }, [close]);
 
   const startRecording = async () => {
+    assertSpeakingSessionActive();
     // Native: Expo recorder (reliable on Android/iOS)
     if (!isWeb || !hasMediaRecorder) {
       try {

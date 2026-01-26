@@ -3,6 +3,7 @@ import { AppState, Platform } from 'react-native';
 import { useAudioRecorder } from './useAudioRecorder';
 import useWebSocket from './useWebSocket';
 import { transcribeAudio } from '../utils/stt';
+import { assertSpeakingSessionActive, isSpeakingReviewActive } from '../utils/speakingAttempts';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
 
@@ -155,8 +156,12 @@ export function useVoiceStreaming(options = {}) {
   }, [isRecording, isProcessing, isListening, isSpeaking, transcript, error, onStateChange]);
 
   // Start recording with WebSocket streaming
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(async (recordingOptions = {}) => {
     try {
+      if (recordingOptions?.userInitiated !== true || recordingOptions?.userGesture !== true) {
+        throw new Error('Speaking invariant: microphone must be started by explicit user gesture.');
+      }
+      assertSpeakingSessionActive();
       setError(null);
       setTranscript('');
       transcriptBufferRef.current = '';
@@ -318,6 +323,9 @@ export function useVoiceStreaming(options = {}) {
   const speakText = useCallback(async (text) => {
     if (!text || !text.trim()) {
       return;
+    }
+    if (isSpeakingReviewActive()) {
+      throw new Error('Speaking invariant: audio playback is not allowed in review mode.');
     }
 
     try {

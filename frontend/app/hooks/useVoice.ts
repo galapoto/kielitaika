@@ -8,6 +8,7 @@
 import { useState, useCallback } from 'react';
 import { playTTS, TTSMode, getProviderForMode } from '../services/tts';
 import { usePreferences } from '../context/PreferencesContext';
+import { isSpeakingReviewActive } from '../utils/speakingAttempts';
 
 export interface UseVoiceReturn {
   speak: (text: string, mode?: TTSMode) => Promise<void>;
@@ -35,6 +36,9 @@ export function useVoice(): UseVoiceReturn {
   const speak = useCallback(async (text: string, mode: TTSMode = 'system') => {
     if (!text || !text.trim()) {
       return;
+    }
+    if (isSpeakingReviewActive()) {
+      throw new Error('Speaking invariant: audio playback is not allowed in review mode.');
     }
 
     setIsSpeaking(true);

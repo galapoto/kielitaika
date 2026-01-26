@@ -1,7 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { fetchMicroTask, submitMicroTask } from '../utils/api';
 import { useVoiceStreaming } from '../hooks/useVoiceStreaming';
+import {
+  completeSpeakingSession,
+  setSpeakingTurnAiTranscript,
+  setSpeakingTurnUserTranscript,
+  useSpeakingSession,
+} from '../utils/speakingAttempts';
 import MicButton from '../components/MicButton';
 import WaveformVisualizer from '../components/features/ConversationUI/WaveformVisualizer';
 import SceneBackground from '../components/SceneBackground';
@@ -21,6 +27,8 @@ export default function MicroOutputScreen() {
   const [timeRemaining, setTimeRemaining] = useState(10);
   const [timerActive, setTimerActive] = useState(false);
   const { playTap, playMicOn } = useSound();
+  const sessionId = useMemo(() => `micro-output:${task?.id || 'pending'}:${Date.now()}`, [task?.id]);
+  useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
 
   const {
     isRecording,
@@ -79,13 +87,19 @@ export default function MicroOutputScreen() {
     loadTask();
   }, []);
 
+  useEffect(() => {
+    if (task?.prompt) {
+      setSpeakingTurnAiTranscript(sessionId, 0, task.prompt);
+    }
+  }, [sessionId, task?.prompt]);
+
   const handleStartSpeaking = async () => {
     try {
       playMicOn();
       setTimeRemaining(task?.seconds || 10);
       setTimerActive(true);
       setFeedback(null);
-      await startRecording();
+      await startRecording({ userInitiated: true, userGesture: true });
     } catch (err) {
       setError(err.message || 'Failed to start recording');
       setTimerActive(false);
@@ -111,6 +125,8 @@ export default function MicroOutputScreen() {
       setError(null);
       const result = await submitMicroTask(task.id, transcriptText);
       setFeedback(result.result || result);
+      setSpeakingTurnUserTranscript(sessionId, 0, transcriptText);
+      completeSpeakingSession(sessionId);
     } catch (err) {
       setError(err.message || 'Failed to submit. Try again.');
     } finally {

@@ -70,10 +70,18 @@ const DEFAULT_MAX_TURNS = 5;
 
 const _sessions = new Map(); // sessionId -> session
 const _listeners = new Map(); // sessionId -> Set<fn>
+const _activeSessions = new Set();
+const _completedSessions = new Set();
 
 function _clone(value) {
   // Session objects are plain data; cloning avoids accidental mutation by screens.
   return JSON.parse(JSON.stringify(value));
+}
+
+function _assert(condition, message) {
+  if (!condition) {
+    throw new Error(message);
+  }
 }
 
 function _emit(sessionId) {
@@ -131,10 +139,16 @@ export function initSpeakingSession(sessionId, options = {}) {
   const existing = _sessions.get(key);
   if (existing) return _clone(existing);
 
-  const maxTurns =
-    typeof options?.maxTurns === 'number'
-      ? Math.max(1, Math.min(DEFAULT_MAX_TURNS, Math.floor(options.maxTurns)))
-      : DEFAULT_MAX_TURNS;
+  const requestedMax =
+    typeof options?.maxTurns === 'number' ? Math.floor(options.maxTurns) : DEFAULT_MAX_TURNS;
+  const allowMoreTurns = options?.isYki === true;
+  _assert(
+    allowMoreTurns || requestedMax <= DEFAULT_MAX_TURNS,
+    'SpeakingSessionEngine: maxTurns > 5 is illegal for non-YKI sessions.'
+  );
+  const maxTurns = allowMoreTurns
+    ? Math.max(1, requestedMax)
+    : Math.max(1, Math.min(DEFAULT_MAX_TURNS, requestedMax));
 
   const initialAiTranscript = typeof options?.initialAiTranscript === 'string' ? options.initialAiTranscript : '';
 
@@ -173,7 +187,13 @@ export function completeSpeakingSession(sessionId) {
   if (!key) return null;
   const session = _sessions.get(key);
   if (!session) return null;
+  for (const turn of session.turns) {
+    _assert(_hasTranscript(turn?.aiSpeech?.transcript), 'SpeakingSessionEngine: missing AI transcript.');
+    _assert(_hasTranscript(turn?.userSpeech?.transcript), 'SpeakingSessionEngine: missing user transcript.');
+  }
   session.status = 'completed';
+  _completedSessions.add(key);
+  _activeSessions.delete(key);
   _sessions.set(key, session);
   _emit(key);
   return _clone(session);
@@ -185,7 +205,9 @@ export function setSpeakingTurnAiTranscript(sessionId, turnIndex, transcript, op
   const session = _sessions.get(key);
   if (!session || session.status === 'completed') return getSpeakingSession(key);
   const turn = _ensureTurn(session, turnIndex);
-  turn.aiSpeech.transcript = String(transcript || '').trim();
+  const normalized = String(transcript || '').trim();
+  _assert(normalized.length > 0, 'SpeakingSessionEngine: AI transcript must be non-empty.');
+  turn.aiSpeech.transcript = normalized;
   if (typeof options?.isConclusive === 'boolean') {
     turn.aiSpeech.isConclusive = options.isConclusive;
   }
@@ -204,7 +226,9 @@ export function setSpeakingTurnUserTranscript(sessionId, turnIndex, transcript) 
   const session = _sessions.get(key);
   if (!session || session.status === 'completed') return getSpeakingSession(key);
   const turn = _ensureTurn(session, turnIndex);
-  turn.userSpeech.transcript = String(transcript || '').trim();
+  const normalized = String(transcript || '').trim();
+  _assert(normalized.length > 0, 'SpeakingSessionEngine: user transcript must be non-empty.');
+  turn.userSpeech.transcript = normalized;
   _maybeComplete(session, turnIndex);
   _sessions.set(key, session);
   _emit(key);
@@ -231,11 +255,14 @@ export function advanceSpeakingTurn(sessionId) {
   if (!session || session.status === 'completed') return getSpeakingSession(key);
 
   const current = session.turns[session.currentTurnIndex];
-  if (!_hasTranscript(current?.aiSpeech?.transcript) || !_hasTranscript(current?.userSpeech?.transcript)) {
-    _sessions.set(key, session);
-    _emit(key);
-    return _clone(session);
-  }
+  _assert(
+    _hasTranscript(current?.aiSpeech?.transcript),
+    'SpeakingSessionEngine: cannot advance without AI transcript.'
+  );
+  _assert(
+    _hasTranscript(current?.userSpeech?.transcript),
+    'SpeakingSessionEngine: cannot advance without user transcript.'
+  );
 
   if (session.currentTurnIndex >= session.maxTurns - 1) {
     _maybeComplete(session, session.currentTurnIndex);
@@ -276,13 +303,31 @@ export function useSpeakingSession(sessionId, options = {}) {
     initSpeakingSession(key, options);
     // Ensure we start in live unless caller explicitly keeps idle.
     if (options?.autoStart !== false) startSpeakingSession(key);
+    _activeSessions.add(key);
+    _completedSessions.delete(key);
     setSnapshot(getSpeakingSession(key));
     const unsubscribe = subscribeSpeakingSession(key, () => {
-      setSnapshot(getSpeakingSession(key));
+      const next = getSpeakingSession(key);
+      if (next?.status === 'completed') {
+        _completedSessions.add(key);
+        _activeSessions.delete(key);
+      } else {
+        _activeSessions.add(key);
+        _completedSessions.delete(key);
+      }
+      setSnapshot(next);
     });
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   return snapshot;
+}
+
+export function assertSpeakingSessionActive() {
+  _assert(_activeSessions.size > 0, 'SpeakingSessionEngine: no active session for speaking flow.');
+}
+
+export function isSpeakingReviewActive() {
+  return _completedSessions.size > 0;
 }

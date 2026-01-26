@@ -497,7 +497,7 @@ export default function FluencyScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.recorder}>
-          <MicButton onPressIn={startRecording} onPressOut={stopRecording} isActive={isRecording} />
+          <MicButton onPressIn={() => startRecording({ userInitiated: true, userGesture: true })} onPressOut={stopRecording} isActive={isRecording} />
           <Text style={styles.status}>{status}</Text>
           <Text style={styles.timer}>{timer > 0 ? formatMs(timer) : 'Ready'}</Text>
         </View>

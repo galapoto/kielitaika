@@ -174,7 +174,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
 
         <View style={styles.inputRow}>
           <MicButton
-            onPressIn={() => startRecording?.()}
+            onPressIn={() => startRecording?.({ userInitiated: true, userGesture: true })}
             onPressOut={() => stopRecording?.()}
             disabled={sessionStatus === 'completed' || isProcessing}
             isActive={isRecording}
@@ -308,4 +308,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

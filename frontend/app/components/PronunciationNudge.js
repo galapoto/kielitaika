@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useVoiceStreaming } from '../hooks/useVoiceStreaming';
 import MicButton from './MicButton';
@@ -8,6 +8,12 @@ import { spacing } from '../styles/spacing';
 import { typography } from '../styles/typography';
 import { radius } from '../styles/radius';
 import { shadows } from '../styles/shadows';
+import {
+  completeSpeakingSession,
+  setSpeakingTurnAiTranscript,
+  setSpeakingTurnUserTranscript,
+  useSpeakingSession,
+} from '../utils/speakingAttempts';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
 
@@ -24,6 +30,8 @@ export default function PronunciationNudge({
   autoStart = false,
   minimalPairs = null 
 }) {
+  const sessionId = useMemo(() => `pronunciation:${expectedText || 'unknown'}:${Date.now()}`, [expectedText]);
+  useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
   const [nudge, setNudge] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -106,6 +114,10 @@ export default function PronunciationNudge({
         onComplete({ success: true, similarity });
       }
     }
+    if (practiceText?.trim()) {
+      setSpeakingTurnUserTranscript(sessionId, 0, practiceText);
+      completeSpeakingSession(sessionId);
+    }
   };
 
   const calculateSimilarity = (str1, str2) => {
@@ -119,10 +131,11 @@ export default function PronunciationNudge({
   const handlePracticeWord = async (word) => {
     // Play the word via TTS
     speakText(word);
+    setSpeakingTurnAiTranscript(sessionId, 0, word);
     
     // Start recording for user to repeat
     setTimeout(async () => {
-      await startRecording();
+      await startRecording({ userInitiated: true, userGesture: false });
     }, 1000);
   };
 

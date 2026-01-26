@@ -341,7 +341,7 @@ export default function GuidedTurnScreen({ route } = {}) {
 
   const handleRecordStart = () => {
     recordingStartRef.current = Date.now();
-    startRecording?.();
+    startRecording?.({ userInitiated: true, userGesture: true });
     setDebugInfo((prev) => ({ ...prev, recordingState: 'recording' }));
   };
 

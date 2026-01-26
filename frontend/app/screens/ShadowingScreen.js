@@ -386,7 +386,7 @@ export default function ShadowingScreen() {
         setRecordingDuration(Date.now() - recordingStartRef.current);
       }
     }, 400);
-    startRecording?.();
+    startRecording?.({ userInitiated: true, userGesture: true });
   };
 
   const handleRecordEnd = () => {
