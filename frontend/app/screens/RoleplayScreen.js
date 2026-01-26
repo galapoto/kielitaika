@@ -13,6 +13,12 @@ import Background from '../components/ui/Background';
 import { useVoiceStreaming } from '../hooks/useVoiceStreaming';
 import { useVoice } from '../hooks/useVoice';
 import { fetchRoleplay, evaluateRoleplay } from '../utils/api';
+import {
+  completeSpeakingSession,
+  setSpeakingTurnAiTranscript,
+  setSpeakingTurnUserTranscript,
+  useSpeakingSession,
+} from '../utils/speakingAttempts';
 
 export default function RoleplayScreen({ navigation, route } = {}) {
   const {
@@ -21,10 +27,18 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     level = 'B1',
   } = route?.params || {};
 
+  const sessionId = useMemo(
+    () => `roleplay:${field}:${scenarioTitle || 'default'}:${level}:${Date.now()}`,
+    [field, scenarioTitle, level]
+  );
+  const session = useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
+  const sessionStatus = session?.status || 'idle';
+  const turn0 = session?.turns?.[0] || null;
+  const transcript = turn0?.userSpeech?.transcript || '';
+
   const [scenario, setScenario] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [transcript, setTranscript] = useState('');
   const [evaluation, setEvaluation] = useState(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const sessionLockRef = useRef(false);
@@ -32,6 +46,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   const { speak } = useVoice();
 
   const handleSpeakPrompt = useCallback(async () => {
+    if (sessionStatus === 'completed') return;
     const prompt = scenario?.roleplay_prompt;
     if (!prompt) return;
     try {
@@ -39,7 +54,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     } catch (err) {
       setError(err?.message || 'Ohjeen äänen toisto epäonnistui.');
     }
-  }, [scenario?.roleplay_prompt, speak]);
+  }, [scenario?.roleplay_prompt, speak, sessionStatus]);
 
   useEffect(() => {
     let mounted = true;
@@ -47,12 +62,14 @@ export default function RoleplayScreen({ navigation, route } = {}) {
       setLoading(true);
       setError(null);
       setScenario(null);
-      setTranscript('');
       setEvaluation(null);
       try {
         const data = await fetchRoleplay(field, scenarioTitle, level);
         if (!mounted) return;
         setScenario(data);
+        if (data?.roleplay_prompt) {
+          setSpeakingTurnAiTranscript(sessionId, 0, data.roleplay_prompt);
+        }
         if (data?.roleplay_prompt) {
           await speak(data.roleplay_prompt, 'professional');
         }
@@ -67,25 +84,28 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     return () => {
       mounted = false;
     };
-  }, [field, scenarioTitle, level, speak]);
+  }, [field, scenarioTitle, level, speak, sessionId]);
 
   const handleTranscriptComplete = useCallback(
     async (text) => {
+      if (sessionStatus === 'completed') return;
       const normalized = (text || '').trim();
       if (!normalized) return;
-      setTranscript(normalized);
+      setSpeakingTurnUserTranscript(sessionId, 0, normalized);
       setIsEvaluating(true);
       setError(null);
       try {
         const result = await evaluateRoleplay(field, normalized);
         setEvaluation(result);
+        // Roleplay is a finite single-turn interaction; enter review mode after evaluation.
+        completeSpeakingSession(sessionId);
       } catch (err) {
         setError(err?.message || 'Vastauksen arviointi epäonnistui.');
       } finally {
         setIsEvaluating(false);
       }
     },
-    [field]
+    [field, sessionId, sessionStatus]
   );
 
   const handleVoiceState = useCallback((state) => {
@@ -125,6 +145,25 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   }, [navigation]);
 
   const keyPhrases = useMemo(() => scenario?.key_phrases || [], [scenario?.key_phrases]);
+
+  if (sessionStatus === 'completed') {
+    const aiText = turn0?.aiSpeech?.transcript || scenario?.roleplay_prompt || '';
+    const userText = turn0?.userSpeech?.transcript || '';
+    return (
+      <Background module="workplace" variant="brown" imageVariant="workplace">
+        <View style={styles.container}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Tekoäly</Text>
+            <Text style={styles.sectionItem}>{aiText}</Text>
+          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Sinä</Text>
+            <Text style={styles.sectionItem}>{userText}</Text>
+          </View>
+        </View>
+      </Background>
+    );
+  }
 
   if (loading) {
     return (
@@ -175,9 +214,15 @@ export default function RoleplayScreen({ navigation, route } = {}) {
 
         <View style={styles.micRow}>
           <MicButton
-            onPressIn={startRecording}
-            onPressOut={stopRecording}
-            disabled={isProcessing}
+            onPressIn={() => {
+              if (sessionStatus === 'completed') return;
+              startRecording();
+            }}
+            onPressOut={() => {
+              if (sessionStatus === 'completed') return;
+              stopRecording();
+            }}
+            disabled={isProcessing || sessionStatus === 'completed'}
             isActive={isRecording}
           />
           <Text style={styles.micStatus}>

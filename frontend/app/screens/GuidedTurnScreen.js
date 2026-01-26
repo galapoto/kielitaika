@@ -9,7 +9,16 @@ import { useVoice } from '../hooks/useVoice';
 import { colors } from '../styles/colors';
 import { spacing } from '../styles/spacing';
 import { typography } from '../styles/typography';
-import { loadSpeakingAttempts, persistSpeakingAttempt, filterAttempts } from '../utils/speakingAttempts';
+import {
+  loadSpeakingAttempts,
+  persistSpeakingAttempt,
+  filterAttempts,
+  useSpeakingSession,
+  setSpeakingTurnUserTranscript,
+  setSpeakingTurnAiTranscript,
+  advanceSpeakingTurn,
+  completeSpeakingSession,
+} from '../utils/speakingAttempts';
 import { getRubricExplanation, getRubricLabel, normalizeRubricDimension } from '../utils/feedbackRubric';
 import { generateSpeakingTurn } from '../utils/speakingTurnEngine';
 
@@ -81,9 +90,17 @@ export default function GuidedTurnScreen({ route } = {}) {
   const source = route?.params?.source || 'unknown';
   const entrypoint = route?.params?.entrypoint || 'unknown';
 
-  const [promptIndex, setPromptIndex] = useState(0);
-  const [transcript, setTranscript] = useState('');
-  const [aiReply, setAiReply] = useState('');
+  const sessionId = useMemo(
+    () => `guided:${source}:${entrypoint}:${Date.now()}`,
+    [source, entrypoint]
+  );
+  const session = useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
+  const sessionStatus = session?.status || 'idle';
+  const promptIndex = session?.currentTurnIndex || 0;
+  const currentTurn = session?.turns?.[promptIndex] || null;
+  const transcript = currentTurn?.userSpeech?.transcript || '';
+  const aiReply = currentTurn?.aiSpeech?.transcript || '';
+  const [reviewTurnIndex, setReviewTurnIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState('Hold to talk');
   const [history, setHistory] = useState([]);
   const [levelFilter, setLevelFilter] = useState('All');
@@ -173,6 +190,7 @@ export default function GuidedTurnScreen({ route } = {}) {
 
   const playAiReply = useCallback(
     async (text) => {
+      if (sessionStatus === 'completed') return;
       setDebugInfo((prev) => ({
         ...prev,
         ttsRequests: prev.ttsRequests + 1,
@@ -192,14 +210,14 @@ export default function GuidedTurnScreen({ route } = {}) {
         setDebugInfo((prev) => ({ ...prev, playbackState: 'error', errorLog: message }));
       }
     },
-    [speak],
+    [speak, sessionStatus],
   );
 
   const handleTranscriptComplete = useCallback(
     async (sttText, sttMeta) => {
+      if (sessionStatus === 'completed') return;
       const normalized = (sttText || '').trim();
       if (!normalized) return;
-      setTranscript(normalized);
       setStatusMessage('Transcribed');
       setError(null);
       setFeedbackExpanded(false);
@@ -221,7 +239,10 @@ export default function GuidedTurnScreen({ route } = {}) {
             history,
           },
         });
-        setAiReply(answer.ai_reply_fi);
+        setSpeakingTurnUserTranscript(sessionId, promptIndex, normalized);
+        setSpeakingTurnAiTranscript(sessionId, promptIndex, answer.ai_reply_fi, {
+          isConclusive: promptIndex >= 4,
+        });
         setFeedback(answer.feedback);
         setDebugInfo((prev) => ({
           ...prev,
@@ -251,6 +272,9 @@ export default function GuidedTurnScreen({ route } = {}) {
         if (answer.ai_reply_fi) {
           await playAiReply(answer.ai_reply_fi);
         }
+        if (promptIndex >= 4) {
+          completeSpeakingSession(sessionId);
+        }
       } catch (err) {
         const message = err?.message || 'Kun en saanut yhteyttä palvelimeen.';
         setError(message);
@@ -259,7 +283,7 @@ export default function GuidedTurnScreen({ route } = {}) {
         setIsProcessingAttempt(false);
       }
     },
-    [currentPrompt, history, persistAttempt, playAiReply]
+    [currentPrompt, entrypoint, history, persistAttempt, playAiReply, promptIndex, sessionId, sessionStatus, source]
   );
 
   const { isRecording, isProcessing, isListening, isSpeaking, startRecording, stopRecording } =
@@ -268,6 +292,52 @@ export default function GuidedTurnScreen({ route } = {}) {
       onTranscriptComplete: handleTranscriptComplete,
       vadSilenceThreshold: 2000,
     });
+
+  useEffect(() => {
+    if (sessionStatus !== 'completed') return;
+    // Ensure mic/audio are off in review mode.
+    try {
+      stopRecording?.();
+    } catch (_) {
+      // ignore
+    }
+  }, [sessionStatus, stopRecording]);
+
+  if (sessionStatus === 'completed') {
+    const turns = session?.turns || [];
+    const idx = Math.max(0, Math.min(turns.length - 1, reviewTurnIndex));
+    const turn = turns[idx] || null;
+    return (
+      <Background module="conversation" variant="blue">
+        <View style={styles.container}>
+          <View style={styles.transcriptPanel}>
+            <Text style={styles.panelLabel}>Tekoäly</Text>
+            <Text style={styles.panelValue}>{turn?.aiSpeech?.transcript || '—'}</Text>
+          </View>
+          <View style={styles.transcriptPanel}>
+            <Text style={styles.panelLabel}>Sinä</Text>
+            <Text style={styles.panelValue}>{turn?.userSpeech?.transcript || '—'}</Text>
+          </View>
+          <View style={styles.row}>
+            <TouchableOpacity
+              onPress={() => setReviewTurnIndex((n) => Math.max(0, n - 1))}
+              disabled={idx === 0}
+              style={[styles.promptButton, idx === 0 && { opacity: 0.5 }]}
+            >
+              <Text style={styles.promptButtonText}>Edellinen</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setReviewTurnIndex((n) => Math.min(turns.length - 1, n + 1))}
+              disabled={idx >= turns.length - 1}
+              style={[styles.promptButton, idx >= turns.length - 1 && { opacity: 0.5 }]}
+            >
+              <Text style={styles.promptButtonText}>Seuraava</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Background>
+    );
+  }
 
   const handleRecordStart = () => {
     recordingStartRef.current = Date.now();
@@ -311,10 +381,10 @@ export default function GuidedTurnScreen({ route } = {}) {
   );
 
   const nextPrompt = () => {
-    setPromptIndex((prev) => (prev + 1) % PROMPTS.length);
+    if (sessionStatus === 'completed') return;
+    if (promptIndex >= 4) return;
+    advanceSpeakingTurn(sessionId);
     setFeedback(null);
-    setTranscript('');
-    setAiReply('');
   };
 
   useEffect(() => {
