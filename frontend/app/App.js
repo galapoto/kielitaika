@@ -53,7 +53,7 @@ function BootScreen() {
   );
 }
 
-function Navigation() {
+function RootNavigator() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated, loading } = useAuth();
   const initialRouteName = loading ? 'Boot' : isAuthenticated ? 'Home' : 'Login';
@@ -143,7 +143,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <AuthProvider>
-          <Navigation />
+          <RootNavigator />
         </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
