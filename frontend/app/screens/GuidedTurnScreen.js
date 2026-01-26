@@ -309,16 +309,16 @@ export default function GuidedTurnScreen({ route } = {}) {
     const turn = turns[idx] || null;
     return (
       <Background module="conversation" variant="blue">
-        <View style={styles.container}>
-          <View style={styles.transcriptPanel}>
-            <Text style={styles.panelLabel}>Tekoäly</Text>
-            <Text style={styles.panelValue}>{turn?.aiSpeech?.transcript || '—'}</Text>
+        <View style={styles.reviewContainer}>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewCardLabel}>Tekoäly</Text>
+            <Text style={styles.reviewCardText}>{turn?.aiSpeech?.transcript || '—'}</Text>
           </View>
-          <View style={styles.transcriptPanel}>
-            <Text style={styles.panelLabel}>Sinä</Text>
-            <Text style={styles.panelValue}>{turn?.userSpeech?.transcript || '—'}</Text>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewCardLabel}>Sinä</Text>
+            <Text style={styles.reviewCardText}>{turn?.userSpeech?.transcript || '—'}</Text>
           </View>
-          <View style={styles.row}>
+          <View style={styles.reviewControls}>
             <TouchableOpacity
               onPress={() => setReviewTurnIndex((n) => Math.max(0, n - 1))}
               disabled={idx === 0}
@@ -679,6 +679,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: spacing.medium,
+  },
+  reviewContainer: {
+    flex: 1,
+    padding: spacing.medium,
+  },
+  reviewCard: {
+    backgroundColor: '#0f1117',
+    borderRadius: 16,
+    padding: spacing.medium,
+    marginBottom: spacing.medium,
+  },
+  reviewCardLabel: {
+    fontSize: 12,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  reviewCardText: {
+    color: colors.surface,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  reviewControls: {
+    marginTop: spacing.small,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   header: {
     marginBottom: spacing.small,

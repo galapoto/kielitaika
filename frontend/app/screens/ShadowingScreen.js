@@ -8,7 +8,16 @@ import {
   FlatList,
   ScrollView,
 } from 'react-native';
-import { loadSpeakingAttempts, persistSpeakingAttempt, filterAttempts } from '../utils/speakingAttempts';
+import {
+  loadSpeakingAttempts,
+  persistSpeakingAttempt,
+  filterAttempts,
+  useSpeakingSession,
+  setSpeakingTurnUserTranscript,
+  setSpeakingTurnAiTranscript,
+  advanceSpeakingTurn,
+  completeSpeakingSession,
+} from '../utils/speakingAttempts';
 import { Audio } from 'expo-av';
 import Background from '../components/ui/Background';
 import MicButton from '../components/MicButton';
@@ -77,9 +86,14 @@ const buildFeedbackLabel = (dimension) =>
   `${getRubricLabel(normalizeRubricDimension(dimension))} focus`;
 
 export default function ShadowingScreen() {
-  const [promptIndex, setPromptIndex] = useState(0);
-  const [transcript, setTranscript] = useState('');
-  const [aiReply, setAiReply] = useState('');
+  const sessionId = useMemo(() => `shadowing:${Date.now()}`, []);
+  const session = useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
+  const sessionStatus = session?.status || 'idle';
+  const promptIndex = session?.currentTurnIndex || 0;
+  const currentTurn = session?.turns?.[promptIndex] || null;
+  const transcript = currentTurn?.userSpeech?.transcript || '';
+  const aiReply = currentTurn?.aiSpeech?.transcript || '';
+  const [reviewTurnIndex, setReviewTurnIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState('Hold to talk');
   const [feedback, setFeedback] = useState(null);
   const [shadowingDiff, setShadowingDiff] = useState(null);
@@ -191,12 +205,12 @@ export default function ShadowingScreen() {
 
   const handleTranscriptComplete = useCallback(
     async (sttText, sttMeta) => {
+      if (sessionStatus === 'completed') return;
       const normalized = (sttText || '').trim();
       if (!normalized) {
         setError('Käytät hiljaisuutta. Yritä uudestaan');
         return;
       }
-      setTranscript(normalized);
       const diffResult = diffWords(targetUtterance, normalized);
       setShadowingDiff(diffResult);
       updateDebug((prev) => ({
@@ -226,7 +240,10 @@ export default function ShadowingScreen() {
             history,
           },
         });
-        setAiReply(answer.ai_reply_fi);
+        setSpeakingTurnUserTranscript(sessionId, promptIndex, normalized);
+        setSpeakingTurnAiTranscript(sessionId, promptIndex, answer.ai_reply_fi, {
+          isConclusive: promptIndex >= 4,
+        });
         const tunedFeedback = {
           ...(answer.feedback || {}),
           better_version_fi: targetUtterance,
@@ -272,10 +289,13 @@ export default function ShadowingScreen() {
           prompt_id: currentPrompt.id,
         };
         await persistAttempt(attemptRecord);
-        if (answer.ai_reply_fi) {
+        if (answer.ai_reply_fi && sessionStatus !== 'completed') {
           setAiPlaying(true);
           await speakWithDebug(answer.ai_reply_fi, 'conversation');
           setAiPlaying(false);
+        }
+        if (promptIndex >= 4) {
+          completeSpeakingSession(sessionId);
         }
       } catch (err) {
         setError(err?.message || 'Jokin meni pieleen. Yritä myöhemmin.');
@@ -283,7 +303,7 @@ export default function ShadowingScreen() {
         setIsProcessingAttempt(false);
       }
     },
-    [currentPrompt, history, persistAttempt, speak, targetUtterance]
+    [currentPrompt, history, persistAttempt, promptIndex, sessionId, sessionStatus, speakWithDebug, targetUtterance]
   );
 
   const {
@@ -299,6 +319,51 @@ export default function ShadowingScreen() {
       onTranscriptComplete: handleTranscriptComplete,
       vadSilenceThreshold: 2000,
     });
+
+  useEffect(() => {
+    if (sessionStatus !== 'completed') return;
+    try {
+      stopRecording?.();
+    } catch (_) {
+      // ignore
+    }
+  }, [sessionStatus, stopRecording]);
+
+  if (sessionStatus === 'completed') {
+    const turns = session?.turns || [];
+    const idx = Math.max(0, Math.min(turns.length - 1, reviewTurnIndex));
+    const turn = turns[idx] || null;
+    return (
+      <Background module="practice" variant="brown">
+        <View style={styles.reviewContainer}>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewCardLabel}>Tekoäly</Text>
+            <Text style={styles.reviewCardText}>{turn?.aiSpeech?.transcript || '—'}</Text>
+          </View>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewCardLabel}>Sinä</Text>
+            <Text style={styles.reviewCardText}>{turn?.userSpeech?.transcript || '—'}</Text>
+          </View>
+          <View style={styles.reviewControls}>
+            <TouchableOpacity
+              style={[styles.nextButton, { flex: 1, marginRight: 8, opacity: idx === 0 ? 0.5 : 1 }]}
+              disabled={idx === 0}
+              onPress={() => setReviewTurnIndex((n) => Math.max(0, n - 1))}
+            >
+              <Text style={styles.nextLabel}>Edellinen</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.nextButton, { flex: 1, marginLeft: 8, opacity: idx >= turns.length - 1 ? 0.5 : 1 }]}
+              disabled={idx >= turns.length - 1}
+              onPress={() => setReviewTurnIndex((n) => Math.min(turns.length - 1, n + 1))}
+            >
+              <Text style={styles.nextLabel}>Seuraava</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Background>
+    );
+  }
 
   const speakWithDebug = useCallback(
     async (text, voice) => {
@@ -341,6 +406,7 @@ export default function ShadowingScreen() {
   }, []);
 
   const playPrompt = useCallback(async () => {
+    if (sessionStatus === 'completed') return;
     try {
       setStatusMessage('Playing AI voice…');
       setAiPlaying(true);
@@ -352,7 +418,7 @@ export default function ShadowingScreen() {
       setAiPlaying(false);
       setStatusMessage('Hold to talk');
     }
-  }, [targetChunks, speakWithDebug]);
+  }, [targetChunks, speakWithDebug, sessionStatus]);
 
   const filteredHistory = useMemo(
     () =>
@@ -366,9 +432,9 @@ export default function ShadowingScreen() {
   );
 
   const handleNextPrompt = () => {
-    setPromptIndex((prev) => (prev + 1) % PROMPTS.length);
-    setTranscript('');
-    setAiReply('');
+    if (sessionStatus === 'completed') return;
+    if (promptIndex >= 4) return;
+    advanceSpeakingTurn(sessionId);
     setFeedback(null);
   };
 
@@ -703,6 +769,32 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: spacing.l,
     marginBottom: spacing.m,
+  },
+  reviewContainer: {
+    flex: 1,
+    padding: spacing.l,
+  },
+  reviewCard: {
+    backgroundColor: '#0f1117',
+    borderRadius: 16,
+    padding: spacing.l,
+    marginBottom: spacing.m,
+  },
+  reviewCardLabel: {
+    color: colors.accentPrimary,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.xs,
+  },
+  reviewCardText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  reviewControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   promptLevel: {
     color: colors.accentPrimary,

@@ -19,6 +19,13 @@ import {
   loadSpeakingAttempts,
   persistSpeakingAttempt,
 } from '../utils/speakingAttempts';
+import {
+  useSpeakingSession,
+  setSpeakingTurnUserTranscript,
+  setSpeakingTurnAiTranscript,
+  advanceSpeakingTurn,
+  completeSpeakingSession,
+} from '../utils/speakingAttempts';
 import { getRubricExplanation, getRubricLabel, normalizeRubricDimension } from '../utils/feedbackRubric';
 import { generateSpeakingTurn } from '../utils/speakingTurnEngine';
 
@@ -66,11 +73,18 @@ const pickFollowUpPrompt = ({ topic, paceWpm, fillerCount, pauseMarkers }) => {
 };
 
 export default function FluencyScreen() {
+  const sessionId = useMemo(() => `fluency:${Date.now()}`, []);
+  const session = useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
+  const sessionStatus = session?.status || 'idle';
+  const turnIndex = session?.currentTurnIndex || 0;
+  const currentTurn = session?.turns?.[turnIndex] || null;
+  const transcript = currentTurn?.userSpeech?.transcript || '';
+  const aiReply = currentTurn?.aiSpeech?.transcript || '';
+  const [reviewTurnIndex, setReviewTurnIndex] = useState(0);
+
   const [topicIndex, setTopicIndex] = useState(0);
   const [durationIndex, setDurationIndex] = useState(0);
   const [status, setStatus] = useState('Hold to talk');
-  const [transcript, setTranscript] = useState('');
-  const [aiReply, setAiReply] = useState('');
   const [feedback, setFeedback] = useState(null);
   const [feedbackExpanded, setFeedbackExpanded] = useState(false);
   const [phase, setPhase] = useState('monologue'); // monologue | followup
@@ -118,6 +132,7 @@ export default function FluencyScreen() {
 
   const playAiReply = useCallback(
     async (text) => {
+      if (sessionStatus === 'completed') return;
       setDebugInfo((prev) => ({
         ...prev,
         ttsRequests: prev.ttsRequests + 1,
@@ -136,14 +151,15 @@ export default function FluencyScreen() {
         setDebugInfo((prev) => ({ ...prev, playbackState: 'error', errorLog: message }));
       }
     },
-    [speak],
+    [speak, sessionStatus],
   );
 
   const onTranscriptComplete = useCallback(
     async (sttText, sttMeta) => {
+      if (sessionStatus === 'completed') return;
       const normalized = (sttText || '').trim();
       if (!normalized) return;
-      setTranscript(normalized);
+      setSpeakingTurnUserTranscript(sessionId, turnIndex, normalized);
       const words = normalized
         .split(/\s+/)
         .map((w) => w.replace(/[^A-Za-zÀ-ÖØ-öø-ÿÅåÄäÖö_/.-]/g, ''))
@@ -186,7 +202,9 @@ export default function FluencyScreen() {
               history,
             },
           });
-          setAiReply(result.ai_reply_fi);
+          setSpeakingTurnAiTranscript(sessionId, turnIndex, result.ai_reply_fi, {
+            isConclusive: turnIndex >= 4,
+          });
           setFeedback(result.feedback);
           setFeedbackExpanded(false);
           setError(null);
@@ -219,6 +237,9 @@ export default function FluencyScreen() {
           setPhase('monologue');
           setFollowUpPrompt('');
           setPendingParentId(null);
+          if (turnIndex >= 4) {
+            completeSpeakingSession(sessionId);
+          }
           return;
         }
 
@@ -253,7 +274,9 @@ export default function FluencyScreen() {
           fillerCount: metrics.filler_count,
           pauseMarkers: metrics.pause_markers,
         });
-        setAiReply(`${result.ai_reply_fi}\n\n${followUp}`);
+        setSpeakingTurnAiTranscript(sessionId, turnIndex, `${result.ai_reply_fi}\n\n${followUp}`, {
+          isConclusive: turnIndex >= 4,
+        });
         setFeedback(tunedFeedback);
         setFeedbackExpanded(false);
         setError(null);
@@ -288,6 +311,9 @@ export default function FluencyScreen() {
         setFollowUpPrompt(followUp);
         setPendingParentId(parentAttemptId);
         setStatus('Playing AI voice…');
+        if (turnIndex >= 4) {
+          completeSpeakingSession(sessionId);
+        }
       } catch (err) {
         setError(err?.message || 'Palvelin ei vastannut.');
         setStatus('Error');
@@ -308,6 +334,9 @@ export default function FluencyScreen() {
       recordingDuration,
       persistAttempt,
       playAiReply,
+      sessionId,
+      sessionStatus,
+      turnIndex,
     ]
   );
 
@@ -330,6 +359,15 @@ export default function FluencyScreen() {
     onTranscriptComplete,
     vadSilenceThreshold: 2500,
   });
+
+  useEffect(() => {
+    if (sessionStatus !== 'completed') return;
+    try {
+      stopRecording?.();
+    } catch (_) {
+      // ignore
+    }
+  }, [sessionStatus, stopRecording]);
 
   useEffect(() => {
     if (isRecording) {
@@ -389,15 +427,52 @@ export default function FluencyScreen() {
   }, [loadHistory]);
 
   const handleNextTopic = () => {
+    if (sessionStatus === 'completed') return;
+    if (turnIndex >= 4) return;
+    advanceSpeakingTurn(sessionId);
     setTopicIndex((prev) => (prev + 1) % TOPICS.length);
-    setTranscript('');
-    setAiReply('');
     setFeedback(null);
     setFeedbackExpanded(false);
     setPhase('monologue');
     setFollowUpPrompt('');
     setPendingParentId(null);
   };
+
+  if (sessionStatus === 'completed') {
+    const turns = session?.turns || [];
+    const idx = Math.max(0, Math.min(turns.length - 1, reviewTurnIndex));
+    const turn = turns[idx] || null;
+    return (
+      <Background module="practice" variant="brown">
+        <View style={styles.reviewContainer}>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewCardLabel}>Tekoäly</Text>
+            <Text style={styles.reviewCardText}>{turn?.aiSpeech?.transcript || '—'}</Text>
+          </View>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewCardLabel}>Sinä</Text>
+            <Text style={styles.reviewCardText}>{turn?.userSpeech?.transcript || '—'}</Text>
+          </View>
+          <View style={styles.reviewControls}>
+            <TouchableOpacity
+              style={[styles.nextButton, { flex: 1, opacity: idx === 0 ? 0.5 : 1 }]}
+              disabled={idx === 0}
+              onPress={() => setReviewTurnIndex((n) => Math.max(0, n - 1))}
+            >
+              <Text style={styles.nextButtonText}>Edellinen</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.nextButton, { flex: 1, opacity: idx >= turns.length - 1 ? 0.5 : 1 }]}
+              disabled={idx >= turns.length - 1}
+              onPress={() => setReviewTurnIndex((n) => Math.min(turns.length - 1, n + 1))}
+            >
+              <Text style={styles.nextButtonText}>Seuraava</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Background>
+    );
+  }
 
   const increaseDuration = () => {
     setDurationIndex((prev) => Math.min(prev + 1, DURATIONS.length - 1));
@@ -596,6 +671,32 @@ const styles = StyleSheet.create({
   panelText: {
     color: colors.surface,
     marginTop: spacing.xsmall,
+  },
+  reviewContainer: {
+    flex: 1,
+    padding: spacing.medium,
+  },
+  reviewCard: {
+    backgroundColor: '#0f1117',
+    borderRadius: 16,
+    padding: spacing.medium,
+    marginBottom: spacing.medium,
+  },
+  reviewCardLabel: {
+    color: colors.primary,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.xsmall,
+  },
+  reviewCardText: {
+    color: colors.surface,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  reviewControls: {
+    flexDirection: 'row',
+    gap: 10,
   },
   error: {
     color: '#ff8b8b',

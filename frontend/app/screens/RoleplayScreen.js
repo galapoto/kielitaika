@@ -152,13 +152,13 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     return (
       <Background module="workplace" variant="brown" imageVariant="workplace">
         <View style={styles.container}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tekoäly</Text>
-            <Text style={styles.sectionItem}>{aiText}</Text>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewCardLabel}>Tekoäly</Text>
+            <Text style={styles.reviewCardText}>{aiText}</Text>
           </View>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sinä</Text>
-            <Text style={styles.sectionItem}>{userText}</Text>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewCardLabel}>Sinä</Text>
+            <Text style={styles.reviewCardText}>{userText}</Text>
           </View>
         </View>
       </Background>
@@ -293,6 +293,24 @@ const styles = StyleSheet.create({
     color: '#cbd5f5',
     fontSize: 14,
     marginBottom: 4,
+  },
+  reviewCard: {
+    backgroundColor: '#0f1117',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
+  },
+  reviewCardLabel: {
+    color: '#7dd3fc',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  reviewCardText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    lineHeight: 22,
   },
   micRow: {
     flexDirection: 'row',
