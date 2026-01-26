@@ -38,9 +38,11 @@ export const designTokens = {
       hero: { size: 32, lineHeight: 40, weight: '700' },
       h2: { size: 24, lineHeight: 32, weight: '600' },
       h3: { size: 20, lineHeight: 28, weight: '600' },
+      h4: { size: 18, lineHeight: 24, weight: '600' },
       cardTitle: { size: 18, lineHeight: 26, weight: '600' },
       body: { size: 16, lineHeight: 24, weight: '400' },
       small: { size: 14, lineHeight: 20, weight: '400' },
+      caption: { size: 12, lineHeight: 16, weight: '400' },
       label: { size: 12, lineHeight: 16, weight: '500' },
     },
     letterSpacing: {
