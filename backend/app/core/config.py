@@ -1,20 +1,39 @@
 """Application configuration placeholders."""
 
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
 from typing import Any, Union
 
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+
 class Settings(BaseSettings):
     # existing
+    app_env: str | None = None
+    debug: bool = False
+    log_level: str | None = None
+
     openai_api_key: str | None = None
+    openai_model: str | None = None
+    openai_temperature: float | None = None
     database_url: str | None = None
+
+    # Auth/JWT (schema alignment only; runtime may use constants elsewhere)
+    secret_key: str | None = None
+    jwt_algorithm: str | None = None
+    access_token_expire_minutes: int | None = None
+    refresh_token_expire_days: int | None = None
+    auth_mode: str | None = None
+
     port: int = 5000
     host: str = "0.0.0.0"
+    public_base_url: str | None = None
 
     # TTS control
     tts_enabled: bool = False
     tts_default_provider: str = "elevenlabs"
     tts_fallback_provider: str = "azure"
+    fail_soft_on_tts_error: bool = True
 
     # ElevenLabs
     eleven_api_key: str | None = None
@@ -75,9 +94,57 @@ class Settings(BaseSettings):
             return v
         return []
 
+    # CORS
+    cors_allow_origins: Union[str, list[str]] = []
+    cors_allow_credentials: bool = False
+
+    # Dev-only legacy / namespaced env keys (declared for strict schema alignment)
+    puhis_eleven_api_key: str | None = None
+    puhis_eleven_voice_ids: str | None = None
+    puhis_eleven_default_voice: str | None = None
+    puhis_eleven_model: str | None = None
+    puhis_eleven_stability: float | None = None
+    puhis_eleven_similarity: float | None = None
+
+    puhis_azure_speech_key: str | None = None
+    puhis_azure_speech_region: str | None = None
+    puhis_azure_speech_voices: str | None = None
+    puhis_azure_speech_default_voice: str | None = None
+    puhis_azure_speech_language: str | None = None
+
+    enable_request_logging: bool = False
+    enable_tts_logging: bool = False
+
+    @field_validator('cors_allow_origins', mode='before')
+    @classmethod
+    def parse_cors_allow_origins(cls, v: Any) -> list[str]:
+        """Parse CORS_ALLOW_ORIGINS env var into list."""
+        if v is None or v == '':
+            return []
+        if isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return []
+            if s == '*':
+                return ['*']
+            return [part.strip() for part in s.split(',') if part.strip()]
+        return []
+
+    @field_validator('cors_allow_origins', mode='after')
+    @classmethod
+    def ensure_cors_allow_origins_list(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            s = v.strip()
+            return [s] if s else []
+        if isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        return []
+
     class Config:
-        env_file = ".env"
-        extra = "ignore"  # Ignore extra env vars not in schema
+        env_file = str(ENV_FILE)
+        extra = "forbid"  # Keep strict env schema enforcement
 
 
 def get_settings() -> Settings:
