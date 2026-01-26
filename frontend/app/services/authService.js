@@ -3,11 +3,16 @@
 import { HTTP_API_BASE } from '../config/backend';
 
 async function fetchWithAuth(url, options = {}) {
-  const response = await fetch(`${HTTP_API_BASE}${url}`, options);
-  return response;
+  try {
+    const response = await fetch(`${HTTP_API_BASE}${url}`, options);
+    return response;
+  } catch (error) {
+    throw new Error('Backend unreachable');
+  }
 }
 
 export async function login(email, password) {
+  // Auth strategy: backend owns user creation via /auth/register; no pre-seeded users assumed.
   const response = await fetchWithAuth('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
