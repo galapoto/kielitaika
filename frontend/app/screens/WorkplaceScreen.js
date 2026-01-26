@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import Background from '../components/ui/Background';
 import { listWorkplaceFields, listWorkplaceFieldsV2 } from '../utils/api';
-import UpgradeNotice from '../components/UpgradeNotice';
 import { useAuth } from '../context/AuthContext';
 import HomeButton from '../components/HomeButton';
 import ProfileImage from '../components/ProfileImage';
@@ -19,7 +18,6 @@ export default function WorkplaceScreen({ navigation }) {
   const [fields, setFields] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [upgradeReason, setUpgradeReason] = useState(null);
 
   useEffect(() => {
     loadFields();
@@ -47,12 +45,8 @@ export default function WorkplaceScreen({ navigation }) {
         response = await listWorkplaceFields();
         setFields(response.fields || []);
       }
-      setUpgradeReason(null);
     } catch (err) {
       console.error('Error loading workplace fields:', err);
-      if (err?.message?.includes('Upgrade required')) {
-        setUpgradeReason(err.message);
-      }
       setError(err.message || 'Failed to load professions');
     } finally {
       setIsLoading(false);
@@ -162,12 +156,6 @@ export default function WorkplaceScreen({ navigation }) {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            {upgradeReason && (
-              <UpgradeNotice
-                reason={upgradeReason}
-                onPress={() => navigation.navigate('Subscription')}
-              />
-            )}
             <TouchableOpacity style={styles.retryButton} onPress={loadFields}>
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>

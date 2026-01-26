@@ -11,7 +11,6 @@ import { useAuth } from '../context/AuthContext';
 import MicRecorder from '../components/MicRecorder';
 import { generateYkiExam, submitYkiExam } from '../utils/api';
 import { getYkiTodaySession } from '../utils/api';
-import UpgradeNotice from '../components/UpgradeNotice';
 import Background from '../components/ui/Background';
 import NeumorphicButton from '../ui/components/NeumorphicButton';
 import EnhancedCard from '../ui/components/EnhancedCard';
@@ -79,7 +78,6 @@ export default function YKIScreen({ navigation }) {
   const [loadingExam, setLoadingExam] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [upgradeReason, setUpgradeReason] = useState(null);
   const [todaySession, setTodaySession] = useState(null);
   const [loadingSession, setLoadingSession] = useState(false);
 
@@ -134,14 +132,10 @@ export default function YKIScreen({ navigation }) {
       setExam(newExam);
       setSpeakingResponses({});
       setWritingResponses({});
-      setUpgradeReason(null);
     } catch (err) {
       console.error('[YKIScreen] Failed to load exam:', err);
       const errorMessage = err?.message || 'Failed to load YKI exam. Please check your connection and try again.';
       setError(errorMessage);
-      if (err?.message?.includes('Upgrade required') || err?.message?.includes('Subscription required')) {
-        setUpgradeReason(err.message);
-      }
     } finally {
       setLoadingExam(false);
     }
@@ -185,12 +179,8 @@ export default function YKIScreen({ navigation }) {
         writingPayload
       );
       setEvaluation(evalResult);
-      setUpgradeReason(null);
     } catch (err) {
       setError(err.message || 'Failed to submit exam');
-      if (err?.message?.includes('Upgrade required')) {
-        setUpgradeReason(err.message);
-      }
     } finally {
       setSubmitting(false);
     }
@@ -506,14 +496,8 @@ export default function YKIScreen({ navigation }) {
           </View>
         )}
 
-        {/* Error and Upgrade Notices */}
+        {/* Error */}
         {error && <Text style={styles.errorText}>{error}</Text>}
-        {upgradeReason && (
-          <UpgradeNotice
-            reason={upgradeReason}
-            onPress={() => navigation.navigate('Subscription')}
-          />
-        )}
 
         {/* Exam Tasks Display */}
         {exam && (
