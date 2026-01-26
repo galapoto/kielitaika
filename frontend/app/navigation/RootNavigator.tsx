@@ -19,11 +19,8 @@ import ConversationScreen from "../screens/ConversationScreen";
 import WorkplaceScreen from "../screens/WorkplaceScreen";
 import ProfessionDetailScreen from "../screens/ProfessionDetailScreen";
 import RoleplayScreen from "../screens/RoleplayScreen";
-import PracticeRoundScreen from "../screens/PracticeRoundScreen";
-import CompetenceDashboardScreen from "../screens/CompetenceDashboardScreen";
 import VocabularyScreen from "../screens/VocabularyScreen";
 import QuizScreen from "../screens/QuizScreen";
-import NotesScreen from "../screens/NotesScreen";
 import LessonDetailScreen from "../screens/LessonDetailScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import NotificationSettingsScreen from "../screens/NotificationSettingsScreen";
@@ -66,11 +63,8 @@ function WorkPlanStack() {
       <WorkStack.Screen name="Workplace" component={WorkplaceScreen} />
       <WorkStack.Screen name="ProfessionDetail" component={ProfessionDetailScreen} />
       <WorkStack.Screen name="Roleplay" component={RoleplayScreen} />
-      <WorkStack.Screen name="PracticeRound" component={PracticeRoundScreen} />
-      <WorkStack.Screen name="CompetenceDashboard" component={CompetenceDashboardScreen} />
       <WorkStack.Screen name="Vocabulary" component={VocabularyScreen} />
       <WorkStack.Screen name="Quiz" component={QuizScreen} />
-      <WorkStack.Screen name="Notes" component={NotesScreen} />
       <WorkStack.Screen name="LessonDetail" component={LessonDetailScreen} />
       <WorkStack.Screen name="Subscription" component={SubscriptionScreen} />
       <WorkStack.Screen name="Settings" component={SettingsScreen} />

@@ -11,7 +11,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Background from '../components/ui/Background';
 import HomeButton from '../components/HomeButton';
 import { fetchLesson } from '../utils/api';
-import { buildNotesKey, appendNoteEntry } from '../utils/notes';
 import { designTokens } from '../styles/designTokens';
 import { colors as palette } from '../styles/colors';
 import PremiumEmbossedButton from '../components/PremiumEmbossedButton';
@@ -156,31 +155,12 @@ export default function QuizScreen({ route, navigation } = {}) {
     setShowAnswer(false);
   };
 
-  const logQuizMistake = useCallback(
-    async (question, response) => {
-      if (!quizNotesKey) return;
-      const expectedOption = question?.options?.[question.correct];
-      const text = `Quiz mistake: ${question.question} → expected "${
-        expectedOption || 'correct answer'
-      }", answered "${question.options?.[response] ?? response}".`;
-      try {
-        await appendNoteEntry(quizNotesKey, text);
-      } catch (err) {
-        console.warn('[QuizScreen] failed to log note', err);
-      }
-    },
-    [quizNotesKey]
-  );
-
   const handleConfirmAnswer = () => {
     if (selectedOption == null || !currentQuestion) return;
     const delta = selectedOption === currentQuestion.correct ? 1 : 0;
     correctCountRef.current += delta;
     setCorrectCount(correctCountRef.current);
     setShowAnswer(true);
-    if (delta === 0) {
-      logQuizMistake(currentQuestion, selectedOption);
-    }
   };
 
   const restartQuiz = useCallback(() => {
@@ -514,16 +494,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-  const lessonParamId = route?.params?.lessonId || `${type}_${level}`;
-  const quizNotesKey = useMemo(
-    () =>
-      buildNotesKey({
-        path,
-        field,
-        sourceType: type,
-        level,
-        lessonId: lessonParamId,
-      }),
-    [path, field, type, level, lessonParamId]
-  );
-  const [roundsCompleted, setRoundsCompleted] = useState(0);

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAnalytics } from '../hooks/useAnalytics';
-import { useAdaptiveLearning } from '../hooks/useAdaptiveLearning';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, findNodeHandle, UIManager } from 'react-native';
 import Background from '../components/ui/Background';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +9,6 @@ import HomeButton from '../components/HomeButton';
 import RukaCard from '../components/ui/RukaCard';
 import { colors as palette } from '../styles/colors';
 import { useVoice } from '../hooks/useVoice';
-import { appendNoteEntry, buildNotesKey, loadNotes } from '../utils/notes';
 
 const LESSON_NORMALIZATION = {
   practice: 'speaking',
@@ -166,7 +164,6 @@ function getFallbackLesson(type, level, path) {
  */
 export default function LessonDetailScreen({ route, navigation } = {}) {
   const { trackScreen, trackLesson, trackMistake } = useAnalytics();
-  const { trackPerformance } = useAdaptiveLearning();
   
   // Track screen view
   useEffect(() => {
@@ -201,52 +198,8 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
     () => lesson?.id || lessonId || `${canonicalType}_${level}`,
     [lesson?.id, lessonId, canonicalType, level]
   );
-  const notesStorageKey = useMemo(
-    () =>
-      buildNotesKey({
-        path,
-        field,
-        sourceType: type,
-        level,
-        lessonId: lessonIdentifier,
-      }),
-    [path, field, type, level, lessonIdentifier]
-  );
-  const [notesEntries, setNotesEntries] = useState([]);
   const [weaknesses, setWeaknesses] = useState({});
   const weaknessesCount = useMemo(() => Object.values(weaknesses).reduce((sum, value) => sum + (value > 0 ? 1 : 0), 0), [weaknesses]);
-
-  useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      if (!notesStorageKey) return;
-      try {
-        const entries = await loadNotes(notesStorageKey);
-        if (isMounted) {
-          setNotesEntries(entries);
-        }
-      } catch (err) {
-        console.warn('[LessonDetailScreen] failed to load notes', err);
-      }
-    };
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, [notesStorageKey]);
-
-  const appendLessonNote = useCallback(
-    async (text) => {
-      if (!text || !notesStorageKey) return;
-      try {
-        const nextEntries = await appendNoteEntry(notesStorageKey, text);
-        setNotesEntries(nextEntries);
-      } catch (err) {
-        console.warn('[LessonDetailScreen] failed to append note', err);
-      }
-    },
-    [notesStorageKey]
-  );
 
   const updateExerciseState = useCallback((exerciseId, updates) => {
     setExerciseState((prev) => ({
@@ -280,7 +233,6 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
         correct: isCorrect ? 1 : 0,
         response,
       };
-      trackPerformance(lessonIdentifier, metrics).catch(() => {});
       if (!isCorrect) {
         const expectedLabel =
           exercise.type === 'multiple-choice'
@@ -292,11 +244,6 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
           expected: expectedLabel,
           response,
         });
-        appendLessonNote(
-          `Practice miss: ${exercise.prompt} → expected ${
-            expectedLabel || 'correct answer'
-          }.`
-        );
         const topic = exercise.grammar?.topic || 'grammar_practice';
         setWeaknesses((prev) => ({
           ...prev,
@@ -304,7 +251,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
         }));
       }
     },
-    [exerciseState, lessonIdentifier, trackMistake, trackPerformance, appendLessonNote]
+    [exerciseState, lessonIdentifier, trackMistake]
   );
 
   const handleMultipleChoiceSelect = useCallback(
@@ -681,19 +628,6 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
                     </Text>
                   </View>
                 )}
-                {notesEntries.length > 0 && (
-                  <View style={styles.notesContainer}>
-                    <Text style={styles.notesLabel}>Recent Fix Notes</Text>
-                    {notesEntries.slice(0, 3).map((note) => (
-                      <View key={note.id} style={styles.noteEntry}>
-                        <Text style={styles.noteEntryText}>{note.text}</Text>
-                        <Text style={styles.noteEntryMeta}>
-                          {note.createdAt ? new Date(note.createdAt).toLocaleTimeString() : ''}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
                 {Object.keys(weaknesses).length > 0 && (
                   <View style={styles.weaknessContainer}>
                     <Text style={styles.weaknessLabel}>Focus Areas</Text>
@@ -710,22 +644,6 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
                     <Text style={styles.promptLabel}>Prompt</Text>
                     <Text style={styles.promptText}>{reviewStep.reviewPrompt}</Text>
                   </View>
-                )}
-                {weaknessesCount > 0 && (
-                  <TouchableOpacity
-                    style={styles.drillButton}
-                    onPress={() => navigation?.navigate('Notes', {
-                      path,
-                      field: route?.params?.field || route?.params?.professionId || null,
-                      sourceType: canonicalType,
-                      level,
-                      lessonId: lesson?.id || lessonId || null,
-                      title: `Focus ${lesson?.title || 'Lesson'}`,
-                    })}
-                  >
-                    <Text style={styles.drillLabel}>Drill the trouble spots in Notes</Text>
-                    <Text style={styles.drillSubLabel}>Copy the fix suggestions and keep practicing.</Text>
-                  </TouchableOpacity>
                 )}
               </View>
             )}
