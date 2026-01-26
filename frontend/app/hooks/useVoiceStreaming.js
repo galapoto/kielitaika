@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useAudioRecorder } from './useAudioRecorder';
 import useWebSocket from './useWebSocket';
 import { transcribeAudio } from '../utils/stt';
@@ -237,6 +237,7 @@ export function useVoiceStreaming(options = {}) {
 
   // Stop recording
   const stopRecording = useCallback(async () => {
+    if (!isRecording) return;
     if (isNativePlatform) {
       try {
         setIsProcessing(true);
@@ -282,7 +283,7 @@ export function useVoiceStreaming(options = {}) {
         onTranscript(finalTranscript);
       }
       if (callTranscriptComplete && onTranscriptComplete) {
-        onTranscriptComplete({ text: finalTranscript, meta });
+        onTranscriptComplete(finalTranscript, meta);
       }
       return finalTranscript;
     } catch (err) {
@@ -306,7 +307,7 @@ export function useVoiceStreaming(options = {}) {
         onTranscript(text);
       }
       if (options?.callTranscriptComplete && onTranscriptComplete) {
-        onTranscriptComplete({ text, meta });
+        onTranscriptComplete(text, meta);
       }
       return text;
     },
@@ -377,12 +378,55 @@ export function useVoiceStreaming(options = {}) {
 
   // Stop speaking
   const stopSpeaking = useCallback(() => {
-    if ('speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
     closeTTS();
     setIsSpeaking(false);
   }, [closeTTS]);
+
+  // Teardown on app background / tab hidden
+  useEffect(() => {
+    const teardown = () => {
+      try {
+        stopRecording();
+      } catch (_) {
+        // ignore teardown errors
+      }
+      try {
+        stopSpeaking();
+      } catch (_) {
+        // ignore teardown errors
+      }
+    };
+
+    const appStateSub =
+      typeof AppState?.addEventListener === 'function'
+        ? AppState.addEventListener('change', (nextState) => {
+            if (nextState !== 'active') teardown();
+          })
+        : null;
+
+    const onVisibility =
+      typeof document !== 'undefined' && typeof document.addEventListener === 'function'
+        ? () => {
+            if (document.visibilityState !== 'visible') teardown();
+          }
+        : null;
+
+    if (onVisibility) {
+      document.addEventListener('visibilitychange', onVisibility);
+    }
+
+    return () => {
+      if (appStateSub && typeof appStateSub.remove === 'function') {
+        appStateSub.remove();
+      }
+      if (onVisibility) {
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
+    };
+  }, [stopRecording, stopSpeaking]);
 
   // Cleanup
   useEffect(() => {

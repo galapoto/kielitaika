@@ -70,8 +70,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   }, [field, scenarioTitle, level, speak]);
 
   const handleTranscriptComplete = useCallback(
-    async (value) => {
-      const text = typeof value === 'string' ? value : value?.text;
+    async (text) => {
       const normalized = (text || '').trim();
       if (!normalized) return;
       setTranscript(normalized);

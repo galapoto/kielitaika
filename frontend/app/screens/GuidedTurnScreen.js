@@ -196,9 +196,7 @@ export default function GuidedTurnScreen({ route } = {}) {
   );
 
   const handleTranscriptComplete = useCallback(
-    async (value) => {
-      const sttText = typeof value === 'string' ? value : value?.text;
-      const sttMeta = typeof value === 'object' && value ? value.meta : null;
+    async (sttText, sttMeta) => {
       const normalized = (sttText || '').trim();
       if (!normalized) return;
       setTranscript(normalized);
