@@ -26,6 +26,7 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const { login, loginWithGoogle } = useAuth();
   
   const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '946481356194-v8t6riiihp9oetqd1fl6gc1onhi2quf1.apps.googleusercontent.com';
@@ -38,8 +39,21 @@ export default function LoginScreen({ navigation }) {
     webClientId: googleClientId, // Required for Web platform
   });
 
+  const withTimeout = (promise, ms) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        const id = setTimeout(() => {
+          clearTimeout(id);
+          reject(new Error('Request timed out. Please try again.'));
+        }, ms);
+      }),
+    ]);
+
   const handleLogin = async () => {
+    setErrorMessage('');
     if (!email.trim() || !password.trim()) {
+      setErrorMessage('Please enter both email and password.');
       Alert.alert('Error', 'Please enter both email and password');
       return;
     }
@@ -47,10 +61,12 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       // Use email as username for now (or update auth service to accept username)
-      await login(email.trim(), password);
-      navigation.replace('Conversation');
+      await withTimeout(login(email.trim(), password), 12000);
+      navigation?.replace?.('Conversation');
     } catch (error) {
-      Alert.alert('Login Failed', error.message || 'Please check your credentials and try again');
+      const message = error?.message || 'Please check your credentials and try again.';
+      setErrorMessage(message);
+      Alert.alert('Login Failed', message);
     } finally {
       setLoading(false);
     }
@@ -61,9 +77,14 @@ export default function LoginScreen({ navigation }) {
       if (response?.type === 'success' && response.authentication?.idToken) {
         try {
           setGoogleLoading(true);
-          await loginWithGoogle(response.authentication.idToken);
+          if (typeof loginWithGoogle !== 'function') {
+            throw new Error('Google sign-in is not available right now.');
+          }
+          await withTimeout(loginWithGoogle(response.authentication.idToken), 12000);
         } catch (err) {
-          Alert.alert('Google Sign-In Failed', err.message || 'Please try again');
+          const message = err?.message || 'Please try again.';
+          setErrorMessage(message);
+          Alert.alert('Google Sign-In Failed', message);
         } finally {
           setGoogleLoading(false);
         }
@@ -98,6 +119,11 @@ export default function LoginScreen({ navigation }) {
 
               {/* Login Form */}
               <View style={styles.form}>
+                {errorMessage ? (
+                  <View style={styles.errorBanner} accessibilityRole="alert">
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
                 {/* Email Field */}
                 <View style={styles.inputContainer}>
                   <TextInput
@@ -105,7 +131,10 @@ export default function LoginScreen({ navigation }) {
                     placeholder="your@email.com"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={(value) => {
+                      setEmail(value);
+                      if (errorMessage) setErrorMessage('');
+                    }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     editable={!loading}
@@ -119,7 +148,10 @@ export default function LoginScreen({ navigation }) {
                     placeholder="Enter your password"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(value) => {
+                      setPassword(value);
+                      if (errorMessage) setErrorMessage('');
+                    }}
                     secureTextEntry
                     autoCapitalize="none"
                     editable={!loading}
@@ -151,6 +183,7 @@ export default function LoginScreen({ navigation }) {
                     if (request && promptAsync) {
                       promptAsync().catch(err => {
                         console.error('Google sign-in error:', err);
+                        setErrorMessage('Unable to start Google sign-in. Please try again.');
                         Alert.alert('Sign-In Error', 'Unable to start Google sign-in. Please try again.');
                       });
                     }
@@ -220,6 +253,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.6)',
     textAlign: 'center',
+  },
+  errorBanner: {
+    width: '100%',
+    backgroundColor: 'rgba(220, 38, 38, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.35)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+  },
+  errorText: {
+    color: '#FEE2E2',
+    fontSize: 13,
+    lineHeight: 18,
   },
   form: {
     width: '100%',
