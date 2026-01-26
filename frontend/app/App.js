@@ -1,3 +1,4 @@
+// RECOVERY MODE: Architecture restoration in progress. Feature work frozen.
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
