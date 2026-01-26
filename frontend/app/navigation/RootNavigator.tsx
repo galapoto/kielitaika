@@ -29,6 +29,7 @@ import SettingsScreen from "../screens/SettingsScreen";
 import NotificationSettingsScreen from "../screens/NotificationSettingsScreen";
 import PrivacySettingsScreen from "../screens/PrivacySettingsScreen";
 import SubscriptionScreen from "../screens/SubscriptionScreen";
+import { useAuth } from "../context/AuthContext";
 
 const Drawer = createDrawerNavigator();
 const YKIStack = createNativeStackNavigator();
@@ -80,6 +81,10 @@ function WorkPlanStack() {
 }
 
 export default function RootNavigator() {
+  const { accessState } = useAuth();
+  const canAccessYki = accessState?.yki === true;
+  const canAccessWork = accessState?.work === true;
+
   return (
     <Drawer.Navigator
       initialRouteName="Home"
@@ -101,14 +106,14 @@ export default function RootNavigator() {
       />
       <Drawer.Screen
         name="YKIPlan"
-        component={YKIPlanStack}
+        component={canAccessYki ? YKIPlanStack : HomeScreen}
         options={{
           title: "YKI Pass Plan",
         }}
       />
       <Drawer.Screen
         name="WorkPlan"
-        component={WorkPlanStack}
+        component={canAccessWork ? WorkPlanStack : HomeScreen}
         options={{
           title: "Work Readiness Plan",
         }}

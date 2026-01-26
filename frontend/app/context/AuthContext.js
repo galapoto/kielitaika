@@ -38,6 +38,17 @@ const AUTH_STORAGE_KEY = '@ruka_auth';
 const TOKEN_STORAGE_KEY = '@ruka_token';
 const REFRESH_TOKEN_STORAGE_KEY = '@ruka_refresh_token';
 
+const deriveAccessState = (tier) => {
+  const normalizedTier = tier || 'free';
+  const hasYkiAccess = normalizedTier === 'general_premium' || normalizedTier === 'professional_premium';
+  const hasWorkAccess = normalizedTier === 'professional_premium';
+  return {
+    tier: normalizedTier,
+    yki: hasYkiAccess,
+    work: hasWorkAccess,
+  };
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
@@ -166,6 +177,7 @@ export function AuthProvider({ children }) {
     token,
     isAuthenticated,
     loading,
+    accessState: deriveAccessState(user?.subscriptionTier),
     login: handleLogin,
     register: handleRegister,
     logout,
