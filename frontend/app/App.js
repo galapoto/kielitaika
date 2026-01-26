@@ -3,16 +3,23 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { HTTP_API_BASE } from './config/backend';
+import * as Reanimated from 'react-native-reanimated';
 
 const runtimeBuildId = new Date().toISOString();
 import { PathProvider } from './context/PathContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { PreferencesProvider } from './context/PreferencesContext';
-import RootNavigator from './navigation/RootNavigator';
+const ensureReanimatedGestureHandler = () => {
+  if (typeof Reanimated.useAnimatedGestureHandler !== 'function') {
+    Reanimated.useAnimatedGestureHandler = () => () => {};
+  }
+};
 
 function NavigationRoot() {
   const { colors, isDark } = useTheme();
+  ensureReanimatedGestureHandler();
+  const RootNavigator = require('./navigation/RootNavigator').default;
 
   return (
     <PathProvider>

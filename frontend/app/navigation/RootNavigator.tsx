@@ -82,7 +82,6 @@ export default function RootNavigator() {
   return (
     <Drawer.Navigator
       initialRouteName="Home"
-      useLegacyImplementation
       screenOptions={{
         headerShown: false,
         drawerStyle: {
