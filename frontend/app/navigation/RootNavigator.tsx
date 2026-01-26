@@ -81,6 +81,9 @@ export default function RootNavigator() {
 
   return (
     <Drawer.Navigator
+      // Reanimated 3+ does not support the legacy drawer implementation.
+      // Force modern drawer to avoid `useLegacyImplementation` crashes.
+      useLegacyImplementation={false}
       initialRouteName="Home"
       screenOptions={{
         headerShown: false,

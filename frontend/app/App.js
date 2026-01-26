@@ -34,6 +34,13 @@ function NavigationRoot() {
             border: colors.border || '#e2e8f0',
             notification: colors.primary || '#0A3D62',
           },
+          // Required by @react-navigation/drawer (DrawerItem reads fonts.medium).
+          fonts: {
+            regular: { fontFamily: 'System', fontWeight: '400' },
+            medium: { fontFamily: 'System', fontWeight: '500' },
+            bold: { fontFamily: 'System', fontWeight: '700' },
+            heavy: { fontFamily: 'System', fontWeight: '800' },
+          },
         }}
       >
         <RootNavigator />

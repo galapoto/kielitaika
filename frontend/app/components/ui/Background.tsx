@@ -256,6 +256,10 @@ export default function Background({
 
   const TextureOverlay = () => {
     if (colorScheme !== "dark") return null;
+    // Android: react-native-svg can emit unsupported layout events depending on
+    // the native/JS module alignment in the current dev client. Skip this purely
+    // decorative grain layer to prevent hard crashes.
+    if (Platform.OS === 'android') return null;
     // Deterministic "grain" dots (subtle texture, not shiny/polished)
     const dots = Array.from({ length: 90 }).map((_, i) => {
       const x = (i * 37) % 100;
