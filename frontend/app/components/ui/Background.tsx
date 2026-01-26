@@ -250,6 +250,9 @@ export default function Background({
 
   // Get background image from canonical source
   const selectedImage = getBackgroundImage(module, colorScheme as "dark" | "light");
+  // When an image is present, make the tone-setting gradient semi-transparent
+  // so the image remains visibly readable underneath.
+  const gradientOpacity = selectedImage ? (colorScheme === "light" ? 0.28 : 0.38) : 1;
 
   const TextureOverlay = () => {
     if (colorScheme !== "dark") return null;
@@ -278,7 +281,7 @@ export default function Background({
         colors={gradientColors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, { opacity: gradientOpacity }]}
       />
       {/* White "stripes" / highlights - enhanced for conversation page */}
       <Animated.View 

@@ -23,9 +23,9 @@ import { getDayNightState } from '../season/DayNightCycle';
 
 // Scene background images - using fallback gradients if images are missing
 // Images are optional - component will work without them
-const auroraImg = null; // require('../../assets/backgrounds/revontuli.png');
-const forestImg = null; // require('../../assets/backgrounds/metsä_talvi.png');
-const laplandImg = null; // require('../../assets/backgrounds/snow_pile.png');
+const auroraImg = require('../assets/images/backgrounds/dark/conversation/convo_dark.png');
+const forestImg = require('../assets/images/backgrounds/dark/home/home_dark.png');
+const laplandImg = require('../assets/images/backgrounds/dark/practice/practice_dark.png');
 
 const emotionMap = {
   calm: 0,
