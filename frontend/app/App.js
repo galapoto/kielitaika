@@ -36,6 +36,7 @@ import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
 import { PathProvider } from './context/PathContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PreferencesProvider } from './context/PreferencesContext';
 import LoginScreen from './screens/auth/LoginScreen';
 import RegisterScreen from './screens/auth/RegisterScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
@@ -143,7 +144,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <AuthProvider>
-          <RootNavigator />
+          <PreferencesProvider>
+            <RootNavigator />
+          </PreferencesProvider>
         </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
