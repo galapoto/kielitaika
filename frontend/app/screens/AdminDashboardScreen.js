@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { RukaButton, RukaCard } from '../ui';
 import { IconLightning, IconPlay } from '../ui/icons/IconPack';
+import Background from '../components/ui/Background';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:5000';
 
@@ -77,81 +78,83 @@ export default function AdminDashboardScreen({ route, navigation } = {}) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Admin Dashboard</Text>
-        <Text style={styles.subtitle}>Cohort Analytics & Reporting</Text>
-      </View>
-      
-      {error ? <Text style={{ color: '#dc2626', paddingHorizontal: 20 }}>{error}</Text> : null}
+    <Background module="workplace" variant="brown">
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Admin Dashboard</Text>
+          <Text style={styles.subtitle}>Cohort Analytics & Reporting</Text>
+        </View>
+        
+        {error ? <Text style={{ color: '#dc2626', paddingHorizontal: 20 }}>{error}</Text> : null}
 
-      <View style={styles.cohortsSection}>
-        <Text style={styles.sectionTitle}>Cohorts</Text>
-        {isLoadingCohorts && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#0A3D62" />
-          </View>
-        )}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cohortChips}>
+        <View style={styles.cohortsSection}>
+          <Text style={styles.sectionTitle}>Cohorts</Text>
+          {isLoadingCohorts && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#0A3D62" />
+            </View>
+          )}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cohortChips}>
+            {cohorts.map((cohort) => (
+              <RukaButton
+                key={cohort.id}
+                title={cohort.name}
+                onPress={() => loadCohortAnalytics(cohort.id)}
+                icon={IconPlay}
+                style={{ opacity: selectedCohort === cohort.id ? 1 : 0.7, marginRight: 8 }}
+              />
+            ))}
+          </ScrollView>
           {cohorts.map((cohort) => (
-            <RukaButton
+            <RukaCard
               key={cohort.id}
               title={cohort.name}
+              subtitle={`ID: ${cohort.id}`}
+              icon={IconLightning}
               onPress={() => loadCohortAnalytics(cohort.id)}
-              icon={IconPlay}
-              style={{ opacity: selectedCohort === cohort.id ? 1 : 0.7, marginRight: 8 }}
+              style={{ width: '100%' }}
             />
           ))}
-        </ScrollView>
-        {cohorts.map((cohort) => (
-          <RukaCard
-            key={cohort.id}
-            title={cohort.name}
-            subtitle={`ID: ${cohort.id}`}
-            icon={IconLightning}
-            onPress={() => loadCohortAnalytics(cohort.id)}
-            style={{ width: '100%' }}
-          />
-        ))}
-      </View>
-
-      {isLoading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0A3D62" />
         </View>
-      )}
 
-      {analytics && (
-        <View style={styles.analyticsSection}>
-          <View style={styles.analyticsHeader}>
-            <Text style={styles.sectionTitle}>Analytics</Text>
-            <View style={styles.exportButtons}>
-              <RukaButton
-                title="Export CSV"
-                onPress={() => exportReport('csv')}
-                icon={IconLightning}
-              />
-              <RukaButton
-                title="Export JSON"
-                onPress={() => exportReport('json')}
-                icon={IconLightning}
-              />
-            </View>
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0A3D62" />
           </View>
+        )}
 
-          <RukaCard title="Total Users" subtitle={`${analytics.user_count}`} icon={IconPlay} style={styles.metricCard} />
-          <RukaCard title="Active Today" subtitle={`${analytics.daily_active}`} icon={IconPlay} style={styles.metricCard} />
-          <RukaCard title="Completion Rate" subtitle={`${analytics.completion_rate}%`} icon={IconLightning} style={styles.metricCard} />
-        </View>
-      )}
-    </ScrollView>
+        {analytics && (
+          <View style={styles.analyticsSection}>
+            <View style={styles.analyticsHeader}>
+              <Text style={styles.sectionTitle}>Analytics</Text>
+              <View style={styles.exportButtons}>
+                <RukaButton
+                  title="Export CSV"
+                  onPress={() => exportReport('csv')}
+                  icon={IconLightning}
+                />
+                <RukaButton
+                  title="Export JSON"
+                  onPress={() => exportReport('json')}
+                  icon={IconLightning}
+                />
+              </View>
+            </View>
+
+            <RukaCard title="Total Users" subtitle={`${analytics.user_count}`} icon={IconPlay} style={styles.metricCard} />
+            <RukaCard title="Active Today" subtitle={`${analytics.daily_active}`} icon={IconPlay} style={styles.metricCard} />
+            <RukaCard title="Completion Rate" subtitle={`${analytics.completion_rate}%`} icon={IconLightning} style={styles.metricCard} />
+          </View>
+        )}
+      </ScrollView>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   header: {
     padding: 20,

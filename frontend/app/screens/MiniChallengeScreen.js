@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView
 import { LinearGradient } from 'expo-linear-gradient';
 import MiniChallengeCard from '../components/MiniChallengeCard';
 import { fetchRecharge } from '../utils/api';
+import Background from '../components/ui/Background';
 
 export default function MiniChallengeScreen({ navigation }) {
   const [challenge, setChallenge] = useState(null);
@@ -26,86 +27,92 @@ export default function MiniChallengeScreen({ navigation }) {
   // Combine all designs: Quiz design (4th) for challenge interface
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF6B35" />
-        <Text style={styles.hint}>Loading challenge...</Text>
-      </View>
+      <Background module="practice" variant="brown">
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#FF6B35" />
+          <Text style={styles.hint}>Loading challenge...</Text>
+        </View>
+      </Background>
     );
   }
 
   if (error || !challenge) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.error}>{error || 'No challenge available'}</Text>
-      </View>
+      <Background module="practice" variant="brown">
+        <View style={styles.center}>
+          <Text style={styles.error}>{error || 'No challenge available'}</Text>
+        </View>
+      </Background>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th picture
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+    <Background module="practice" variant="brown">
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th picture
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}
+        />
 
-      {/* Header Bar - From 4th picture (Quiz design) */}
-      <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.headerLeft}>
-          <Text style={styles.headerIcon}>←</Text>
-          <Text style={styles.headerText}>Challenge</Text>
-        </TouchableOpacity>
-        <View style={styles.progressBarContainer}>
-          <View style={[styles.progressBar, { width: completed ? '100%' : '50%' }]} />
+        {/* Header Bar - From 4th picture (Quiz design) */}
+        <View style={styles.headerBar}>
+          <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.headerLeft}>
+            <Text style={styles.headerIcon}>←</Text>
+            <Text style={styles.headerText}>Challenge</Text>
+          </TouchableOpacity>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: completed ? '100%' : '50%' }]} />
+          </View>
+          <TouchableOpacity style={styles.headerRight}>
+            <Text style={styles.headerIcon}>⚡</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.headerRight}>
-          <Text style={styles.headerIcon}>⚡</Text>
-        </TouchableOpacity>
+
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {/* Challenge Card - From 4th picture (Question card style) */}
+          <View style={styles.challengeCard}>
+            <Text style={styles.challengeNumber}>
+              Challenge <Text style={styles.challengeNumberHighlight}>01</Text>
+            </Text>
+            <Text style={styles.challengeCategory}>Mini Challenge</Text>
+            <Text style={styles.challengeText}>
+              "{challenge.prompt || 'Pick the right match'}"
+            </Text>
+          </View>
+
+          {/* Mini Challenge Card Component */}
+          <View style={styles.challengeContainer}>
+            <MiniChallengeCard
+              challengeData={{
+                prompt: challenge.prompt || 'Pick the right match',
+                options: challenge.word_bank || challenge.options || [],
+                answer: (challenge.word_bank && challenge.word_bank[0]) || challenge.answer || '',
+              }}
+              onComplete={() => setCompleted(true)}
+            />
+          </View>
+
+          {/* Action Button */}
+          <TouchableOpacity
+            style={[styles.actionButton, completed && styles.actionButtonCompleted]}
+            onPress={() => navigation.navigate('Conversation')}
+          >
+            <Text style={styles.actionButtonText}>
+              {completed ? 'Conversation Ready → Start' : 'Skip to Conversation'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Challenge Card - From 4th picture (Question card style) */}
-        <View style={styles.challengeCard}>
-          <Text style={styles.challengeNumber}>
-            Challenge <Text style={styles.challengeNumberHighlight}>01</Text>
-          </Text>
-          <Text style={styles.challengeCategory}>Mini Challenge</Text>
-          <Text style={styles.challengeText}>
-            "{challenge.prompt || 'Pick the right match'}"
-          </Text>
-        </View>
-
-        {/* Mini Challenge Card Component */}
-        <View style={styles.challengeContainer}>
-          <MiniChallengeCard
-            challengeData={{
-              prompt: challenge.prompt || 'Pick the right match',
-              options: challenge.word_bank || challenge.options || [],
-              answer: (challenge.word_bank && challenge.word_bank[0]) || challenge.answer || '',
-            }}
-            onComplete={() => setCompleted(true)}
-          />
-        </View>
-
-        {/* Action Button */}
-        <TouchableOpacity
-          style={[styles.actionButton, completed && styles.actionButtonCompleted]}
-          onPress={() => navigation.navigate('Conversation')}
-        >
-          <Text style={styles.actionButtonText}>
-            {completed ? 'Conversation Ready → Start' : 'Skip to Conversation'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#4A148C', // Dark purple from 4th picture
+    backgroundColor: 'transparent',
   },
   headerBar: {
     flexDirection: 'row',

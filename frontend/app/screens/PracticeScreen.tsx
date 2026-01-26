@@ -2,6 +2,7 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import Background from "../components/ui/Background";
 
 export default function PracticeScreen({ navigation }) {
   // Practice options - Card grid from 2nd picture
@@ -15,77 +16,79 @@ export default function PracticeScreen({ navigation }) {
   ];
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th/5th pictures
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+    <Background module="practice" variant="brown">
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th/5th pictures
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}
+        />
 
-      {/* Header - From 4th picture (Quiz design) */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Practice Mode</Text>
-        <View style={styles.headerRight} />
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Practice Options Grid - From 2nd picture (3x2 grid) */}
-        <View style={styles.optionsGrid}>
-          {practiceOptions.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              style={styles.practiceCard}
-              onPress={() => {
-                if (option.id === 'vocabulary') navigation?.navigate('Vocabulary');
-                else if (option.id === 'grammar') navigation?.navigate('GrammarLab');
-                else if (option.id === 'speaking') navigation?.navigate('Conversation');
-              }}
-            >
-              <Text style={styles.cardIcon}>{option.icon}</Text>
-              <Text style={styles.cardLabel}>{option.label}</Text>
-            </TouchableOpacity>
-          ))}
+        {/* Header - From 4th picture (Quiz design) */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Practice Mode</Text>
+          <View style={styles.headerRight} />
         </View>
 
-        {/* Practice Schedule - From 3rd picture */}
-        <View style={styles.scheduleSection}>
-          <View style={styles.scheduleHeader}>
-            <Text style={styles.scheduleTitle}>PRACTICE SCHEDULE</Text>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {/* Practice Options Grid - From 2nd picture (3x2 grid) */}
+          <View style={styles.optionsGrid}>
+            {practiceOptions.map((option) => (
+              <TouchableOpacity
+                key={option.id}
+                style={styles.practiceCard}
+                onPress={() => {
+                  if (option.id === 'vocabulary') navigation?.navigate('Vocabulary');
+                  else if (option.id === 'grammar') navigation?.navigate('GrammarLab');
+                  else if (option.id === 'speaking') navigation?.navigate('Conversation');
+                }}
+              >
+                <Text style={styles.cardIcon}>{option.icon}</Text>
+                <Text style={styles.cardLabel}>{option.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
-          <View style={styles.scheduleCard}>
-            <View style={styles.timeAxis}>
-              {['9:00', '11:00', '14:00'].map((time) => (
-                <View key={time} style={styles.timeMarker}>
-                  <Text style={styles.timeText}>{time}</Text>
-                </View>
-              ))}
+          {/* Practice Schedule - From 3rd picture */}
+          <View style={styles.scheduleSection}>
+            <View style={styles.scheduleHeader}>
+              <Text style={styles.scheduleTitle}>PRACTICE SCHEDULE</Text>
             </View>
 
-            <View style={styles.practiceList}>
-              <View style={styles.practiceItem}>
-                <View style={styles.practiceContent}>
-                  <Text style={styles.practiceTitle}>Vocabulary Practice</Text>
-                  <Text style={styles.practiceSubtitle}>20 words completed</Text>
+            <View style={styles.scheduleCard}>
+              <View style={styles.timeAxis}>
+                {['9:00', '11:00', '14:00'].map((time) => (
+                  <View key={time} style={styles.timeMarker}>
+                    <Text style={styles.timeText}>{time}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.practiceList}>
+                <View style={styles.practiceItem}>
+                  <View style={styles.practiceContent}>
+                    <Text style={styles.practiceTitle}>Vocabulary Practice</Text>
+                    <Text style={styles.practiceSubtitle}>20 words completed</Text>
+                  </View>
+                  <Text style={styles.statusIcon}>✓</Text>
                 </View>
-                <Text style={styles.statusIcon}>✓</Text>
               </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#4A148C',
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

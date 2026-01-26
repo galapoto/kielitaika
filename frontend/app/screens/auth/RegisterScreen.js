@@ -15,6 +15,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../../context/AuthContext';
 import GoogleLogo from '../../ui/icons/GoogleLogo';
 import RukaLogo3D from '../../components/RukaLogo3D';
+import Background from '../../components/ui/Background';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -82,135 +83,137 @@ export default function RegisterScreen({ navigation }) {
   }, [response]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.container}>
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.content}>
-            {/* Logo */}
-            <View style={styles.logoContainer}>
-              <RukaLogo3D width={280} height={93} />
-            </View>
-            
-            {/* Welcome Text */}
-            <View style={styles.header}>
-              <Text style={styles.title}>Create Account!</Text>
-              <Text style={styles.subtitle}>Please sign up to start your journey</Text>
-            </View>
-
-            {/* Registration Form */}
-            <View style={styles.form}>
-              {/* Name Field */}
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Name (Optional)"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  editable={!loading}
-                />
+    <Background module="login" variant="brown">
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.container}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.content}>
+              {/* Logo */}
+              <View style={styles.logoContainer}>
+                <RukaLogo3D width={280} height={93} />
+              </View>
+              
+              {/* Welcome Text */}
+              <View style={styles.header}>
+                <Text style={styles.title}>Create Account!</Text>
+                <Text style={styles.subtitle}>Please sign up to start your journey</Text>
               </View>
 
-              {/* Email Field */}
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  editable={!loading}
-                />
-              </View>
-
-              {/* Password Field */}
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="password-new"
-                  editable={!loading}
-                />
-              </View>
-
-              {/* Confirm Password Field */}
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Confirm Password"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="password-new"
-                  editable={!loading}
-                  onSubmitEditing={handleRegister}
-                />
-              </View>
-
-              {/* Sign Up Button */}
-              <TouchableOpacity
-                style={[styles.signUpButton, loading && styles.signUpButtonDisabled]}
-                onPress={handleRegister}
-                disabled={loading}
-              >
-                <Text style={styles.signUpButtonText}>
-                  {loading ? 'Creating...' : 'Sign Up'}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Google Sign Up */}
-              <TouchableOpacity
-                style={styles.googleButton}
-                onPress={() => {
-                  if (request) promptAsync();
-                }}
-                disabled={googleLoading || !request}
-              >
-                <View style={styles.googleButtonContent}>
-                  <GoogleLogo size={20} />
-                  <Text style={styles.googleButtonText}>
-                    {googleLoading ? 'Connecting...' : 'Sign Up With Google'}
-                  </Text>
+              {/* Registration Form */}
+              <View style={styles.form}>
+                {/* Name Field */}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Name (Optional)"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    editable={!loading}
+                  />
                 </View>
-              </TouchableOpacity>
 
-              {/* Sign In Link */}
-              <View style={styles.signInContainer}>
-                <Text style={styles.signInText}>Already Have An Account? </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                  <Text style={styles.signInLink}>Sign In</Text>
+                {/* Email Field */}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    editable={!loading}
+                  />
+                </View>
+
+                {/* Password Field */}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoComplete="password-new"
+                    editable={!loading}
+                  />
+                </View>
+
+                {/* Confirm Password Field */}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm Password"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoComplete="password-new"
+                    editable={!loading}
+                    onSubmitEditing={handleRegister}
+                  />
+                </View>
+
+                {/* Sign Up Button */}
+                <TouchableOpacity
+                  style={[styles.signUpButton, loading && styles.signUpButtonDisabled]}
+                  onPress={handleRegister}
+                  disabled={loading}
+                >
+                  <Text style={styles.signUpButtonText}>
+                    {loading ? 'Creating...' : 'Sign Up'}
+                  </Text>
                 </TouchableOpacity>
+
+                {/* Google Sign Up */}
+                <TouchableOpacity
+                  style={styles.googleButton}
+                  onPress={() => {
+                    if (request) promptAsync();
+                  }}
+                  disabled={googleLoading || !request}
+                >
+                  <View style={styles.googleButtonContent}>
+                    <GoogleLogo size={20} />
+                    <Text style={styles.googleButtonText}>
+                      {googleLoading ? 'Connecting...' : 'Sign Up With Google'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Sign In Link */}
+                <View style={styles.signInContainer}>
+                  <Text style={styles.signInText}>Already Have An Account? </Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                    <Text style={styles.signInLink}>Sign In</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000', // Dark background matching LoginScreen
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     flexGrow: 1,

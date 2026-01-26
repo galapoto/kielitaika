@@ -408,7 +408,7 @@ const getBucketColor = (score) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: palette.backgroundPrimary,
+    backgroundColor: 'transparent',
   },
   modeBanner: {
     marginBottom: 16,

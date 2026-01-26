@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { generateYkiExam } from '../utils/api';
+import Background from '../components/ui/Background';
 
 export default function YKISpeakingExamScreen({ route, navigation } = {}) {
   const tasksProp = route?.params?.tasks || [];
@@ -74,43 +75,48 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#FFFFFF" style={styles.loader} />
-      </View>
+      <Background module="yki_speak" variant="blue">
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color="#FFFFFF" style={styles.loader} />
+        </View>
+      </Background>
     );
   }
 
   if (error || tasks.length === 0) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>{error || 'No tasks available'}</Text>
-      </View>
+      <Background module="yki_speak" variant="blue">
+        <View style={styles.container}>
+          <Text style={styles.errorText}>{error || 'No tasks available'}</Text>
+        </View>
+      </Background>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th picture
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+    <Background module="yki_speak" variant="blue">
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th picture
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}
+        />
 
-      {/* Header Bar - From 4th picture (Quiz design) */}
-      <View style={styles.headerBar}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerIcon}>👥</Text>
-          <Text style={styles.headerText}>{currentTaskIndex + 1} of {tasks.length}</Text>
+        {/* Header Bar - From 4th picture (Quiz design) */}
+        <View style={styles.headerBar}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerIcon}>👥</Text>
+            <Text style={styles.headerText}>{currentTaskIndex + 1} of {tasks.length}</Text>
+          </View>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
+          </View>
+          <TouchableOpacity style={styles.headerRight}>
+            <Text style={styles.headerIcon}>⚡</Text>
+            <Text style={styles.headerText}>{lifelines} of {tasks.length}</Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.progressBarContainer}>
-          <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
-        </View>
-        <TouchableOpacity style={styles.headerRight}>
-          <Text style={styles.headerIcon}>⚡</Text>
-          <Text style={styles.headerText}>{lifelines} of {tasks.length}</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Timer Circle - From 4th picture */}
       <View style={styles.timerContainer}>
@@ -186,41 +192,42 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
       </View>
 
       {/* Task List - Flight Booking Style from 6th picture */}
-      <ScrollView style={styles.tasksList} contentContainerStyle={styles.tasksListContent}>
-        <Text style={styles.tasksListTitle}>All Tasks</Text>
-        {tasks.map((task, index) => (
-          <TouchableOpacity
-            key={task.id}
-            style={[
-              styles.taskCard,
-              index === currentTaskIndex && styles.taskCardActive
-            ]}
-            onPress={() => {
-              setCurrentTaskIndex(index);
-              setIsRecording(false);
-              setTimer(0);
-            }}
-          >
-            <View style={styles.taskCardLeft}>
-              <Text style={styles.taskCardTitle}>Task {index + 1}</Text>
-              <Text style={styles.taskCardDescription}>{task.description || 'Speaking Task'}</Text>
-              <Text style={styles.taskCardTime}>~{task.time_limit}s</Text>
-            </View>
-            <View style={styles.taskCardRight}>
-              {index < currentTaskIndex && <Text style={styles.taskStatusIcon}>✓</Text>}
-              {index === currentTaskIndex && <Text style={styles.taskStatusIconActive}>●</Text>}
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
+        <ScrollView style={styles.tasksList} contentContainerStyle={styles.tasksListContent}>
+          <Text style={styles.tasksListTitle}>All Tasks</Text>
+          {tasks.map((task, index) => (
+            <TouchableOpacity
+              key={task.id}
+              style={[
+                styles.taskCard,
+                index === currentTaskIndex && styles.taskCardActive
+              ]}
+              onPress={() => {
+                setCurrentTaskIndex(index);
+                setIsRecording(false);
+                setTimer(0);
+              }}
+            >
+              <View style={styles.taskCardLeft}>
+                <Text style={styles.taskCardTitle}>Task {index + 1}</Text>
+                <Text style={styles.taskCardDescription}>{task.description || 'Speaking Task'}</Text>
+                <Text style={styles.taskCardTime}>~{task.time_limit}s</Text>
+              </View>
+              <View style={styles.taskCardRight}>
+                {index < currentTaskIndex && <Text style={styles.taskStatusIcon}>✓</Text>}
+                {index === currentTaskIndex && <Text style={styles.taskStatusIconActive}>●</Text>}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#4A148C', // Dark purple from 4th picture
+    backgroundColor: 'transparent',
   },
   loader: {
     marginTop: 100,

@@ -465,7 +465,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
 
   // Combine all designs: Quiz header (4th), Conversation gradient (5th), Flight cards (6th), Schedule (3rd), Card grid (2nd)
   return (
-    <Background module={path === 'workplace' ? 'workplace' : 'home'} variant="brown" imageVariant="lesson">
+    <Background module="workplace" variant="brown" imageVariant="lesson">
       <View style={styles.container}>
       {/* Header Bar - From 4th picture (Quiz design) */}
       <View style={styles.headerBar}>
@@ -1212,7 +1212,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: palette.backgroundPrimary,
+    backgroundColor: 'transparent',
   },
   loader: {
     marginTop: 100,

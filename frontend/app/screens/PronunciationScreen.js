@@ -5,6 +5,7 @@ import MicRecorder from '../components/MicRecorder';
 import RukaButton from '../ui/components/Button';
 import RukaCard from '../ui/components/Card';
 import { IconMic, IconPlay, IconSettings } from '../ui/icons/IconPack';
+import Background from '../components/ui/Background';
 
 const onDark = '#E6F2FF';
 const onDarkMuted = '#BFD7E8';
@@ -68,12 +69,13 @@ export default function PronunciationScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Pronunciation Practice</Text>
-        <Text style={styles.subtitle}>
-          Practice Finnish pronunciation and get detailed feedback
-        </Text>
+    <Background module="practice" variant="brown">
+      <ScrollView style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Pronunciation Practice</Text>
+          <Text style={styles.subtitle}>
+            Practice Finnish pronunciation and get detailed feedback
+          </Text>
 
         <View style={styles.inputSection}>
           <Text style={styles.label}>Expected Text (Finnish):</Text>
@@ -198,15 +200,16 @@ export default function PronunciationScreen() {
             )}
           </RukaCard>
         )}
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 20,

@@ -171,7 +171,7 @@ export default function SkillDetailScreen({ route, navigation } = {}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.grayBg,
+    backgroundColor: 'transparent',
   },
   center: {
     flex: 1,

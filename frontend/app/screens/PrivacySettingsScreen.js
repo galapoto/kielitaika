@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, Alert, TouchableOpacity } from 'react-native';
+import Background from '../components/ui/Background';
 
 /**
  * PrivacySettingsScreen - Using 17th picture design
@@ -15,91 +16,93 @@ export default function PrivacySettingsScreen({ navigation }) {
 
   // Using 17th picture design - Settings screen with privacy options
   return (
-    <View style={styles.container}>
-      {/* Header - Dark Blue from 6th picture */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            if (navigation?.canGoBack?.() && navigation.canGoBack()) navigation.goBack();
-            else navigation?.navigate?.('Home');
-          }}
-          style={styles.backButton}
-        >
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privacy Settings</Text>
-        <View style={styles.headerRight} />
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Privacy Settings Cards - Flight Booking Style */}
-        <View style={styles.settingsList}>
-          <View style={styles.settingCard}>
-            <View style={styles.settingCardLeft}>
-              <Text style={styles.settingCardTitle}>Data Privacy</Text>
-              <Text style={styles.settingCardDescription}>Manage sharing and tracking</Text>
-            </View>
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Usage Tracking</Text>
-              <Text style={styles.settingItemDescription}>
-                Allow anonymous usage tracking to improve the product
-              </Text>
-            </View>
-            <Switch
-              value={trackingEnabled}
-              onValueChange={setTrackingEnabled}
-              trackColor={{ false: '#767577', true: '#1E3A8A' }}
-              thumbColor={trackingEnabled ? '#FFFFFF' : '#f4f3f4'}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Personalization</Text>
-              <Text style={styles.settingItemDescription}>
-                Use learning data to personalize content
-              </Text>
-            </View>
-            <Switch
-              value={personalizationEnabled}
-              onValueChange={setPersonalizationEnabled}
-              trackColor={{ false: '#767577', true: '#1E3A8A' }}
-              thumbColor={personalizationEnabled ? '#FFFFFF' : '#f4f3f4'}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Crash Analytics</Text>
-              <Text style={styles.settingItemDescription}>
-                Send crash reports to help us fix issues quickly
-              </Text>
-            </View>
-            <Switch
-              value={analyticsEnabled}
-              onValueChange={setAnalyticsEnabled}
-              trackColor={{ false: '#767577', true: '#1E3A8A' }}
-              thumbColor={analyticsEnabled ? '#FFFFFF' : '#f4f3f4'}
-            />
-          </View>
-
-          {/* Export Data Button */}
-          <TouchableOpacity style={styles.exportButton} onPress={handleExport}>
-            <Text style={styles.exportButtonText}>Export My Data</Text>
+    <Background module="home" variant="brown">
+      <View style={styles.container}>
+        {/* Header - Dark Blue from 6th picture */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => {
+              if (navigation?.canGoBack?.() && navigation.canGoBack()) navigation.goBack();
+              else navigation?.navigate?.('Home');
+            }}
+            style={styles.backButton}
+          >
+            <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Privacy Settings</Text>
+          <View style={styles.headerRight} />
         </View>
-      </ScrollView>
-    </View>
+
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {/* Privacy Settings Cards - Flight Booking Style */}
+          <View style={styles.settingsList}>
+            <View style={styles.settingCard}>
+              <View style={styles.settingCardLeft}>
+                <Text style={styles.settingCardTitle}>Data Privacy</Text>
+                <Text style={styles.settingCardDescription}>Manage sharing and tracking</Text>
+              </View>
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingItemLeft}>
+                <Text style={styles.settingItemLabel}>Usage Tracking</Text>
+                <Text style={styles.settingItemDescription}>
+                  Allow anonymous usage tracking to improve the product
+                </Text>
+              </View>
+              <Switch
+                value={trackingEnabled}
+                onValueChange={setTrackingEnabled}
+                trackColor={{ false: '#767577', true: '#1E3A8A' }}
+                thumbColor={trackingEnabled ? '#FFFFFF' : '#f4f3f4'}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingItemLeft}>
+                <Text style={styles.settingItemLabel}>Personalization</Text>
+                <Text style={styles.settingItemDescription}>
+                  Use learning data to personalize content
+                </Text>
+              </View>
+              <Switch
+                value={personalizationEnabled}
+                onValueChange={setPersonalizationEnabled}
+                trackColor={{ false: '#767577', true: '#1E3A8A' }}
+                thumbColor={personalizationEnabled ? '#FFFFFF' : '#f4f3f4'}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingItemLeft}>
+                <Text style={styles.settingItemLabel}>Crash Analytics</Text>
+                <Text style={styles.settingItemDescription}>
+                  Send crash reports to help us fix issues quickly
+                </Text>
+              </View>
+              <Switch
+                value={analyticsEnabled}
+                onValueChange={setAnalyticsEnabled}
+                trackColor={{ false: '#767577', true: '#1E3A8A' }}
+                thumbColor={analyticsEnabled ? '#FFFFFF' : '#f4f3f4'}
+              />
+            </View>
+
+            {/* Export Data Button */}
+            <TouchableOpacity style={styles.exportButton} onPress={handleExport}>
+              <Text style={styles.exportButtonText}>Export My Data</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: '#1E3A8A',

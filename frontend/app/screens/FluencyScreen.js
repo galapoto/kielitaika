@@ -410,7 +410,7 @@ export default function FluencyScreen() {
   };
 
   return (
-    <Background>
+    <Background module="practice" variant="brown">
       <View style={styles.container}>
         <Text style={styles.title}>Fluency Builder</Text>
         <Text style={styles.topic}>{topic}</Text>

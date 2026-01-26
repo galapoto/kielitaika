@@ -209,7 +209,7 @@ export default function ProfessionDetailScreen({ route, navigation } = {}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: palette.backgroundPrimary,
+    backgroundColor: 'transparent',
   },
   homeButtonHeader: {
     marginLeft: 'auto',

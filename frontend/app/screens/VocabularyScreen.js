@@ -309,7 +309,7 @@ export default function VocabularyScreen({ route, navigation } = {}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B1624',
+    backgroundColor: 'transparent',
   },
   centerContainer: {
     flex: 1,

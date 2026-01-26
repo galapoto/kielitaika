@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import GrammarBiteCard from '../components/GrammarBiteCard';
 import { fetchRecharge } from '../utils/api';
 import HomeButton from '../components/HomeButton';
+import Background from '../components/ui/Background';
 
 export default function GrammarBiteScreen({ navigation }) {
   const [grammar, setGrammar] = useState(null);
@@ -26,99 +27,105 @@ export default function GrammarBiteScreen({ navigation }) {
   // Combine all designs: Quiz design (4th), Flight booking (6th), Vocabulary practice (7th)
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#FF6B35" style={styles.loader} />
-        <Text style={styles.hint}>Loading grammar...</Text>
-      </View>
+      <Background module="practice" variant="brown">
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color="#FF6B35" style={styles.loader} />
+          <Text style={styles.hint}>Loading grammar...</Text>
+        </View>
+      </Background>
     );
   }
 
   if (error || !grammar) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.error}>{error || 'No grammar bite'}</Text>
-      </View>
+      <Background module="practice" variant="brown">
+        <View style={styles.container}>
+          <Text style={styles.error}>{error || 'No grammar bite'}</Text>
+        </View>
+      </Background>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th picture
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+    <Background module="practice" variant="brown">
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th picture
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}
+        />
 
-      {/* Header - From 4th picture (Quiz design) */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Grammar Bite</Text>
-        <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Grammar Card - From 4th picture (Question card style) */}
-        <View style={styles.grammarCard}>
-          <Text style={styles.grammarNumber}>
-            Grammar <Text style={styles.grammarNumberHighlight}>01</Text>
-          </Text>
-          <Text style={styles.grammarCategory}>Daily Grammar</Text>
-          <Text style={styles.grammarTitle}>{grammar.title}</Text>
+        {/* Header - From 4th picture (Quiz design) */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Grammar Bite</Text>
+          <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
         </View>
 
-        {/* Grammar Content - Flight Booking Card from 6th picture */}
-        <View style={styles.contentCard}>
-          <View style={styles.contentCardLeft}>
-            <Text style={styles.contentCardTitle}>Explanation</Text>
-            <Text style={styles.contentCardDescription}>
-              {grammar.explanation || grammar.meaning || 'Grammar rule explanation'}
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {/* Grammar Card - From 4th picture (Question card style) */}
+          <View style={styles.grammarCard}>
+            <Text style={styles.grammarNumber}>
+              Grammar <Text style={styles.grammarNumberHighlight}>01</Text>
             </Text>
+            <Text style={styles.grammarCategory}>Daily Grammar</Text>
+            <Text style={styles.grammarTitle}>{grammar.title}</Text>
           </View>
-        </View>
 
-        {/* Examples - Flight Booking Cards */}
-        {grammar.examples && grammar.examples.length > 0 && (
-          <View style={styles.examplesSection}>
-            <Text style={styles.sectionTitle}>Examples</Text>
-            {grammar.examples.map((example, idx) => (
-              <View key={idx} style={styles.exampleCard}>
-                <View style={styles.exampleCardLeft}>
-                  <Text style={styles.exampleCardTitle}>Example {idx + 1}</Text>
-                  <Text style={styles.exampleCardText}>{example}</Text>
+          {/* Grammar Content - Flight Booking Card from 6th picture */}
+          <View style={styles.contentCard}>
+            <View style={styles.contentCardLeft}>
+              <Text style={styles.contentCardTitle}>Explanation</Text>
+              <Text style={styles.contentCardDescription}>
+                {grammar.explanation || grammar.meaning || 'Grammar rule explanation'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Examples - Flight Booking Cards */}
+          {grammar.examples && grammar.examples.length > 0 && (
+            <View style={styles.examplesSection}>
+              <Text style={styles.sectionTitle}>Examples</Text>
+              {grammar.examples.map((example, idx) => (
+                <View key={idx} style={styles.exampleCard}>
+                  <View style={styles.exampleCardLeft}>
+                    <Text style={styles.exampleCardTitle}>Example {idx + 1}</Text>
+                    <Text style={styles.exampleCardText}>{example}</Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
+          )}
+
+          {/* Grammar Bite Card Component */}
+          <View style={styles.grammarBiteContainer}>
+            <GrammarBiteCard
+              title={grammar.title}
+              meaning={grammar.explanation || grammar.meaning}
+              examples={grammar.examples || []}
+            />
           </View>
-        )}
 
-        {/* Grammar Bite Card Component */}
-        <View style={styles.grammarBiteContainer}>
-          <GrammarBiteCard
-            title={grammar.title}
-            meaning={grammar.explanation || grammar.meaning}
-            examples={grammar.examples || []}
-          />
-        </View>
-
-        {/* Next Button */}
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={() => navigation.navigate('MiniChallenge')}
-        >
-          <Text style={styles.nextButtonText}>Next → Mini Challenge</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+          {/* Next Button */}
+          <TouchableOpacity
+            style={styles.nextButton}
+            onPress={() => navigation.navigate('MiniChallenge')}
+          >
+            <Text style={styles.nextButtonText}>Next → Mini Challenge</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#4A148C', // Dark purple from 4th picture
+    backgroundColor: 'transparent',
   },
   loader: {
     marginTop: 100,

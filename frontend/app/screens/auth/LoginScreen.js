@@ -17,6 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import GoogleLogo from '../../ui/icons/GoogleLogo';
 import RukaLogo3D from '../../components/RukaLogo3D';
 import { PRODUCT_NAME } from '../../utils/constants';
+import Background from '../../components/ui/Background';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -72,109 +73,111 @@ export default function LoginScreen({ navigation }) {
   }, [response]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.container}>
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.content}>
-            {/* Logo */}
-            <View style={styles.logoContainer}>
-              <RukaLogo3D width={280} height={93} />
-            </View>
-            
-            {/* Welcome Text */}
-            <View style={styles.header}>
-              <Text style={styles.title}>Welcome to {PRODUCT_NAME}</Text>
-              <Text style={styles.subtitle}>Sign in to continue your Finnish learning journey</Text>
-            </View>
-
-            {/* Login Form */}
-            <View style={styles.form}>
-              {/* Email Field */}
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="your@email.com"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  editable={!loading}
-                />
+    <Background module="login" variant="brown">
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.container}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.content}>
+              {/* Logo */}
+              <View style={styles.logoContainer}>
+                <RukaLogo3D width={280} height={93} />
+              </View>
+              
+              {/* Welcome Text */}
+              <View style={styles.header}>
+                <Text style={styles.title}>Welcome to {PRODUCT_NAME}</Text>
+                <Text style={styles.subtitle}>Sign in to continue your Finnish learning journey</Text>
               </View>
 
-              {/* Password Field */}
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your password"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  editable={!loading}
-                  onSubmitEditing={handleLogin}
-                />
-              </View>
-
-              {/* Forgot Password Link */}
-              <TouchableOpacity style={styles.forgotPasswordContainer}>
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-              </TouchableOpacity>
-
-              {/* Sign In Button */}
-              <TouchableOpacity
-                style={[styles.signInButton, loading && styles.signInButtonDisabled]}
-                onPress={handleLogin}
-                disabled={loading}
-                testID="login-button"
-              >
-                <Text style={styles.signInButtonText}>
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Google Sign In */}
-              <TouchableOpacity
-                style={styles.googleButton}
-                onPress={() => {
-                  if (request && promptAsync) {
-                    promptAsync().catch(err => {
-                      console.error('Google sign-in error:', err);
-                      Alert.alert('Sign-In Error', 'Unable to start Google sign-in. Please try again.');
-                    });
-                  }
-                }}
-                disabled={googleLoading || !request}
-              >
-                <View style={styles.googleButtonContent}>
-                  <GoogleLogo size={20} />
-                  <Text style={styles.googleButtonText}>
-                    {googleLoading ? 'Connecting...' : 'Sign In With Google'}
-                  </Text>
+              {/* Login Form */}
+              <View style={styles.form}>
+                {/* Email Field */}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="your@email.com"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={!loading}
+                  />
                 </View>
-              </TouchableOpacity>
 
-              {/* Sign Up Link */}
-              <View style={styles.signUpContainer}>
-                <Text style={styles.signUpText}>Don't Have An Account? </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                  <Text style={styles.signUpLink}>Sign Up</Text>
+                {/* Password Field */}
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your password"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    editable={!loading}
+                    onSubmitEditing={handleLogin}
+                  />
+                </View>
+
+                {/* Forgot Password Link */}
+                <TouchableOpacity style={styles.forgotPasswordContainer}>
+                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                 </TouchableOpacity>
+
+                {/* Sign In Button */}
+                <TouchableOpacity
+                  style={[styles.signInButton, loading && styles.signInButtonDisabled]}
+                  onPress={handleLogin}
+                  disabled={loading}
+                  testID="login-button"
+                >
+                  <Text style={styles.signInButtonText}>
+                    {loading ? 'Signing in...' : 'Sign In'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Google Sign In */}
+                <TouchableOpacity
+                  style={styles.googleButton}
+                  onPress={() => {
+                    if (request && promptAsync) {
+                      promptAsync().catch(err => {
+                        console.error('Google sign-in error:', err);
+                        Alert.alert('Sign-In Error', 'Unable to start Google sign-in. Please try again.');
+                      });
+                    }
+                  }}
+                  disabled={googleLoading || !request}
+                >
+                  <View style={styles.googleButtonContent}>
+                    <GoogleLogo size={20} />
+                    <Text style={styles.googleButtonText}>
+                      {googleLoading ? 'Connecting...' : 'Sign In With Google'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Sign Up Link */}
+                <View style={styles.signUpContainer}>
+                  <Text style={styles.signUpText}>Don't Have An Account? </Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                    <Text style={styles.signUpLink}>Sign Up</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Background>
   );
 }
 
@@ -183,7 +186,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000', // Dark background
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     flexGrow: 1,

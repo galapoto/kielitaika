@@ -11,7 +11,7 @@ import { spacing } from '../styles/spacing';
 
 export default function SkillTreeScreen() {
   return (
-    <Background>
+    <Background module="home" variant="brown">
       <ScrollView contentContainerStyle={styles.container}>
         <HomeButton />
         <SectionHeader title="Skill Tree" />

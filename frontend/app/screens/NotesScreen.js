@@ -68,7 +68,7 @@ export default function NotesScreen({ route, navigation } = {}) {
   );
 
   return (
-    <Background module="notes" variant="brown">
+    <Background module="home" variant="brown">
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.headerButton}>

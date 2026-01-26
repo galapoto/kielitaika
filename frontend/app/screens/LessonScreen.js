@@ -265,7 +265,7 @@ export default function LessonScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: '#1E3A8A', // Dark blue from 3rd picture

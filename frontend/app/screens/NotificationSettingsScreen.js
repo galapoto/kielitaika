@@ -24,7 +24,7 @@ export default function NotificationSettingsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: '#1E3A8A',

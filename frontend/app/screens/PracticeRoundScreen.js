@@ -325,7 +325,7 @@ export default function PracticeRoundScreen({ route, navigation } = {}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: palette.backgroundPrimary,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

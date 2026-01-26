@@ -183,7 +183,7 @@ export default function YKIPracticeReadingScreen({ navigation, route } = {}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: palette.backgroundPrimary,
+    backgroundColor: 'transparent',
   },
   modeBanner: {
     marginBottom: 16,

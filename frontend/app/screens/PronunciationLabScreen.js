@@ -23,7 +23,7 @@ import { spacing } from '../styles/spacing';
  */
 export default function PronunciationLabScreen() {
   return (
-    <Background>
+    <Background module="practice" variant="brown">
       <ScrollView contentContainerStyle={styles.container}>
         <HomeButton />
         <SectionHeader title="Pronunciation Lab" />

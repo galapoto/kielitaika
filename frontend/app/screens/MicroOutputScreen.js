@@ -254,7 +254,7 @@ export default function MicroOutputScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.grayBg,
+    backgroundColor: 'transparent',
   },
   header: {
     padding: spacing.l,

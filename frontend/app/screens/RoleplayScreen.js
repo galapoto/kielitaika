@@ -358,7 +358,7 @@ export default function RoleplayScreen() {
   );
 
   return (
-    <Background>
+    <Background module="conversation" variant="blue">
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Roleplay Conversation</Text>

@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, 
 import VocabCard from '../components/VocabCard';
 import { fetchRecharge } from '../utils/api';
 import HomeButton from '../components/HomeButton';
+import Background from '../components/ui/Background';
 
 export default function VocabScreen({ navigation }) {
   const [vocab, setVocab] = useState([]);
@@ -25,87 +26,93 @@ export default function VocabScreen({ navigation }) {
   // Combine all designs: Purple header (7th), Card grid (2nd), Flight cards (6th)
   if (loading) {
     return (
-      <View style={styles.center}> 
-        <ActivityIndicator size="large" color="#6F42C1" />
-        <Text style={styles.hint}>Loading vocab...</Text>
-      </View>
+      <Background module="practice" variant="brown">
+        <View style={styles.center}> 
+          <ActivityIndicator size="large" color="#6F42C1" />
+          <Text style={styles.hint}>Loading vocab...</Text>
+        </View>
+      </Background>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}> 
-        <Text style={styles.error}>{error}</Text>
-      </View>
+      <Background module="practice" variant="brown">
+        <View style={styles.center}> 
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      </Background>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Purple Header - From 7th picture */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Vocabulary Boost</Text>
-        <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
+    <Background module="practice" variant="brown">
+      <View style={styles.container}>
+        {/* Purple Header - From 7th picture */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Vocabulary Boost</Text>
+          <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
+        </View>
+
+        {/* Progress Indicator - From 7th picture */}
+        <View style={styles.progressIndicator}>
+          {[1, 2, 3].map((step) => (
+            <View
+              key={step}
+              style={[
+                styles.progressDash,
+                step === 1 && styles.progressDashActive,
+              ]}
+            />
+          ))}
+        </View>
+
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {/* Vocabulary Cards - Flight Booking Style from 6th picture */}
+          {vocab.length > 0 ? (
+            <View style={styles.vocabList}>
+              {vocab.map((item, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.vocabCard}
+                  onPress={() => navigation?.navigate('Vocabulary', { word: item.fi || item.word })}
+                >
+                  <View style={styles.vocabCardLeft}>
+                    <Text style={styles.vocabCardTitle}>{item.fi || item.word}</Text>
+                    <Text style={styles.vocabCardDescription}>{item.en || item.translation || 'Vocabulary word'}</Text>
+                  </View>
+                  <View style={styles.vocabCardRight}>
+                    <Text style={styles.vocabCardArrow}>→</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No vocabulary items available</Text>
+            </View>
+          )}
+
+          {/* Next Button */}
+          <TouchableOpacity
+            style={styles.nextButton}
+            onPress={() => navigation.navigate('GrammarBite')}
+          >
+            <Text style={styles.nextButtonText}>Next → Grammar Bite</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
-
-      {/* Progress Indicator - From 7th picture */}
-      <View style={styles.progressIndicator}>
-        {[1, 2, 3].map((step) => (
-          <View
-            key={step}
-            style={[
-              styles.progressDash,
-              step === 1 && styles.progressDashActive,
-            ]}
-          />
-        ))}
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Vocabulary Cards - Flight Booking Style from 6th picture */}
-        {vocab.length > 0 ? (
-          <View style={styles.vocabList}>
-            {vocab.map((item, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.vocabCard}
-                onPress={() => navigation?.navigate('Vocabulary', { word: item.fi || item.word })}
-              >
-                <View style={styles.vocabCardLeft}>
-                  <Text style={styles.vocabCardTitle}>{item.fi || item.word}</Text>
-                  <Text style={styles.vocabCardDescription}>{item.en || item.translation || 'Vocabulary word'}</Text>
-                </View>
-                <View style={styles.vocabCardRight}>
-                  <Text style={styles.vocabCardArrow}>→</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No vocabulary items available</Text>
-          </View>
-        )}
-
-        {/* Next Button */}
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={() => navigation.navigate('GrammarBite')}
-        >
-          <Text style={styles.nextButtonText}>Next → Grammar Bite</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2EEFF', // Light lavender from 7th picture
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: '#6F42C1', // Medium purple from 7th picture

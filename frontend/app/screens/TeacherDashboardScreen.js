@@ -11,7 +11,7 @@ import { spacing } from '../styles/spacing';
 
 export default function TeacherDashboardScreen() {
   return (
-    <Background>
+    <Background module="workplace" variant="brown">
       <ScrollView contentContainerStyle={styles.container}>
         <HomeButton />
         <SectionHeader title="Teacher Dashboard" />

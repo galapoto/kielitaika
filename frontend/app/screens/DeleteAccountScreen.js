@@ -134,7 +134,7 @@ export default function DeleteAccountScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.grayBg,
+    backgroundColor: 'transparent',
   },
   header: {
     padding: spacing.l,

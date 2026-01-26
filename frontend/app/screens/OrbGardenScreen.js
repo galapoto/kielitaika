@@ -7,6 +7,7 @@ import SkillOrb from '../components/SkillOrb';
 import RukaCard from '../ui/components/Card';
 import RukaButton from '../ui/components/Button';
 import { IconPlay, IconHome } from '../ui/icons/IconPack';
+import Background from '../components/ui/Background';
 
 const sampleSkills = [
   { key: 'vocab', label: 'Vocabulary', progress: 0.62, color: '#4EC5FF' },
@@ -18,35 +19,37 @@ const sampleSkills = [
 
 export default function OrbGardenScreen({ navigation }) {
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Orb Garden</Text>
-      <Text style={styles.subtitle}>Each skill has its own orb with a breathing animation.</Text>
-      <View style={styles.grid}>
-        {sampleSkills.map((s) => (
-          <SkillOrb key={s.key} label={s.label} progress={s.progress} color={s.color} />
-        ))}
-      </View>
-      <RukaCard
-        title="Skill Tree & Infusions"
-        subtitle="Complete nodes to infuse your primary orb with more glow and motion."
-        icon={IconHome}
-        style={styles.card}
-      >
-        <RukaButton
-          title="Go to Skill Tree"
-          icon={IconPlay}
-          onPress={() => navigation.navigate('SkillTree')}
-          style={styles.button}
-        />
-      </RukaCard>
-    </ScrollView>
+    <Background module="home" variant="brown">
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Orb Garden</Text>
+        <Text style={styles.subtitle}>Each skill has its own orb with a breathing animation.</Text>
+        <View style={styles.grid}>
+          {sampleSkills.map((s) => (
+            <SkillOrb key={s.key} label={s.label} progress={s.progress} color={s.color} />
+          ))}
+        </View>
+        <RukaCard
+          title="Skill Tree & Infusions"
+          subtitle="Complete nodes to infuse your primary orb with more glow and motion."
+          icon={IconHome}
+          style={styles.card}
+        >
+          <RukaButton
+            title="Go to Skill Tree"
+            icon={IconPlay}
+            onPress={() => navigation.navigate('SkillTree')}
+            style={styles.button}
+          />
+        </RukaCard>
+      </ScrollView>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.grayBg,
+    backgroundColor: 'transparent',
   },
   content: {
     padding: spacing.l,

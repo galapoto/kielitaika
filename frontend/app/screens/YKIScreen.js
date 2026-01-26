@@ -591,7 +591,7 @@ export default function YKIScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   content: {
     padding: 20,

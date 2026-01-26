@@ -374,7 +374,7 @@ export default function GuidedTurnScreen({ route } = {}) {
   );
 
   return (
-    <Background>
+    <Background module="conversation" variant="blue">
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Guided Turn-Taking</Text>

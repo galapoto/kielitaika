@@ -183,7 +183,7 @@ export default function WorkplaceScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'transparent',
   },
   header: {
     paddingTop: 60,

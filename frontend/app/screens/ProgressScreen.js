@@ -188,7 +188,7 @@ export default function ProgressScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   headerRight: {
     flexDirection: 'row',

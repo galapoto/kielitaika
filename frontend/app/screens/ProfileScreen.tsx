@@ -2,87 +2,90 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import Background from "../components/ui/Background";
 
 export default function ProfileScreen({ navigation }) {
   const { user } = useAuth();
 
   // Using 16th picture design - Profile screen with user info, settings options
   return (
-    <View style={styles.container}>
-      {/* Header - Dark Blue/Purple from 6th picture */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity style={styles.moreButton}>
-          <Text style={styles.moreIcon}>⋮</Text>
-        </TouchableOpacity>
-      </View>
+    <Background module="home" variant="brown">
+      <View style={styles.container}>
+        {/* Header - Dark Blue/Purple from 6th picture */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Profile</Text>
+          <TouchableOpacity style={styles.moreButton}>
+            <Text style={styles.moreIcon}>⋮</Text>
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* User Info Card - From 6th picture (Profile screen style) */}
-        <View style={styles.userInfoCard}>
-          <View style={styles.profileImageContainer}>
-            <Text style={styles.profileImageText}>👤</Text>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {/* User Info Card - From 6th picture (Profile screen style) */}
+          <View style={styles.userInfoCard}>
+            <View style={styles.profileImageContainer}>
+              <Text style={styles.profileImageText}>👤</Text>
+            </View>
+            <Text style={styles.userName}>{user?.name?.toUpperCase() || 'USER'}</Text>
+            <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
           </View>
-          <Text style={styles.userName}>{user?.name?.toUpperCase() || 'USER'}</Text>
-          <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
-        </View>
 
-        {/* Settings Section - From 6th picture */}
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={() => navigation?.navigate('Subscription')}
-          >
-            <View style={styles.settingItemLeft}>
-              <Text style={styles.settingIcon}>💳</Text>
-              <Text style={styles.settingLabel}>Payment Method</Text>
-            </View>
-            <Text style={styles.settingArrow}>→</Text>
-          </TouchableOpacity>
+          {/* Settings Section - From 6th picture */}
+          <View style={styles.settingsSection}>
+            <Text style={styles.sectionTitle}>Settings</Text>
+            
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => navigation?.navigate('Subscription')}
+            >
+              <View style={styles.settingItemLeft}>
+                <Text style={styles.settingIcon}>💳</Text>
+                <Text style={styles.settingLabel}>Payment Method</Text>
+              </View>
+              <Text style={styles.settingArrow}>→</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingItemLeft}>
-              <Text style={styles.settingIcon}>🌐</Text>
-              <Text style={styles.settingLabel}>Languages</Text>
-            </View>
-            <Text style={styles.settingArrow}>→</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.settingItem}>
+              <View style={styles.settingItemLeft}>
+                <Text style={styles.settingIcon}>🌐</Text>
+                <Text style={styles.settingLabel}>Languages</Text>
+              </View>
+              <Text style={styles.settingArrow}>→</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingItemLeft}>
-              <Text style={styles.settingIcon}>🌙</Text>
-              <Text style={styles.settingLabel}>Dark Theme</Text>
-            </View>
-            <Text style={styles.settingArrow}>→</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity style={styles.settingItem}>
+              <View style={styles.settingItemLeft}>
+                <Text style={styles.settingIcon}>🌙</Text>
+                <Text style={styles.settingLabel}>Dark Theme</Text>
+              </View>
+              <Text style={styles.settingArrow}>→</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Support Section */}
-        <View style={styles.supportSection}>
-          <Text style={styles.sectionTitle}>Support</Text>
-          
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingItemLeft}>
-              <Text style={styles.settingIcon}>❓</Text>
-              <Text style={styles.settingLabel}>Help Centre</Text>
-            </View>
-            <Text style={styles.settingArrow}>→</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+          {/* Support Section */}
+          <View style={styles.supportSection}>
+            <Text style={styles.sectionTitle}>Support</Text>
+            
+            <TouchableOpacity style={styles.settingItem}>
+              <View style={styles.settingItemLeft}>
+                <Text style={styles.settingIcon}>❓</Text>
+                <Text style={styles.settingLabel}>Help Centre</Text>
+              </View>
+              <Text style={styles.settingArrow}>→</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   header: {
     backgroundColor: '#1E3A8A', // Dark blue from 6th picture

@@ -12,6 +12,7 @@ import {
 import { createCheckoutSession, getSubscriptionStatus } from '../services/paymentService';
 import { useSound } from '../hooks/useSound';
 import useOnboardingStore from '../state/useOnboardingStore';
+import Background from '../components/ui/Background';
 
 export default function PaywallScreen({ navigation, route } = {}) {
   const { redirectFrom } = route?.params || {};
@@ -134,119 +135,121 @@ export default function PaywallScreen({ navigation, route } = {}) {
 
   // Combine 19-20 pictures with 3-day trial - Paywall design
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
-          <Text style={styles.closeIcon}>✕</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Unlock Your Finnish Potential</Text>
-        <Text style={styles.headerSubtitle}>
-          Choose the plan that fits your learning goals
-        </Text>
-        {redirectFrom && (
-          <View style={styles.upgradePrompt}>
-            <Text style={styles.upgradeText}>
-              ⚠️ This feature requires {redirectFrom} subscription
-            </Text>
-          </View>
-        )}
-      </View>
+    <Background module="home" variant="brown">
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+            <Text style={styles.closeIcon}>✕</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Unlock Your Finnish Potential</Text>
+          <Text style={styles.headerSubtitle}>
+            Choose the plan that fits your learning goals
+          </Text>
+          {redirectFrom && (
+            <View style={styles.upgradePrompt}>
+              <Text style={styles.upgradeText}>
+                ⚠️ This feature requires {redirectFrom} subscription
+              </Text>
+            </View>
+          )}
+        </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Tier Cards - From 19-20 pictures */}
-        <View style={styles.tiersContainer}>
-          {tiers.map((tier) => (
-            <TouchableOpacity
-              key={tier.id}
-              style={[
-                styles.tierCard,
-                tier.isRecommended && styles.tierCardRecommended,
-                currentTier === tier.id && styles.tierCardCurrent,
-              ]}
-              onPress={() => handleSelectTier(tier.id)}
-            >
-              {tier.isRecommended && (
-                <View style={styles.recommendedBadge}>
-                  <Text style={styles.recommendedText}>RECOMMENDED</Text>
-                </View>
-              )}
-              <Text style={styles.tierName}>{tier.name}</Text>
-              <View style={styles.priceContainer}>
-                <Text style={styles.priceAmount}>${tier.price}</Text>
-                <Text style={styles.pricePeriod}>/{tier.period}</Text>
-              </View>
-              {tier.trialDays && (
-                <View style={styles.trialBadge}>
-                  <Text style={styles.trialText}>{tier.trialDays}-Day Free Trial</Text>
-                </View>
-              )}
-              <View style={styles.featuresList}>
-                {tier.features.map((feature, idx) => (
-                  <View key={idx} style={styles.featureItem}>
-                    <Text style={styles.featureIcon}>✓</Text>
-                    <Text style={styles.featureText}>{feature}</Text>
-                  </View>
-                ))}
-              </View>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Tier Cards - From 19-20 pictures */}
+          <View style={styles.tiersContainer}>
+            {tiers.map((tier) => (
               <TouchableOpacity
+                key={tier.id}
                 style={[
-                  styles.selectButton,
-                  currentTier === tier.id && styles.selectButtonCurrent,
+                  styles.tierCard,
+                  tier.isRecommended && styles.tierCardRecommended,
+                  currentTier === tier.id && styles.tierCardCurrent,
                 ]}
                 onPress={() => handleSelectTier(tier.id)}
-                disabled={loading || currentTier === tier.id}
               >
-                <Text style={[
-                  styles.selectButtonText,
-                  currentTier === tier.id && styles.selectButtonTextCurrent,
-                ]}>
-                  {currentTier === tier.id ? 'Current Plan' : tier.trialDays ? `Start ${tier.trialDays}-Day Trial` : 'Select Plan'}
-                </Text>
+                {tier.isRecommended && (
+                  <View style={styles.recommendedBadge}>
+                    <Text style={styles.recommendedText}>RECOMMENDED</Text>
+                  </View>
+                )}
+                <Text style={styles.tierName}>{tier.name}</Text>
+                <View style={styles.priceContainer}>
+                  <Text style={styles.priceAmount}>${tier.price}</Text>
+                  <Text style={styles.pricePeriod}>/{tier.period}</Text>
+                </View>
+                {tier.trialDays && (
+                  <View style={styles.trialBadge}>
+                    <Text style={styles.trialText}>{tier.trialDays}-Day Free Trial</Text>
+                  </View>
+                )}
+                <View style={styles.featuresList}>
+                  {tier.features.map((feature, idx) => (
+                    <View key={idx} style={styles.featureItem}>
+                      <Text style={styles.featureIcon}>✓</Text>
+                      <Text style={styles.featureText}>{feature}</Text>
+                    </View>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.selectButton,
+                    currentTier === tier.id && styles.selectButtonCurrent,
+                  ]}
+                  onPress={() => handleSelectTier(tier.id)}
+                  disabled={loading || currentTier === tier.id}
+                >
+                  <Text style={[
+                    styles.selectButtonText,
+                    currentTier === tier.id && styles.selectButtonTextCurrent,
+                  ]}>
+                    {currentTier === tier.id ? 'Current Plan' : tier.trialDays ? `Start ${tier.trialDays}-Day Trial` : 'Select Plan'}
+                  </Text>
+                </TouchableOpacity>
               </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-        </View>
+            ))}
+          </View>
 
-        {/* Feature Comparison - From 19-20 pictures */}
-        <View style={styles.comparisonSection}>
-          <Text style={styles.comparisonTitle}>Feature Comparison</Text>
-          {comparisonFeatures.map((feature) => (
-            <View key={feature.id} style={styles.comparisonRow}>
-              <Text style={styles.comparisonFeature}>{feature.name}</Text>
-              <View style={styles.comparisonCheckmarks}>
-                <Text style={styles.comparisonCheck}>✓</Text>
-                <Text style={styles.comparisonCheck}>✓</Text>
-                <Text style={styles.comparisonCheck}>✓</Text>
+          {/* Feature Comparison - From 19-20 pictures */}
+          <View style={styles.comparisonSection}>
+            <Text style={styles.comparisonTitle}>Feature Comparison</Text>
+            {comparisonFeatures.map((feature) => (
+              <View key={feature.id} style={styles.comparisonRow}>
+                <Text style={styles.comparisonFeature}>{feature.name}</Text>
+                <View style={styles.comparisonCheckmarks}>
+                  <Text style={styles.comparisonCheck}>✓</Text>
+                  <Text style={styles.comparisonCheck}>✓</Text>
+                  <Text style={styles.comparisonCheck}>✓</Text>
+                </View>
               </View>
+            ))}
+          </View>
+
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
             </View>
-          ))}
-        </View>
+          )}
 
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {loading && (
-          <View style={styles.loader}>
-            <ActivityIndicator size="large" color="#1E3A8A" />
-          </View>
-        )}
-      </ScrollView>
-    </View>
+          {loading && (
+            <View style={styles.loader}>
+              <ActivityIndicator size="large" color="#1E3A8A" />
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    </Background>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   header: {
     paddingTop: 50,

@@ -24,7 +24,7 @@ const onDarkMuted = '#BFD7E8';
  */
 export default function CertificateDetailScreen() {
   return (
-    <Background>
+    <Background module="home" variant="brown">
       <ScrollView contentContainerStyle={styles.container}>
         <HomeButton />
         <SectionHeader title="Certificate Details" />
