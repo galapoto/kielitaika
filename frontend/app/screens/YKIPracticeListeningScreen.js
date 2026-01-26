@@ -2,8 +2,8 @@
  * YKIPracticeListeningScreen - Short YKI listening practice exercises
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, BackHandler } from 'react-native';
 import Background from '../components/ui/Background';
 import PremiumEmbossedButton from '../components/PremiumEmbossedButton';
 import HomeButton from '../components/HomeButton';
@@ -37,6 +37,19 @@ export default function YKIPracticeListeningScreen({ navigation, route } = {}) {
   const [audioError, setAudioError] = useState('');
   const [replaysUsed, setReplaysUsed] = useState(0);
   const replayLimit = ykiMode === 'exam' ? 1 : 3; // exam mode = 1 replay, training = 3
+
+  useEffect(() => {
+    if (ykiMode !== 'exam') return undefined;
+    navigation?.setOptions?.({ gestureEnabled: false });
+    const handler = BackHandler.addEventListener('hardwareBackPress', () => true);
+    const unsubscribe = navigation?.addListener?.('beforeRemove', (e) => {
+      e.preventDefault();
+    });
+    return () => {
+      handler.remove();
+      if (unsubscribe) unsubscribe();
+    };
+  }, [navigation, ykiMode]);
 
   const handleStartPractice = async () => {
     setLoading(true);
@@ -117,7 +130,13 @@ export default function YKIPracticeListeningScreen({ navigation, route } = {}) {
     <Background module="yki_listen" variant="blue">
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => {
+              if (ykiMode === 'exam') return;
+              navigation?.goBack?.();
+            }}
+            style={styles.backButton}
+          >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>YKI Listening Practice</Text>

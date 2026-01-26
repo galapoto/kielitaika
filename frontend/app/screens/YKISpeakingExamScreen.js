@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, BackHandler } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { generateYkiExam } from '../utils/api';
 import Background from '../components/ui/Background';
+import { YKIExamModeController } from '../utils/constants';
 
 export default function YKISpeakingExamScreen({ route, navigation } = {}) {
   const tasksProp = route?.params?.tasks || [];
@@ -11,8 +12,8 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
   const [error, setError] = useState(null);
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [timer, setTimer] = useState(0);
   const [lifelines] = useState(1);
+  const [examSnapshot, setExamSnapshot] = useState(null);
 
   useEffect(() => {
     if (tasksProp.length === 0) {
@@ -30,27 +31,55 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
   }, [tasksProp, route?.params?.level]);
 
   useEffect(() => {
-    if (isRecording && tasks[currentTaskIndex]) {
-      const timeLimit = tasks[currentTaskIndex].time_limit || 90;
-      const interval = setInterval(() => {
-        setTimer((prev) => {
-          if (prev >= timeLimit) {
-            setIsRecording(false);
-            return timeLimit;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
+    let unsubscribe = null;
+    let mounted = true;
+    YKIExamModeController.hydrate().then(() => {
+      if (!mounted) return;
+      unsubscribe = YKIExamModeController.subscribe(setExamSnapshot);
+    });
+    return () => {
+      mounted = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (tasks.length > 0) {
+      YKIExamModeController.startExam({
+        examId: route?.params?.examId || 'yki_speaking_exam',
+        tasks,
+        timeUnit: 'seconds',
+      });
     }
-  }, [isRecording, currentTaskIndex, tasks]);
+  }, [tasks, route?.params?.examId]);
+
+  useEffect(() => {
+    const current = tasks[currentTaskIndex];
+    if (current?.id) {
+      YKIExamModeController.setActiveTask(current.id);
+    }
+  }, [currentTaskIndex, tasks]);
+
+  useEffect(() => {
+    navigation?.setOptions?.({ gestureEnabled: false });
+    const handler = BackHandler.addEventListener('hardwareBackPress', () => true);
+    const unsubscribe = navigation?.addListener?.('beforeRemove', (e) => {
+      e.preventDefault();
+    });
+    return () => {
+      handler.remove();
+      if (unsubscribe) unsubscribe();
+    };
+  }, [navigation]);
 
   const currentTask = tasks[currentTaskIndex];
   const progress = tasks.length > 0 ? (currentTaskIndex + 1) / tasks.length : 0;
+  const remainingSeconds = currentTask
+    ? (examSnapshot ? YKIExamModeController.getRemainingFor(currentTask.id) : (currentTask.time_limit || 0))
+    : 0;
 
   const handleStartRecording = () => {
     setIsRecording(true);
-    setTimer(0);
   };
 
   const handleStopRecording = () => {
@@ -61,15 +90,6 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
     if (currentTaskIndex < tasks.length - 1) {
       setCurrentTaskIndex(currentTaskIndex + 1);
       setIsRecording(false);
-      setTimer(0);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentTaskIndex > 0) {
-      setCurrentTaskIndex(currentTaskIndex - 1);
-      setIsRecording(false);
-      setTimer(0);
     }
   };
 
@@ -122,7 +142,7 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
       <View style={styles.timerContainer}>
         <View style={styles.timerCircle}>
           <Text style={styles.timerText}>
-            {currentTask ? (currentTask.time_limit - timer) : 0}
+            {remainingSeconds}
           </Text>
         </View>
       </View>
@@ -177,8 +197,8 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
       <View style={styles.navigationContainer}>
         <TouchableOpacity
           style={[styles.navButton, currentTaskIndex === 0 && styles.navButtonDisabled]}
-          onPress={handlePrevious}
-          disabled={currentTaskIndex === 0}
+          onPress={() => {}}
+          disabled
         >
           <Text style={styles.navButtonText}>Previous</Text>
         </TouchableOpacity>
@@ -202,9 +222,9 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
                 index === currentTaskIndex && styles.taskCardActive
               ]}
               onPress={() => {
+                if (index < currentTaskIndex) return;
                 setCurrentTaskIndex(index);
                 setIsRecording(false);
-                setTimer(0);
               }}
             >
               <View style={styles.taskCardLeft}>

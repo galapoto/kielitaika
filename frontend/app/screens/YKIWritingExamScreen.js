@@ -12,59 +12,56 @@ import {
 import { submitYkiExam } from '../utils/api';
 import Background from '../components/ui/Background';
 import HomeButton from '../components/HomeButton';
+import { YKIExamModeController } from '../utils/constants';
 
 export default function YKIWritingExamScreen({ route, navigation } = {}) {
   const tasks = route?.params?.tasks || [];
   const examId = route?.params?.examId;
   const [responses, setResponses] = useState({});
-  const [timeRemaining, setTimeRemaining] = useState({});
   const [activeTaskIndex, setActiveTaskIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const timersRef = useRef({});
+  const [examSnapshot, setExamSnapshot] = useState(null);
+  const alertedRef = useRef({});
 
-  // Initialize timers for each task
   useEffect(() => {
-    tasks.forEach((task) => {
-      if (task.time_limit && !timeRemaining[task.id]) {
-        setTimeRemaining((prev) => ({
-          ...prev,
-          [task.id]: task.time_limit * 60, // Convert minutes to seconds
-        }));
-      }
+    let unsubscribe = null;
+    let mounted = true;
+    YKIExamModeController.hydrate().then(() => {
+      if (!mounted) return;
+      unsubscribe = YKIExamModeController.subscribe(setExamSnapshot);
     });
-
-    // Start timers
-    tasks.forEach((task) => {
-      if (task.time_limit && timersRef.current[task.id] === undefined) {
-        timersRef.current[task.id] = setInterval(() => {
-          setTimeRemaining((prev) => {
-            const current = prev[task.id];
-            if (current === undefined || current <= 0) {
-              clearInterval(timersRef.current[task.id]);
-              return prev;
-            }
-            return { ...prev, [task.id]: current - 1 };
-          });
-        }, 1000);
-      }
-    });
-
     return () => {
-      // Cleanup timers
-      Object.values(timersRef.current).forEach((timer) => {
-        if (timer) clearInterval(timer);
-      });
+      mounted = false;
+      if (unsubscribe) unsubscribe();
     };
-  }, [tasks]);
+  }, []);
 
-  // Check for time expiration
   useEffect(() => {
-    Object.entries(timeRemaining).forEach(([taskId, seconds]) => {
-      if (seconds === 0) {
-        Alert.alert('Time Up', `Time has run out for task ${taskId}. Please move to the next task.`);
-      }
-    });
-  }, [timeRemaining]);
+    if (tasks.length > 0) {
+      YKIExamModeController.startExam({
+        examId: examId || 'yki_writing_exam',
+        tasks,
+        timeUnit: 'minutes',
+      });
+    }
+  }, [tasks, examId]);
+
+  useEffect(() => {
+    const current = tasks[activeTaskIndex];
+    if (current?.id) {
+      YKIExamModeController.setActiveTask(current.id);
+    }
+  }, [activeTaskIndex, tasks]);
+
+  useEffect(() => {
+    const current = tasks[activeTaskIndex];
+    if (!current?.id || !examSnapshot) return;
+    const remaining = YKIExamModeController.getRemainingFor(current.id);
+    if (remaining === 0 && !alertedRef.current[current.id]) {
+      alertedRef.current[current.id] = true;
+      Alert.alert('Time Up', `Time has run out for task ${current.id}. Please move to the next task.`);
+    }
+  }, [examSnapshot, activeTaskIndex, tasks]);
 
   const wordCount = (text) => {
     if (!text) return 0;
@@ -163,7 +160,7 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
   const currentTask = tasks[activeTaskIndex];
   const currentResponse = responses[currentTask.id] || '';
   const currentWordCount = wordCount(currentResponse);
-  const currentTime = timeRemaining[currentTask.id] || 0;
+  const currentTime = examSnapshot ? YKIExamModeController.getRemainingFor(currentTask.id) : (currentTask.time_limit || 0) * 60;
   const totalTasks = tasks.length;
   const currentStep = activeTaskIndex;
   const totalSteps = totalTasks;
