@@ -24,7 +24,7 @@ const buildQuestions = (lesson) => {
       step.questions.forEach((q, idx) => {
         questions.push({
           id: q.id || `${step.id}-${idx}`,
-          question: q.question || q.prompt || `Question ${idx + 1}`,
+          question: q.question || q.prompt || `Kysymys ${idx + 1}`,
           options: q.options || q.choices || ['A', 'B', 'C'],
           correct: typeof q.correct === 'number' ? q.correct : 0,
         });
@@ -33,7 +33,7 @@ const buildQuestions = (lesson) => {
     if (step?.grammar && step?.grammar?.examples) {
       questions.push({
         id: `${step.id}-gap`,
-        question: `Choose the correct word to complete: ${step.grammar.examples[0]}`,
+        question: `Valitse oikea sana täydentämään: ${step.grammar.examples[0]}`,
         options: step.grammar.options || ['A', 'B', 'C'],
         correct: step.grammar.correct || 0,
       });
@@ -42,15 +42,15 @@ const buildQuestions = (lesson) => {
   if (questions.length === 0) {
     questions.push({
       id: 'fallback-1',
-      question: 'Which case marks the object in Finnish?',
-      options: ['Nominative', 'Accusative (partitive)', 'Inessive'],
-      correct: 1,
+      question: 'Mikä sijamuoto on usein objektilla?',
+      options: ['Partitiivi', 'Inessiivi', 'Allatiivi'],
+      correct: 0,
     });
     questions.push({
       id: 'fallback-2',
-      question: 'Which verb form is used for past tense?',
-      options: ['Infinitive', 'Perfect', 'Imperfect'],
-      correct: 2,
+      question: 'Mikä aikamuoto ilmaisee mennyttä aikaa?',
+      options: ['Preesens', 'Imperfekti', 'Konditionaali'],
+      correct: 1,
     });
   }
   return questions;
@@ -236,7 +236,7 @@ export default function QuizScreen({ route, navigation } = {}) {
       })}
       {showAnswer && (
         <Text style={styles.feedbackText}>
-          {selectedOption === currentQuestion.correct ? 'Correct! 🎉' : 'Almost there. Review and try next.'}
+          {selectedOption === currentQuestion.correct ? 'Oikein! 🎉' : 'Melkein. Kertaa ja jatka.'}
         </Text>
       )}
     </View>
@@ -250,13 +250,13 @@ export default function QuizScreen({ route, navigation } = {}) {
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
           <Text style={styles.title}>
-            {type === 'grammar' ? 'Grammar' : 
-             type === 'vocabulary' ? 'Vocabulary' :
-             type === 'reading' ? 'Reading' :
-             type === 'listening' ? 'Listening' :
-             type === 'writing' ? 'Writing' :
-             type === 'speaking' ? 'Speaking' :
-             'Quiz'}
+            {type === 'grammar' ? 'Kielioppi' : 
+             type === 'vocabulary' ? 'Sanasto' :
+             type === 'reading' ? 'Lukeminen' :
+             type === 'listening' ? 'Kuuntelu' :
+             type === 'writing' ? 'Kirjoittaminen' :
+             type === 'speaking' ? 'Puhuminen' :
+             'Koe'}
           </Text>
           <HomeButton navigation={navigation} style={styles.homeButton} />
         </View>
@@ -265,7 +265,7 @@ export default function QuizScreen({ route, navigation } = {}) {
           {score && <Text style={styles.scoreText}>{score}</Text>}
         </View>
         <View style={styles.autoRow}>
-          <Text style={styles.metaText}>Auto-advance</Text>
+          <Text style={styles.metaText}>Automaattinen eteneminen</Text>
           <TouchableOpacity
             style={[
               styles.autoToggle,
@@ -279,15 +279,15 @@ export default function QuizScreen({ route, navigation } = {}) {
                 autoAdvance && styles.autoToggleTextActive,
               ]}
             >
-              {autoAdvance ? 'On' : 'Off'}
+              {autoAdvance ? 'Päällä' : 'Pois'}
             </Text>
           </TouchableOpacity>
         </View>
         <View style={styles.scoreSummary}>
           <Text style={styles.scoreSummaryText}>
-            {score ? `Last round score: ${score}` : 'Complete one round to see your stats'}
+            {score ? `Edellisen kierroksen tulos: ${score}` : 'Tee yksi kierros nähdäksesi tilastot'}
           </Text>
-          <Text style={styles.scoreSummaryMeta}>Rounds completed: {roundsCompleted}</Text>
+          <Text style={styles.scoreSummaryMeta}>Kierroksia: {roundsCompleted}</Text>
         </View>
         <ScrollView contentContainerStyle={styles.content}>
           {loading ? (
@@ -297,7 +297,7 @@ export default function QuizScreen({ route, navigation } = {}) {
               {questionCard}
               {!showAnswer ? (
                 <PremiumEmbossedButton
-                  title="Check Answer"
+                  title="Tarkista vastaus"
                   variant="primary"
                   onPress={handleConfirmAnswer}
                   style={styles.submitButton}
@@ -305,7 +305,7 @@ export default function QuizScreen({ route, navigation } = {}) {
                 />
               ) : (
                 <PremiumEmbossedButton
-                  title="Next Question"
+                  title="Seuraava kysymys"
                   variant="primary"
                   onPress={handleNextQuestion}
                   style={styles.submitButton}

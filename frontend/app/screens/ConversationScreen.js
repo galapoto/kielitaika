@@ -265,7 +265,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
           }
         } catch (err) {
           addDebugEvent('send_error', { message: err?.message });
-          const errorMessage = err?.message || 'Failed to send message. Please try again.';
+          const errorMessage = err?.message || 'Viestin lähetys epäonnistui. Yritä uudelleen.';
           setError(errorMessage);
           showError(errorMessage);
           setMessages((prev) => [
@@ -385,7 +385,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
       const res = await listConversationBookmarks();
       setBookmarks(res?.bookmarks || []);
     } catch (err) {
-      showError(err?.message || 'Failed to load bookmarks');
+      showError(err?.message || 'Kirjanmerkkien lataus epäonnistui');
     }
   }, [showError]);
 
@@ -394,11 +394,11 @@ export default function ConversationScreen({ navigation, route } = {}) {
     if (phrase) {
       setInputText(phrase);
       setCorrectionAccepted((c) => c + 1);
-      showSuccess('Starting quick drill...');
+      showSuccess('Aloitetaan pikaharjoitus…');
       speakText?.(phrase);
       sendAnalyticsEvent('correction_accept', { phrase }).catch(() => {});
     } else {
-      showError('No drill content available.');
+      showError('Harjoituksen sisältöä ei ole saatavilla.');
     }
   }, [showError, showSuccess, speakText]);
   
@@ -454,7 +454,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
           // ignore TTS errors
         }
       } catch (err) {
-        const errorMessage = err?.message || 'Failed to send message. Please try again.';
+        const errorMessage = err?.message || 'Viestin lähetys epäonnistui. Yritä uudelleen.';
         setError(errorMessage);
         showError(errorMessage);
         setMessages((prev) => [
@@ -474,7 +474,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
       await startRecording();
     } catch (err) {
       // Silently handle errors - user feedback via Toast
-      const errorMessage = err?.message || 'Failed to start recording. Please check microphone permissions in settings.';
+      const errorMessage = err?.message || 'Nauhoituksen aloitus epäonnistui. Tarkista mikrofonin oikeudet asetuksista.';
       setError(errorMessage);
       showError(errorMessage);
     }
@@ -487,7 +487,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
       // Transcription and sending is handled by onTranscriptComplete callback
     } catch (err) {
       // Silently handle errors - user feedback via Toast
-      const errorMessage = err?.message || 'Failed to stop recording';
+      const errorMessage = err?.message || 'Nauhoituksen lopetus epäonnistui';
       setError(errorMessage);
       showError(errorMessage);
     }
@@ -663,10 +663,10 @@ export default function ConversationScreen({ navigation, route } = {}) {
             <ProfileImage size={48} />
             <Text style={styles.greetingText}>
               {type === 'listening' && mode === 'practice' 
-                ? `Listening Practice - ${level.toUpperCase()} Level`
+                ? `Kuunteluharjoitus – taso ${level.toUpperCase()}`
                 : type === 'listening' && mode === 'review'
-                ? `Listening Review - ${level.toUpperCase()} Level`
-                : `Good Evening, ${user?.name || 'User'}`}
+                ? `Kuuntelukertaus – taso ${level.toUpperCase()}`
+                : `Hei, ${user?.name || 'opiskelija'}`}
             </Text>
             <HomeButton navigation={navigation} style={styles.homeButtonWelcome} />
           </View>
@@ -684,7 +684,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
               <View pointerEvents="none" style={styles.embossHighlight24} />
               <TextInput
                 style={styles.welcomeInput}
-                placeholder="Try asking..."
+                placeholder="Kokeile kysyä…"
                 placeholderTextColor="rgba(255,255,255,0.55)"
                 value={inputText}
                 onChangeText={setInputText}
@@ -785,7 +785,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
               {isProcessing && (
                 <View style={styles.aiBubbleContainer}>
                   <View style={styles.aiBubbleNew}>
-                    <Text style={styles.aiBubbleTextNew}>Transcribing…</Text>
+                    <Text style={styles.aiBubbleTextNew}>Litteroidaan…</Text>
                   </View>
                 </View>
               )}
@@ -819,7 +819,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
               style={styles.inputNew}
               value={inputText}
               onChangeText={setInputText}
-              placeholder="Type or speak your Finnish here..."
+              placeholder="Kirjoita tai puhu suomeksi tähän…"
               placeholderTextColor="rgba(255,255,255,0.55)"
               multiline
               onSubmitEditing={handleSend}
@@ -832,7 +832,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
           disabled={!inputText.trim() || isLoading}
         >
           <View pointerEvents="none" style={styles.embossHighlight20} />
-          <Text style={styles.sendButtonText}>Send</Text>
+          <Text style={styles.sendButtonText}>Lähetä</Text>
         </TouchableOpacity>
       </View>
 

@@ -105,12 +105,12 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
           setOriginalText(writingText);
           setRewriteRequired(true);
           setRewriteText('');  // Clear rewrite text
-          Alert.alert('Rewrite Required', 'Your score was below the threshold. Please rewrite your text with improvements.', [{ text: 'OK' }]);
+          Alert.alert('Uudelleenkirjoitus tarvitaan', 'Pisteesi jäi alle rajan. Kirjoita tekstisi uudelleen parannusten kanssa.', [{ text: 'OK' }]);
           return;
         }
       }
       
-      Alert.alert('Submitted', 'Your writing has been submitted for evaluation.', [
+      Alert.alert('Lähetetty', 'Tekstisi on lähetetty arvioitavaksi.', [
         {
           text: 'OK',
           onPress: () => {
@@ -120,7 +120,7 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
       ]);
     } catch (error) {
       console.error('Failed to submit:', error);
-      Alert.alert('Error', 'Failed to submit your writing. Please try again.');
+      Alert.alert('Virhe', 'Tekstin lähetys epäonnistui. Yritä uudelleen.');
     } finally {
       setIsEvaluating(false);
     }
@@ -128,7 +128,7 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
 
   const handleRewrite = async () => {
     if (!rewriteText.trim()) {
-      Alert.alert('Empty rewrite', 'Please write your improved version before submitting.');
+      Alert.alert('Tyhjä uudelleenkirjoitus', 'Kirjoita parannettu versio ennen lähettämistä.');
       return;
     }
     setIsEvaluating(true);
@@ -147,13 +147,13 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
       setRewriteRequired(false);
       
       if (rewriteAvg > originalAvg) {
-        Alert.alert('Great improvement!', `Your rewrite improved from ${originalAvg.toFixed(1)} to ${rewriteAvg.toFixed(1)}. Keep practicing!`, [{ text: 'OK' }]);
+        Alert.alert('Hienoa kehitystä!', `Uusi versio parani ${originalAvg.toFixed(1)} → ${rewriteAvg.toFixed(1)}. Jatka harjoittelua!`, [{ text: 'OK' }]);
       } else {
-        Alert.alert('Keep working', 'Your rewrite maintained similar quality. Review the feedback and try again.', [{ text: 'OK' }]);
+        Alert.alert('Jatka harjoittelua', 'Uudelleenkirjoitus pysyi lähes samalla tasolla. Katso palaute ja yritä uudelleen.', [{ text: 'OK' }]);
       }
     } catch (error) {
       console.error('Failed to evaluate rewrite:', error);
-      Alert.alert('Error', 'Failed to evaluate your rewrite. Please try again.');
+      Alert.alert('Virhe', 'Uudelleenkirjoituksen arviointi epäonnistui. Yritä uudelleen.');
     } finally {
       setIsEvaluating(false);
     }
@@ -162,12 +162,12 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
   const wordCount = writingText.trim().split(/\s+/).filter(word => word.length > 0).length;
 
   const WRITING_BUCKETS = [
-    { key: 'task_fulfilment', label: 'Task Fulfilment', hint: 'All requirements met completely.' },
-    { key: 'coherence', label: 'Coherence', hint: 'Clear structure, connectors, flow.' },
-    { key: 'vocabulary_range', label: 'Vocabulary Range', hint: 'Variety and breadth of words used.' },
-    { key: 'vocabulary_precision', label: 'Vocabulary Precision', hint: 'Accuracy and appropriateness of word choice.' },
-    { key: 'register', label: 'Register', hint: 'Appropriate formal/informal style.' },
-    { key: 'grammar', label: 'Grammar', hint: 'Accurate verb forms, cases, and structures.' },
+    { key: 'task_fulfilment', label: 'Tehtävänanto', hint: 'Kaikki vaatimukset täyttyvät.' },
+    { key: 'coherence', label: 'Johdonmukaisuus', hint: 'Selkeä rakenne, sidosteisuus ja sujuvuus.' },
+    { key: 'vocabulary_range', label: 'Sanavaraston laajuus', hint: 'Sanojen monipuolisuus ja laajuus.' },
+    { key: 'vocabulary_precision', label: 'Sanavalintojen tarkkuus', hint: 'Sananvalinnan osuvuus ja täsmällisyys.' },
+    { key: 'register', label: 'Rekisteri', hint: 'Tilanteeseen sopiva tyyli (asiallinen/puhekieli).' },
+    { key: 'grammar', label: 'Kielioppi', hint: 'Oikeat verbimuodot, sijamuodot ja rakenteet.' },
   ];
 
   const buildWritingFixPack = (evaluation) => {
@@ -271,7 +271,7 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
           <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>YKI Writing Practice</Text>
+          <Text style={styles.headerTitle}>YKI: kirjoitusharjoitus</Text>
           <HomeButton navigation={navigation} style={styles.homeButton} homeType="yki" />
         </View>
 
@@ -280,15 +280,15 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
           
           {!currentExercise ? (
             <View style={styles.startContainer}>
-              <Text style={styles.startTitle}>Practice YKI Writing</Text>
+              <Text style={styles.startTitle}>Harjoittele YKI-kirjoittamista</Text>
               <Text style={styles.startDescription}>
-                Short writing exercises to prepare for the YKI exam.
+                Lyhyitä kirjoitusharjoituksia YKI‑kokeeseen.
               </Text>
               {loading ? (
                 <ActivityIndicator size="large" color={palette?.textPrimary || '#F8F9FA'} />
               ) : (
                 <PremiumEmbossedButton
-                  title="Start Practice"
+                  title="Aloita harjoitus"
                   onPress={handleStartPractice}
                   variant="primary"
                   size="large"
@@ -302,32 +302,32 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
                 <View style={styles.examSummaryCard}>
                   <View style={styles.examSummaryRow}>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Mock ID</Text>
+                      <Text style={styles.examSummaryLabel}>Koe-ID</Text>
                       <Text style={styles.examSummaryValue}>{examInfo.examId}</Text>
                     </View>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Subtest</Text>
+                      <Text style={styles.examSummaryLabel}>Osakoe</Text>
                       <Text style={styles.examSummaryValue}>{examInfo.examType?.replace('_', ' ')}</Text>
                     </View>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Length</Text>
-                      <Text style={styles.examSummaryValue}>{examInfo.totalTimeMinutes} mins</Text>
+                      <Text style={styles.examSummaryLabel}>Kesto</Text>
+                      <Text style={styles.examSummaryValue}>{examInfo.totalTimeMinutes} min</Text>
                     </View>
                   </View>
                   <View style={styles.examSummaryRow}>
-                    <Text style={styles.examSummaryLabel}>Target Level</Text>
+                    <Text style={styles.examSummaryLabel}>Tavoitetaso</Text>
                     <Text style={styles.examSummaryValue}>{examInfo.level}</Text>
                   </View>
                 </View>
               )}
               <Text style={styles.exercisePrompt}>{currentExercise.prompt}</Text>
               <Text style={styles.exerciseInfo}>
-                Word limit: {currentExercise.wordLimit} words • Time: {currentExercise.timeLimit} min
+                Sanamäärä: {currentExercise.wordLimit} sanaa • Aika: {currentExercise.timeLimit} min
               </Text>
               <TextInput
                 style={styles.textInput}
                 multiline
-                placeholder="Write your text here..."
+                placeholder="Kirjoita tekstisi tähän…"
                 placeholderTextColor="rgba(255,255,255,0.5)"
                 value={writingText}
                 onChangeText={setWritingText}
@@ -339,10 +339,10 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
                 keyboardType="default"
               />
               <Text style={styles.wordCount}>
-                Words: {wordCount} / {currentExercise.wordLimit}
+                Sanat: {wordCount} / {currentExercise.wordLimit}
               </Text>
               <PremiumEmbossedButton
-                title="Submit"
+                title="Lähetä"
                 onPress={handleSubmit}
                 variant="primary"
                 size="medium"
@@ -350,7 +350,7 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
               />
               {evaluation?.scores && (
                 <View style={styles.evaluationSection}>
-                  <Text style={styles.rubricTitle}>Evaluation</Text>
+                  <Text style={styles.rubricTitle}>Arvio</Text>
                   <View style={styles.rubricGrid}>
                     {WRITING_BUCKETS.map(bucket => {
                       const score = evaluation.scores?.[bucket.key];
@@ -374,23 +374,23 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
               {/* Rewrite Loop - Training Mode Only */}
               {rewriteRequired && ykiMode === 'training' && (
                 <View style={styles.rewriteSection}>
-                  <Text style={styles.rewriteTitle}>📝 Rewrite Required</Text>
+                  <Text style={styles.rewriteTitle}>📝 Uudelleenkirjoitus</Text>
                   <Text style={styles.rewriteDescription}>
-                    Your score was below the threshold. Review the feedback above and rewrite your text with improvements.
+                    Pisteesi jäi alle rajan. Lue palaute ja kirjoita tekstisi uudelleen parannusten kanssa.
                   </Text>
                   
                   {originalText && (
                     <View style={styles.originalTextCard}>
-                      <Text style={styles.originalTextLabel}>Original:</Text>
+                      <Text style={styles.originalTextLabel}>Alkuperäinen:</Text>
                       <Text style={styles.originalText}>{originalText}</Text>
                     </View>
                   )}
                   
-                  <Text style={styles.rewriteLabel}>Your improved version:</Text>
+                  <Text style={styles.rewriteLabel}>Parannettu versio:</Text>
                   <TextInput
                     style={styles.textInput}
                     multiline
-                    placeholder="Rewrite your text with improvements..."
+                    placeholder="Kirjoita tekstisi uudelleen parannusten kanssa…"
                     placeholderTextColor="rgba(255,255,255,0.5)"
                     value={rewriteText}
                     onChangeText={setRewriteText}
@@ -398,11 +398,11 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
                     spellCheck={true}
                   />
                   <Text style={styles.wordCount}>
-                    Words: {rewriteText.trim().split(/\s+/).filter(word => word.length > 0).length} / {currentExercise.wordLimit}
+                    Sanat: {rewriteText.trim().split(/\s+/).filter(word => word.length > 0).length} / {currentExercise.wordLimit}
                   </Text>
                   
                   <PremiumEmbossedButton
-                    title="Submit Rewrite"
+                    title="Lähetä uudelleen"
                     onPress={handleRewrite}
                     variant="primary"
                     size="medium"
@@ -417,13 +417,13 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
                     }}
                     style={styles.skipRewriteButton}
                   >
-                    <Text style={styles.skipRewriteText}>Skip rewrite (not recommended)</Text>
+                    <Text style={styles.skipRewriteText}>Ohita uudelleenkirjoitus (ei suositella)</Text>
                   </TouchableOpacity>
                 </View>
               )}
               {fixPack.length > 0 && (
                 <View style={styles.fixPackSection}>
-                  <Text style={styles.fixPackTitle}>Fix Pack</Text>
+                  <Text style={styles.fixPackTitle}>Korjauspaketti</Text>
                   {fixPack.map((item, idx) => (
                     <View key={`${item.title}-${idx}`} style={styles.fixPackCard}>
                       <Text style={styles.fixPackHeading}>{item.title}</Text>
@@ -461,23 +461,23 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
               {/* Rewrite Loop - Training Mode Only */}
               {rewriteRequired && ykiMode === 'training' && (
                 <View style={styles.rewriteSection}>
-                  <Text style={styles.rewriteTitle}>📝 Rewrite Required</Text>
+                  <Text style={styles.rewriteTitle}>📝 Uudelleenkirjoitus</Text>
                   <Text style={styles.rewriteDescription}>
-                    Your score was below the threshold. Review the feedback above and rewrite your text with improvements.
+                    Pisteesi jäi alle rajan. Lue palaute ja kirjoita tekstisi uudelleen parannusten kanssa.
                   </Text>
                   
                   {originalText && (
                     <View style={styles.originalTextCard}>
-                      <Text style={styles.originalTextLabel}>Original:</Text>
+                      <Text style={styles.originalTextLabel}>Alkuperäinen:</Text>
                       <Text style={styles.originalText}>{originalText}</Text>
                     </View>
                   )}
                   
-                  <Text style={styles.rewriteLabel}>Your improved version:</Text>
+                  <Text style={styles.rewriteLabel}>Parannettu versio:</Text>
                   <TextInput
                     style={styles.textInput}
                     multiline
-                    placeholder="Rewrite your text with improvements..."
+                    placeholder="Kirjoita tekstisi uudelleen parannusten kanssa…"
                     placeholderTextColor="rgba(255,255,255,0.5)"
                     value={rewriteText}
                     onChangeText={setRewriteText}
@@ -485,11 +485,11 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
                     spellCheck={true}
                   />
                   <Text style={styles.wordCount}>
-                    Words: {rewriteText.trim().split(/\s+/).filter(word => word.length > 0).length} / {currentExercise.wordLimit}
+                    Sanat: {rewriteText.trim().split(/\s+/).filter(word => word.length > 0).length} / {currentExercise.wordLimit}
                   </Text>
                   
                   <PremiumEmbossedButton
-                    title="Submit Rewrite"
+                    title="Lähetä uudelleen"
                     onPress={handleRewrite}
                     variant="primary"
                     size="medium"
@@ -504,7 +504,7 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
                     }}
                     style={styles.skipRewriteButton}
                   >
-                    <Text style={styles.skipRewriteText}>Skip rewrite (not recommended)</Text>
+                    <Text style={styles.skipRewriteText}>Ohita uudelleenkirjoitus (ei suositella)</Text>
                   </TouchableOpacity>
                 </View>
               )}

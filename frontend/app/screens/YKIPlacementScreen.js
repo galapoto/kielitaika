@@ -114,7 +114,7 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
     try {
       await playTTS(currentTask.prompt_fi, 'yki');
     } catch (e) {
-      Alert.alert('Audio failed', 'Could not play audio. Please continue with text.', [{ text: 'OK' }]);
+      Alert.alert('Ääni ei toiminut', 'Äänen toisto epäonnistui. Jatka tekstin avulla.', [{ text: 'OK' }]);
     }
   };
 
@@ -126,12 +126,12 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
             <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
               <Text style={styles.backButtonText}>←</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>YKI Placement</Text>
+            <Text style={styles.headerTitle}>YKI: tasotesti</Text>
             <HomeButton navigation={navigation} style={styles.homeButton} homeType="yki" />
           </View>
           <View style={styles.center}>
             <ActivityIndicator size="large" color="#EAF5FF" />
-            <Text style={styles.centerText}>Starting placement diagnostic...</Text>
+            <Text style={styles.centerText}>Aloitetaan tasotesti…</Text>
           </View>
         </View>
       </Background>
@@ -146,28 +146,28 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
             <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
               <Text style={styles.backButtonText}>←</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Placement Results</Text>
+            <Text style={styles.headerTitle}>Tasotestin tulos</Text>
             <HomeButton navigation={navigation} style={styles.homeButton} homeType="yki" />
           </View>
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.resultsCard}>
-              <Text style={styles.resultsTitle}>Your Estimated Level</Text>
+              <Text style={styles.resultsTitle}>Arvioitu tasosi</Text>
               <Text style={styles.resultsBand}>{results.estimated_band || 'B1'}</Text>
               <Text style={styles.resultsSubtitle}>
-                Based on your performance across all 4 skills
+                Perustuu suoriutumiseesi kaikissa neljässä osa-alueessa
               </Text>
             </View>
 
             <View style={styles.skillsCard}>
-              <Text style={styles.skillsTitle}>Per-Skill Assessment</Text>
+              <Text style={styles.skillsTitle}>Arvio osa-alueittain</Text>
               {Object.entries(results.per_skill || {}).map(([skill, data]) => (
                 <View key={skill} style={styles.skillRow}>
                   <View style={styles.skillInfo}>
                     <Text style={styles.skillName}>{skill.charAt(0).toUpperCase() + skill.slice(1)}</Text>
-                    <Text style={styles.skillBand}>Band: {data.band || '—'}</Text>
+                    <Text style={styles.skillBand}>Taso: {data.band || '—'}</Text>
                   </View>
                   <View style={styles.distanceInfo}>
-                    <Text style={styles.distanceLabel}>Distance to YKI Level 3</Text>
+                    <Text style={styles.distanceLabel}>Etäisyys YKI-tasoon 3</Text>
                     <Text style={styles.distanceValue}>
                       {data.distance_to_yki3 !== undefined ? `${data.distance_to_yki3.toFixed(1)}` : '—'}
                     </Text>
@@ -177,14 +177,14 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
             </View>
 
             <View style={styles.recommendationsCard}>
-              <Text style={styles.recommendationsTitle}>Recommendations</Text>
+              <Text style={styles.recommendationsTitle}>Suositukset</Text>
               {results.recommendations?.map((rec, idx) => (
                 <Text key={idx} style={styles.recommendationItem}>• {rec}</Text>
               ))}
             </View>
 
             <PremiumEmbossedButton
-              title="Continue to YKI Training"
+              title="Jatka YKI-harjoitteluun"
               onPress={() => {
                 navigation.navigate('YKI');
               }}
@@ -206,17 +206,17 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
             <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
               <Text style={styles.backButtonText}>←</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>YKI Placement</Text>
+            <Text style={styles.headerTitle}>YKI: tasotesti</Text>
             <HomeButton navigation={navigation} style={styles.homeButton} homeType="yki" />
           </View>
           <View style={styles.center}>
             {error ? (
               <>
                 <Text style={styles.errorText}>{error}</Text>
-                <PremiumEmbossedButton title="Retry" onPress={startPlacement} variant="primary" size="large" />
+                <PremiumEmbossedButton title="Yritä uudelleen" onPress={startPlacement} variant="primary" size="large" />
               </>
             ) : (
-              <Text style={styles.centerText}>Loading placement...</Text>
+              <Text style={styles.centerText}>Ladataan tasotestiä…</Text>
             )}
           </View>
         </View>
@@ -231,19 +231,19 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
           <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>YKI Placement</Text>
+          <Text style={styles.headerTitle}>YKI: tasotesti</Text>
           <HomeButton navigation={navigation} style={styles.homeButton} homeType="yki" />
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>Placement Diagnostic</Text>
+            <Text style={styles.infoTitle}>Tasotesti</Text>
             <Text style={styles.infoText}>
-              This diagnostic takes about {placement.estimated_minutes || 12} minutes and covers all 4 skills.
-              It helps us determine your current level and create a personalized training plan.
+              Tämä tasotesti kestää noin {placement.estimated_minutes || 12} minuuttia ja kattaa kaikki neljä osa-aluetta.
+              Sen avulla määritämme nykyisen tasosi ja luomme henkilökohtaisen harjoitussuunnitelman.
             </Text>
             <Text style={styles.progressText}>
-              Task {currentTaskIndex + 1} of {placement.tasks?.length || 0}
+              Tehtävä {currentTaskIndex + 1} / {placement.tasks?.length || 0}
             </Text>
           </View>
 
@@ -351,18 +351,18 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
                 <View style={styles.taskContent}>
                   <Text style={styles.prompt}>{currentTask.prompt_fi}</Text>
                   <Text style={styles.constraints}>
-                    {currentTask.constraints?.min_words || 50}-{currentTask.constraints?.max_words || 80} words
+                    {currentTask.constraints?.min_words || 50}-{currentTask.constraints?.max_words || 80} sanaa
                   </Text>
                   <TextInput
                     value={responses.writing?.text || ''}
                     onChangeText={(text) => handleWritingText(text)}
-                    placeholder="Write your response in Finnish..."
+                    placeholder="Kirjoita vastauksesi suomeksi…"
                     placeholderTextColor="rgba(255,255,255,0.45)"
                     multiline
                     style={styles.textInput}
                   />
                   <Text style={styles.wordCount}>
-                    {responses.writing?.text?.trim().split(/\s+/).filter(Boolean).length || 0} words
+                    {responses.writing?.text?.trim().split(/\s+/).filter(Boolean).length || 0} sanaa
                   </Text>
                 </View>
               )}
@@ -370,7 +370,7 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
               <View style={styles.taskActions}>
                 {currentTaskIndex < (placement.tasks?.length || 0) - 1 ? (
                   <PremiumEmbossedButton
-                    title="Next Task"
+                    title="Seuraava tehtävä"
                     onPress={handleNextTask}
                     variant="primary"
                     size="large"
@@ -378,7 +378,7 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
                   />
                 ) : (
                   <PremiumEmbossedButton
-                    title={submitting ? 'Submitting...' : 'Submit Placement'}
+                    title={submitting ? 'Lähetetään…' : 'Lähetä tasotesti'}
                     onPress={handleSubmitPlacement}
                     disabled={submitting}
                     variant="primary"

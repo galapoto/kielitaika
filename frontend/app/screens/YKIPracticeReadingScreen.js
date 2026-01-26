@@ -20,15 +20,15 @@ function QuestionList({ questions }) {
   const handleOptionSelect = (questionId, optionIdx, correctIdx, options) => {
     setSelectedOptions(prev => ({ ...prev, [questionId]: optionIdx }));
     if (correctIdx === optionIdx) {
-      Alert.alert('Correct!', 'Well done!');
+      Alert.alert('Oikein!', 'Hyvä!');
     } else {
-      Alert.alert('Incorrect', `The correct answer is: ${options[correctIdx]}`);
+      Alert.alert('Väärin', `Oikea vastaus on: ${options[correctIdx]}`);
     }
   };
   
   return (
     <View style={styles.questionsContainer}>
-      <Text style={styles.questionsTitle}>Questions:</Text>
+      <Text style={styles.questionsTitle}>Kysymykset:</Text>
       {questions.map((q, idx) => (
         <View key={q.id || idx} style={styles.questionCard}>
           <Text style={styles.questionText}>{q.question}</Text>
@@ -118,7 +118,7 @@ export default function YKIPracticeReadingScreen({ navigation, route } = {}) {
 
   const goToNextTask = () => {
     if (currentTaskIndex >= readingTasks.length - 1) {
-      Alert.alert('Great job!', 'You have reached the end of available reading tasks. Tap start practice again for a new set.');
+      Alert.alert('Hyvä työ!', 'Olet saavuttanut lukutehtävien loppuun. Aloita uusi setti painamalla “Aloita harjoitus”.');
       return;
     }
     const nextIndex = currentTaskIndex + 1;
@@ -133,7 +133,7 @@ export default function YKIPracticeReadingScreen({ navigation, route } = {}) {
           <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>YKI Reading Practice</Text>
+          <Text style={styles.headerTitle}>YKI: lukuharjoitus</Text>
           <HomeButton navigation={navigation} style={styles.homeButton} homeType="yki" />
         </View>
 
@@ -142,15 +142,15 @@ export default function YKIPracticeReadingScreen({ navigation, route } = {}) {
           
           {!currentExercise ? (
             <View style={styles.startContainer}>
-              <Text style={styles.startTitle}>Practice YKI Reading</Text>
+              <Text style={styles.startTitle}>Harjoittele YKI-lukutaitoa</Text>
               <Text style={styles.startDescription}>
-                Short reading comprehension exercises to prepare for the YKI exam.
+                Lyhyitä luetun ymmärtämisen harjoituksia YKI‑kokeeseen.
               </Text>
               {loading ? (
                 <ActivityIndicator size="large" color={palette.textPrimary} />
               ) : (
                 <PremiumEmbossedButton
-                  title="Start Practice"
+                  title="Aloita harjoitus"
                   onPress={handleStartPractice}
                   variant="primary"
                   size="large"
@@ -166,7 +166,7 @@ export default function YKIPracticeReadingScreen({ navigation, route } = {}) {
               )}
               {readingTasks.length > 1 && (
                 <PremiumEmbossedButton
-                  title="Next Reading Task"
+                  title="Seuraava tehtävä"
                   onPress={goToNextTask}
                   variant="secondary"
                   style={styles.nextButton}

@@ -20,7 +20,7 @@ export default function SubscriptionScreen({ navigation }) {
       const res = await fetchSubscriptionStatus();
       setStatus(res);
     } catch (err) {
-      setError(err.message || 'Failed to load subscription status');
+      setError(err.message || 'Tilauksen tilan lataus epäonnistui');
     } finally {
       setLoading(false);
     }
@@ -43,20 +43,20 @@ export default function SubscriptionScreen({ navigation }) {
         if (canOpen) {
           await Linking.openURL(url);
           Alert.alert(
-            'Redirecting to Payment',
-            'You will be redirected to complete your payment. Return to the app after payment.',
+            'Siirrytään maksamaan',
+            'Sinut ohjataan maksusivulle. Palaa sovellukseen maksun jälkeen.',
             [{ text: 'OK' }]
           );
         } else {
-          Alert.alert('Error', 'Cannot open payment page. Please try again.');
+          Alert.alert('Virhe', 'Maksusivua ei voitu avata. Yritä uudelleen.');
         }
       } else {
         const res = await upgradeSubscription(tier);
         setStatus(res);
-        Alert.alert('Success', `Upgraded to ${tier}`);
+        Alert.alert('Valmis', `Päivitetty: ${tier}`);
       }
     } catch (err) {
-      Alert.alert('Upgrade failed', err.message || 'Please try again');
+      Alert.alert('Päivitys epäonnistui', err.message || 'Yritä uudelleen');
     } finally {
       setLoading(false);
     }
@@ -72,11 +72,11 @@ export default function SubscriptionScreen({ navigation }) {
         if (canOpen) {
           await Linking.openURL(portal.url);
         } else {
-          Alert.alert('Error', 'Cannot open subscription management page.');
+          Alert.alert('Virhe', 'Tilauksen hallintasivua ei voitu avata.');
         }
       }
     } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to open subscription management');
+      Alert.alert('Virhe', err.message || 'Tilauksen hallinta ei auennut');
     } finally {
       setLoading(false);
     }
@@ -85,27 +85,27 @@ export default function SubscriptionScreen({ navigation }) {
   const tiers = [
     {
       id: 'general_premium',
-      title: 'General Premium',
-      description: 'Unlimited General Finnish',
+      title: 'Yleinen Premium',
+      description: 'Rajaton yleinen suomi',
       features: [
-        '✓ Unlimited conversations',
-        '✓ Full grammar correction',
-        '✓ Personalization',
-        '✓ Analytics',
-        '✓ Vocabulary unlimited',
+        '✓ Rajattomat keskustelut',
+        '✓ Kielioppikorjaukset',
+        '✓ Personointi',
+        '✓ Analytiikka',
+        '✓ Rajaton sanasto',
       ],
       isPremium: false,
     },
     {
       id: 'professional_premium',
-      title: 'Professional Premium',
-      description: 'Unlock Töihin + YKI + Reports',
+      title: 'Ammattilainen Premium',
+      description: 'Avaa Töihin + YKI + raportit',
       features: [
-        '✓ Everything in General Premium',
-        '✓ Unlimited Workplace Finnish',
-        '✓ Unlimited YKI practice',
-        '✓ Professional reports',
-        '✓ Certificates',
+        '✓ Kaikki Yleinen Premium -sisällöt',
+        '✓ Rajaton työelämän suomi',
+        '✓ Rajattomat YKI-harjoitukset',
+        '✓ Ammatilliset raportit',
+        '✓ Todistukset',
       ],
       isPremium: true,
     },
@@ -127,12 +127,12 @@ export default function SubscriptionScreen({ navigation }) {
           >
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Subscription</Text>
+          <Text style={styles.headerTitle}>Tilaus</Text>
         </View>
         <View style={styles.headerRight}>
           <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
           <ProfileImage size={32} />
-          <Text style={styles.headerEmail}>{user?.email || 'user@example.com'}</Text>
+          <Text style={styles.headerEmail}>{user?.email || 'user@esimerkki.fi'}</Text>
         </View>
       </View>
 
@@ -141,12 +141,12 @@ export default function SubscriptionScreen({ navigation }) {
         {status && (
           <View style={styles.currentCard}>
             <View style={styles.currentCardLeft}>
-              <Text style={styles.currentCardTitle}>Current Plan</Text>
+              <Text style={styles.currentCardTitle}>Nykyinen tilaus</Text>
               <Text style={styles.currentCardDescription}>
-                {status.tier === 'free' ? 'Free' : status.tier === 'general_premium' ? 'General Premium' : 'Professional Premium'}
+                {status.tier === 'free' ? 'Ilmainen' : status.tier === 'general_premium' ? 'Yleinen Premium' : 'Ammattilainen Premium'}
               </Text>
               {status.is_trial && (
-                <Text style={styles.trialBadgeText}>Trial Period: Active</Text>
+                <Text style={styles.trialBadgeText}>Kokeilujakso: aktiivinen</Text>
               )}
             </View>
             {status.tier !== 'free' && (
@@ -155,7 +155,7 @@ export default function SubscriptionScreen({ navigation }) {
                 onPress={handleManageSubscription}
                 disabled={loading}
               >
-                <Text style={styles.manageButtonText}>Manage</Text>
+                <Text style={styles.manageButtonText}>Hallitse</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -163,7 +163,7 @@ export default function SubscriptionScreen({ navigation }) {
 
         {/* Subscription Tiers - From 21st picture + app design */}
         <View style={styles.tiersSection}>
-          <Text style={styles.sectionTitle}>Available Plans</Text>
+          <Text style={styles.sectionTitle}>Saatavilla olevat tilaukset</Text>
           
           {tiers.map((tier) => {
             const isCurrentTier = status?.tier === tier.id;
@@ -204,7 +204,7 @@ export default function SubscriptionScreen({ navigation }) {
                   <Text style={styles.pricePeriod}>/{tier.period}</Text>
                   {tier.trialDays && (
                     <View style={styles.trialBadge}>
-                      <Text style={styles.trialText}>{tier.trialDays} days free</Text>
+                      <Text style={styles.trialText}>{tier.trialDays} päivää ilmaiseksi</Text>
                     </View>
                   )}
                 </View>
@@ -240,7 +240,7 @@ export default function SubscriptionScreen({ navigation }) {
                     styles.subscribeButtonText,
                     isCurrentTier && styles.subscribeButtonTextCurrent,
                   ]}>
-                    {isCurrentTier ? 'Current Plan' : tier.trialDays ? `Start ${tier.trialDays}-Day Trial` : 'Subscribe'}
+                    {isCurrentTier ? 'Nykyinen tilaus' : tier.trialDays ? `Aloita ${tier.trialDays} päivän kokeilu` : 'Tilaa'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -251,7 +251,7 @@ export default function SubscriptionScreen({ navigation }) {
         {loading && !status && (
           <View style={styles.loader}>
             <ActivityIndicator size="large" color="#1E3A8A" />
-            <Text style={styles.loadingText}>Loading subscription status...</Text>
+            <Text style={styles.loadingText}>Ladataan tilauksen tilaa…</Text>
           </View>
         )}
 

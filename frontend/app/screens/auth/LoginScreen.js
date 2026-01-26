@@ -113,8 +113,8 @@ export default function LoginScreen({ navigation }) {
               
               {/* Welcome Text */}
               <View style={styles.header}>
-                <Text style={styles.title}>Welcome to {PRODUCT_NAME}</Text>
-                <Text style={styles.subtitle}>Sign in to continue your Finnish learning journey</Text>
+                <Text style={styles.title}>Tervetuloa {PRODUCT_NAME}iin</Text>
+                <Text style={styles.subtitle}>Kirjaudu sisään jatkaaksesi suomen oppimista</Text>
               </View>
 
               {/* Login Form */}
@@ -128,7 +128,7 @@ export default function LoginScreen({ navigation }) {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="your@email.com"
+                    placeholder="sähköposti@esimerkki.fi"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={email}
                     onChangeText={(value) => {
@@ -145,7 +145,7 @@ export default function LoginScreen({ navigation }) {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter your password"
+                    placeholder="Salasana"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={password}
                     onChangeText={(value) => {
@@ -161,7 +161,7 @@ export default function LoginScreen({ navigation }) {
 
                 {/* Forgot Password Link */}
                 <TouchableOpacity style={styles.forgotPasswordContainer}>
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                  <Text style={styles.forgotPasswordText}>Unohditko salasanan?</Text>
                 </TouchableOpacity>
 
                 {/* Sign In Button */}
@@ -172,7 +172,7 @@ export default function LoginScreen({ navigation }) {
                   testID="login-button"
                 >
                   <Text style={styles.signInButtonText}>
-                    {loading ? 'Signing in...' : 'Sign In'}
+                    {loading ? 'Kirjaudutaan…' : 'Kirjaudu'}
                   </Text>
                 </TouchableOpacity>
 
@@ -183,8 +183,8 @@ export default function LoginScreen({ navigation }) {
                     if (request && promptAsync) {
                       promptAsync().catch(err => {
                         console.error('Google sign-in error:', err);
-                        setErrorMessage('Unable to start Google sign-in. Please try again.');
-                        Alert.alert('Sign-In Error', 'Unable to start Google sign-in. Please try again.');
+                        setErrorMessage('Google-kirjautumista ei voitu aloittaa. Yritä uudelleen.');
+                        Alert.alert('Kirjautumisvirhe', 'Google-kirjautumista ei voitu aloittaa. Yritä uudelleen.');
                       });
                     }
                   }}

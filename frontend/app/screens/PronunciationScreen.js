@@ -72,19 +72,19 @@ export default function PronunciationScreen() {
     <Background module="practice" variant="brown">
       <ScrollView style={styles.container}>
         <View style={styles.content}>
-          <Text style={styles.title}>Pronunciation Practice</Text>
+          <Text style={styles.title}>Ääntämisharjoitus</Text>
           <Text style={styles.subtitle}>
-            Practice Finnish pronunciation and get detailed feedback
+            Harjoittele suomen ääntämistä ja saat tarkkaa palautetta
           </Text>
 
         <View style={styles.inputSection}>
-          <Text style={styles.label}>Expected Text (Finnish):</Text>
+          <Text style={styles.label}>Tavoitelause (suomeksi):</Text>
           <View style={styles.textInputContainer}>
             <Text style={styles.textInput}>{expectedText}</Text>
             <RukaButton
-              title="Edit"
+              title="Muokkaa"
               icon={IconSettings}
-              onPress={() => alert('Edit functionality coming soon')}
+              onPress={() => alert('Muokkaus ei ole käytettävissä tässä versiossa.')}
               style={styles.editButton}
               textStyle={styles.editButtonText}
             />
@@ -92,20 +92,20 @@ export default function PronunciationScreen() {
         </View>
 
         <View style={styles.inputSection}>
-          <Text style={styles.label}>Your Pronunciation:</Text>
+          <Text style={styles.label}>Ääntäminen:</Text>
           <MicRecorder onTranscript={handleVoiceTranscript} />
           {transcript ? (
             <View style={styles.transcriptContainer}>
-              <Text style={styles.transcriptLabel}>Transcribed:</Text>
+              <Text style={styles.transcriptLabel}>Tunnistettu:</Text>
               <Text style={styles.transcriptText}>{transcript}</Text>
             </View>
           ) : (
-            <Text style={styles.hint}>Tap the microphone to record</Text>
+            <Text style={styles.hint}>Paina mikrofonia nauhoittaaksesi</Text>
           )}
         </View>
 
         <RukaButton
-          title={isAnalyzing ? 'Analyzing...' : 'Analyze Pronunciation'}
+          title={isAnalyzing ? 'Analysoidaan…' : 'Analysoi ääntämistä'}
           icon={IconPlay}
           onPress={handleAnalyze}
           disabled={!transcript || isAnalyzing}

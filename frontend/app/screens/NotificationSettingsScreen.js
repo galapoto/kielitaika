@@ -169,56 +169,25 @@ const styles = StyleSheet.create({
         <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notification</Text>
+        <Text style={styles.headerTitle}>Ilmoitukset</Text>
         <View style={styles.headerRight}>
           <View style={styles.profileImageSmall}>
             <Text style={styles.profileImageSmallText}>👤</Text>
           </View>
-          <Text style={styles.headerEmail}>user@example.com</Text>
+          <Text style={styles.headerEmail}>—</Text>
         </View>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Today Section - Notification cards from 6th picture */}
-        <View style={styles.notificationSection}>
-          <Text style={styles.sectionHeader}>Today</Text>
-          
-          <View style={styles.notificationCard}>
-            <View style={styles.notificationIconContainer}>
-              <Text style={styles.notificationIcon}>✓</Text>
-            </View>
-            <View style={styles.notificationContent}>
-              <Text style={styles.notificationTitle}>Your booking has been successfully</Text>
-              <Text style={styles.notificationDescription}>
-                Your notification settings have been updated successfully.
-              </Text>
-              <Text style={styles.notificationTime}>20 Jun 2023 08:30 PM</Text>
-            </View>
-          </View>
-
-          <View style={styles.notificationCard}>
-            <View style={styles.notificationIconContainer}>
-              <Text style={styles.notificationIcon}>🏷️</Text>
-            </View>
-            <View style={styles.notificationContent}>
-              <Text style={styles.notificationTitle}>Don't miss out on discounted flights!</Text>
-              <Text style={styles.notificationDescription}>
-                Special offers available for premium users.
-              </Text>
-              <Text style={styles.notificationTime}>20 Jun 2023 10:15 AM</Text>
-            </View>
-          </View>
-        </View>
-
         {/* Notification Settings - Toggle switches */}
         <View style={styles.settingsSection}>
-          <Text style={styles.sectionHeader}>Notification Preferences</Text>
+          <Text style={styles.sectionHeader}>Ilmoitusasetukset</Text>
           
           <View style={styles.settingItem}>
             <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Morning (8:00)</Text>
+              <Text style={styles.settingItemLabel}>Aamu (8:00)</Text>
               <Text style={styles.settingItemDescription}>
-                "Here are 3 words to warm up your Finnish today!"
+                "Tässä ovat päivän 3 sanaa suomen lämmittelyyn!"
               </Text>
             </View>
             <Switch
@@ -231,9 +200,9 @@ const styles = StyleSheet.create({
 
           <View style={styles.settingItem}>
             <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Afternoon (13:00)</Text>
+              <Text style={styles.settingItemLabel}>Iltapäivä (13:00)</Text>
               <Text style={styles.settingItemDescription}>
-                "Your grammar snack is ready 🍪"
+                "Kielioppipala on valmis 🍪"
               </Text>
             </View>
             <Switch
@@ -246,9 +215,9 @@ const styles = StyleSheet.create({
 
           <View style={styles.settingItem}>
             <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Evening (19:00)</Text>
+              <Text style={styles.settingItemLabel}>Ilta (19:00)</Text>
               <Text style={styles.settingItemDescription}>
-                "10-second speaking challenge awaits!"
+                "10 sekunnin puhehaaste odottaa!"
               </Text>
             </View>
             <Switch
@@ -261,9 +230,9 @@ const styles = StyleSheet.create({
 
           <View style={styles.settingItem}>
             <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Streak Preserving Alerts</Text>
+              <Text style={styles.settingItemLabel}>Putkimuistutus</Text>
               <Text style={styles.settingItemDescription}>
-                Get notified if you're about to break your streak
+                Saat ilmoituksen, jos putki on katkeamassa
               </Text>
             </View>
             <Switch
@@ -276,7 +245,7 @@ const styles = StyleSheet.create({
         </View>
 
         <Text style={styles.infoText}>
-          Notifications help you build a daily learning habit. You can change these settings anytime.
+          Ilmoitukset auttavat rakentamaan päivittäisen oppimisrutiinin. Voit muuttaa asetuksia milloin tahansa.
         </Text>
       </ScrollView>
       </View>

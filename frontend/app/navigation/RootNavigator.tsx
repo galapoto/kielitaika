@@ -82,7 +82,7 @@ export default function RootNavigator() {
   return (
     <Drawer.Navigator
       initialRouteName="Home"
-      useLegacyImplementation={false}
+      useLegacyImplementation
       screenOptions={{
         headerShown: false,
         drawerStyle: {
@@ -103,14 +103,14 @@ export default function RootNavigator() {
         name="YKIPlan"
         component={canAccessYki ? YKIPlanStack : HomeScreen}
         options={{
-          title: "YKI Pass Plan",
+          title: "YKI‑suunnitelma",
         }}
       />
       <Drawer.Screen
         name="WorkPlan"
         component={canAccessWork ? WorkPlanStack : HomeScreen}
         options={{
-          title: "Work Readiness Plan",
+          title: "Työvalmius‑suunnitelma",
         }}
       />
     </Drawer.Navigator>

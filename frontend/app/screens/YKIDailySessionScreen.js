@@ -106,8 +106,8 @@ export default function YKIDailySessionScreen({ navigation, route }) {
     if (!currentTask?.prompt_fi) return;
     const provider = await playTTS(currentTask.prompt_fi, 'yki', { playbackRate: mode === 'exam' ? 1.0 : 0.95 });
     if (!provider) {
-      Alert.alert('Audio failed', 'We could not play the prompt audio. Please check your connection and try again.', [
-        { text: 'Retry', onPress: () => playPrompt() },
+      Alert.alert('Ääni ei toiminut', 'Emme voineet toistaa ääniohjetta. Tarkista yhteys ja yritä uudelleen.', [
+        { text: 'Yritä uudelleen', onPress: () => playPrompt() },
         { text: 'OK' },
       ]);
     }
@@ -222,17 +222,17 @@ export default function YKIDailySessionScreen({ navigation, route }) {
       <View style={styles.completionContainer}>
         <View style={styles.completionCard}>
           <Text style={styles.completionEmoji}>🎉</Text>
-          <Text style={styles.completionTitle}>Session Complete!</Text>
+          <Text style={styles.completionTitle}>Harjoitus valmis!</Text>
           <Text style={styles.completionSubtitle}>
-            You finished all {session?.total_count || tasks.length} tasks in today's YKI session.
+            Suoritit kaikki {session?.total_count || tasks.length} tehtävää päivän YKI-harjoituksesta.
           </Text>
           <View style={styles.completionStats}>
             <View style={styles.completionStat}>
-              <Text style={styles.completionStatLabel}>Tasks completed</Text>
+              <Text style={styles.completionStatLabel}>Suoritetut tehtävät</Text>
               <Text style={styles.completionStatValue}>{session?.total_count || tasks.length}</Text>
             </View>
             <View style={styles.completionStat}>
-              <Text style={styles.completionStatLabel}>Estimated time</Text>
+              <Text style={styles.completionStatLabel}>Arvioitu aika</Text>
               <Text style={styles.completionStatValue}>≈ {session?.plan?.estimated_minutes || 15} min</Text>
             </View>
           </View>
@@ -240,7 +240,7 @@ export default function YKIDailySessionScreen({ navigation, route }) {
           {/* Progress Signals */}
           {!loadingSignals && progressSignals.length > 0 && (
             <View style={styles.signalsCard}>
-              <Text style={styles.signalsTitle}>Your Progress</Text>
+              <Text style={styles.signalsTitle}>Edistymisesi</Text>
               {progressSignals.map((signal, idx) => (
                 <View key={idx} style={styles.signalItem}>
                   <Text style={styles.signalIcon}>✓</Text>
@@ -251,10 +251,10 @@ export default function YKIDailySessionScreen({ navigation, route }) {
           )}
 
           <Text style={styles.completionMessage}>
-            Great work! Keep practicing daily to build your skills for the YKI exam.
+            Hienoa! Harjoittele päivittäin, jotta taitosi kehittyvät YKI-koetta varten.
           </Text>
           <PremiumEmbossedButton
-            title="Back to YKI Home"
+            title="Takaisin YKI-kotiin"
             onPress={onBack}
             variant="primary"
             size="large"
@@ -273,14 +273,14 @@ export default function YKIDailySessionScreen({ navigation, route }) {
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Today's YKI Session</Text>
+            <Text style={styles.headerTitle}>Päivän YKI-harjoitus</Text>
             <View style={styles.modeBadge}>
               <Text style={[styles.modeBadgeText, mode === 'exam' && styles.modeBadgeExam]}>
-                {mode === 'exam' ? '📝 Exam Mode' : '🎓 Training Mode'}
+                {mode === 'exam' ? '📝 Koetila' : '🎓 Harjoittelutila'}
               </Text>
             </View>
             <Text style={styles.headerSubtitle}>
-              {mode === 'exam' ? 'Limited help, strict time limits' : 'Supportive practice with feedback and retries'}
+              {mode === 'exam' ? 'Vähemmän apua, tiukat aikarajat' : 'Harjoittelu palautteella ja uusintayrityksillä'}
             </Text>
           </View>
           <HomeButton navigation={navigation} style={styles.homeButton} homeType="yki" />
@@ -289,12 +289,12 @@ export default function YKIDailySessionScreen({ navigation, route }) {
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color="#EAF5FF" />
-            <Text style={styles.centerText}>Building your session…</Text>
+            <Text style={styles.centerText}>Rakennetaan harjoitusta…</Text>
           </View>
         ) : error ? (
           <View style={styles.center}>
             <Text style={styles.errorText}>{error}</Text>
-            <PremiumEmbossedButton title="Retry" onPress={refresh} variant="primary" size="large" />
+            <PremiumEmbossedButton title="Yritä uudelleen" onPress={refresh} variant="primary" size="large" />
           </View>
         ) : showCompletion ? (
           <SessionCompletionView
@@ -320,23 +320,23 @@ export default function YKIDailySessionScreen({ navigation, route }) {
             {showCalibrationPrompt && calibrationStatus?.calibration_needed && (
               <View style={styles.calibrationCard}>
                 <Text style={styles.calibrationIcon}>🔄</Text>
-                <Text style={styles.calibrationTitle}>Level Assessment Recommended</Text>
+                <Text style={styles.calibrationTitle}>Tasotesti suositeltu</Text>
                 <Text style={styles.calibrationText}>
-                  {calibrationStatus.reason || "It's time to recalibrate your level to ensure your training matches your current skills."}
+                  {calibrationStatus.reason || 'On aika tarkistaa tasosi, jotta harjoittelu vastaa nykyisiä taitojasi.'}
                 </Text>
                 {calibrationStatus.days_since_last && (
                   <Text style={styles.calibrationMeta}>
-                    Last assessment: {calibrationStatus.days_since_last} days ago
+                    Edellinen tasotesti: {calibrationStatus.days_since_last} päivää sitten
                   </Text>
                 )}
                 {calibrationStatus.attempts_since_last && (
                   <Text style={styles.calibrationMeta}>
-                    Attempts since: {calibrationStatus.attempts_since_last}
+                    Yrityksiä sen jälkeen: {calibrationStatus.attempts_since_last}
                   </Text>
                 )}
                 <View style={styles.calibrationActions}>
                   <PremiumEmbossedButton
-                    title="Take Assessment"
+                    title="Tee tasotesti"
                     onPress={() => {
                       setShowCalibrationPrompt(false);
                       navigation.navigate('YKIPlacement');
@@ -349,7 +349,7 @@ export default function YKIDailySessionScreen({ navigation, route }) {
                     onPress={() => setShowCalibrationPrompt(false)}
                     style={styles.calibrationDismiss}
                   >
-                    <Text style={styles.calibrationDismissText}>Maybe later</Text>
+                    <Text style={styles.calibrationDismissText}>Ehkä myöhemmin</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -358,22 +358,22 @@ export default function YKIDailySessionScreen({ navigation, route }) {
             <View style={styles.sessionCard}>
               <View style={styles.sessionRow}>
                 <View>
-                  <Text style={styles.sessionLabel}>Estimated</Text>
+                  <Text style={styles.sessionLabel}>Arvio</Text>
                   <Text style={styles.sessionValue}>≈ {session?.plan?.estimated_minutes || 15} min</Text>
                 </View>
                 <View>
-                  <Text style={styles.sessionLabel}>Progress</Text>
+                  <Text style={styles.sessionLabel}>Edistyminen</Text>
                   <Text style={styles.sessionValue}>
                     {session?.completed_count || session?.plan?.progress?.completed || 0} / {session?.total_count || session?.plan?.progress?.total || tasks.length || 0}
                   </Text>
                 </View>
                 <View>
-                  <Text style={styles.sessionLabel}>Task</Text>
+                  <Text style={styles.sessionLabel}>Tehtävä</Text>
                   <Text style={styles.sessionValue}>{taskIndex + 1} / {tasks.length}</Text>
                 </View>
               </View>
               <Text style={styles.sessionHint}>
-                You don't need to choose what to practice. We'll run a short, focused set of tasks and then finish.
+                Sinun ei tarvitse valita mitä harjoitella. Teemme lyhyen, kohdennetun tehtäväsarjan ja lopetamme.
               </Text>
             </View>
 
@@ -382,26 +382,26 @@ export default function YKIDailySessionScreen({ navigation, route }) {
                 <View style={styles.taskHeader}>
                   <Text style={styles.taskTitle}>
                     {currentTask.is_skill_lab 
-                      ? currentTask.title || 'Skill Lab'
-                      : currentTask.task_type === 'speaking' ? 'Speaking' 
-                      : currentTask.task_type === 'writing' ? 'Writing' 
-                      : currentTask.task_type === 'skill_lab' ? 'Skill Lab'
+                      ? currentTask.title || 'Taitoharjoitus'
+                      : currentTask.task_type === 'speaking' ? 'Puhuminen' 
+                      : currentTask.task_type === 'writing' ? 'Kirjoittaminen' 
+                      : currentTask.task_type === 'skill_lab' ? 'Taitoharjoitus'
                       : currentTask.task_type}
                   </Text>
                   <Text style={styles.taskMeta}>
                     {currentTask.is_skill_lab 
-                      ? `Targeting: ${currentTask.target_weakness || 'weakness'} • ${currentTask.constraints?.estimated_minutes || 5} min`
-                      : `Level ${currentTask.level} • ${mode === 'exam' ? 'Exam constraints' : 'Training with feedback'}`}
+                      ? `Kohde: ${currentTask.target_weakness || 'heikkous'} • ${currentTask.constraints?.estimated_minutes || 5} min`
+                      : `Taso ${currentTask.level} • ${mode === 'exam' ? 'Koerajoitukset' : 'Harjoittelu palautteella'}`}
                   </Text>
                 </View>
 
                 {currentTask.is_skill_lab ? (
                   <View style={styles.skillLabCard}>
                     <Text style={styles.skillLabDescription}>
-                      {currentTask.description || 'Practice drill to improve your skills.'}
+                      {currentTask.description || 'Harjoitus, jolla kehität taitojasi.'}
                     </Text>
                     <PremiumEmbossedButton
-                      title={`Start ${currentTask.title || 'Lab'}`}
+                      title={`Aloita ${currentTask.title || 'harjoitus'}`}
                       onPress={() => {
                         const route = currentTask.screen_route;
                         const params = currentTask.params || {};
@@ -418,7 +418,7 @@ export default function YKIDailySessionScreen({ navigation, route }) {
 
                 <View style={styles.primaryActions}>
                   <PremiumEmbossedButton
-                    title="Play prompt audio"
+                    title="Toista ääniohje"
                     onPress={playPrompt}
                     variant="secondary"
                     size="large"
@@ -428,27 +428,27 @@ export default function YKIDailySessionScreen({ navigation, route }) {
 
                 {currentTask.task_type === 'speaking' ? (
                   <View style={styles.block}>
-                    <Text style={styles.blockTitle}>Record your answer</Text>
+                    <Text style={styles.blockTitle}>Nauhoita vastauksesi</Text>
                     <MicRecorder onTranscript={setSpeakingTranscript} minSeconds={mode === 'exam' ? 10 : 0} />
                     {!!speakingTranscript && (
                       <View style={styles.responseBox}>
-                        <Text style={styles.responseLabel}>Transcript</Text>
+                        <Text style={styles.responseLabel}>Litterointi</Text>
                         <Text style={styles.responseText}>{speakingTranscript}</Text>
                       </View>
                     )}
                   </View>
                 ) : (
                   <View style={styles.block}>
-                    <Text style={styles.blockTitle}>Write your answer</Text>
+                    <Text style={styles.blockTitle}>Kirjoita vastauksesi</Text>
                     <TextInput
                       value={writingText}
                       onChangeText={setWritingText}
-                      placeholder="Write in Finnish…"
+                      placeholder="Kirjoita suomeksi…"
                       placeholderTextColor="rgba(255,255,255,0.45)"
                       multiline
                       style={styles.textInput}
                     />
-                    <Text style={styles.helperText}>{writingText.trim().split(/\s+/).filter(Boolean).length} words</Text>
+                    <Text style={styles.helperText}>{writingText.trim().split(/\s+/).filter(Boolean).length} sanaa</Text>
                   </View>
                 )}
 
@@ -456,7 +456,7 @@ export default function YKIDailySessionScreen({ navigation, route }) {
 
                 {!currentTask.is_skill_lab && (
                   <PremiumEmbossedButton
-                    title={evaluating ? 'Evaluating…' : 'Submit & get next step'}
+                    title={evaluating ? 'Arvioidaan…' : 'Lähetä ja jatka'}
                     onPress={evaluateAndSubmit}
                     disabled={!canEvaluate || evaluating}
                     variant="primary"
@@ -469,20 +469,20 @@ export default function YKIDailySessionScreen({ navigation, route }) {
 
                 {evaluation && (
                   <View style={styles.feedbackCard}>
-                    <Text style={styles.feedbackTitle}>Feedback</Text>
-                    <Text style={styles.feedbackLine}><Text style={styles.feedbackStrong}>Win:</Text> {evaluation.feedback?.one_big_win}</Text>
-                    <Text style={styles.feedbackLine}><Text style={styles.feedbackStrong}>Fix now:</Text> {evaluation.feedback?.one_fix_now}</Text>
-                    <Text style={styles.feedbackLine}><Text style={styles.feedbackStrong}>Band:</Text> {evaluation.band || '—'}</Text>
+                    <Text style={styles.feedbackTitle}>Palaute</Text>
+                    <Text style={styles.feedbackLine}><Text style={styles.feedbackStrong}>Onnistuminen:</Text> {evaluation.feedback?.one_big_win}</Text>
+                    <Text style={styles.feedbackLine}><Text style={styles.feedbackStrong}>Korjaa nyt:</Text> {evaluation.feedback?.one_fix_now}</Text>
+                    <Text style={styles.feedbackLine}><Text style={styles.feedbackStrong}>Taso:</Text> {evaluation.band || '—'}</Text>
                   </View>
                 )}
 
                 {nextDirective && !nextDirective.auto_advance && (
                   <View style={styles.nextCard}>
-                    <Text style={styles.nextTitle}>What’s next</Text>
+                    <Text style={styles.nextTitle}>Seuraavaksi</Text>
                     <Text style={styles.nextReason}>{nextDirective.reason}</Text>
                     <Text style={styles.nextProgress}>{nextDirective.progress_message}</Text>
                     <PremiumEmbossedButton
-                      title="Continue"
+                      title="Jatka"
                       onPress={manualContinue}
                       variant="primary"
                       size="large"
@@ -493,8 +493,8 @@ export default function YKIDailySessionScreen({ navigation, route }) {
               </View>
             ) : (
               <View style={styles.center}>
-                <Text style={styles.centerText}>No tasks in today’s plan.</Text>
-                <PremiumEmbossedButton title="Back to YKI Home" onPress={() => navigation.navigate('YKI')} variant="primary" size="large" />
+                <Text style={styles.centerText}>Päivän suunnitelmassa ei ole tehtäviä.</Text>
+                <PremiumEmbossedButton title="Takaisin YKI-kotiin" onPress={() => navigation.navigate('YKI')} variant="primary" size="large" />
               </View>
             )}
           </ScrollView>

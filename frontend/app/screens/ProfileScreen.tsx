@@ -29,7 +29,7 @@ export default function ProfileScreen({ navigation }) {
               <Text style={styles.profileImageText}>👤</Text>
             </View>
             <Text style={styles.userName}>{user?.name?.toUpperCase() || 'USER'}</Text>
-            <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+            <Text style={styles.userEmail}>{user?.email || 'user@esimerkki.fi'}</Text>
           </View>
 
           {/* Settings Section - From 6th picture */}

@@ -10,23 +10,23 @@ export default function HomeScreen({ navigation }) {
   return (
     <Background module="home" variant="brown" imageVariant="home">
       <View style={styles.container}>
-        <Text style={styles.title}>Choose your plan</Text>
-        <Text style={styles.subtitle}>Select the outcome you are pursuing.</Text>
+        <Text style={styles.title}>Valitse suunnitelma</Text>
+        <Text style={styles.subtitle}>Valitse tavoite, jota kohti opiskelet.</Text>
         <TouchableOpacity
           style={styles.card}
           onPress={() => navigation?.navigate('YKIPlan')}
           activeOpacity={0.85}
         >
-          <Text style={styles.cardTitle}>YKI Pass Plan</Text>
-          <Text style={styles.cardBody}>Exam-focused preparation mode.</Text>
+          <Text style={styles.cardTitle}>YKI‑suunnitelma</Text>
+          <Text style={styles.cardBody}>Kokeeseen keskittyvä harjoittelutila.</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.card}
           onPress={() => navigation?.navigate('WorkPlan')}
           activeOpacity={0.85}
         >
-          <Text style={styles.cardTitle}>Work Readiness Plan</Text>
-          <Text style={styles.cardBody}>Professional Finnish for your field.</Text>
+          <Text style={styles.cardTitle}>Työvalmius‑suunnitelma</Text>
+          <Text style={styles.cardBody}>Ammattisuomea omalle alallesi.</Text>
         </TouchableOpacity>
       </View>
     </Background>

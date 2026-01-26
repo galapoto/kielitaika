@@ -81,9 +81,9 @@ export default function YKIPracticeListeningScreen({ navigation, route } = {}) {
     } catch (error) {
       console.error('Failed to load listening exercise:', error);
       Alert.alert(
-        'Could not load listening task',
-        error?.message || 'Please check your connection and try again.',
-        [{ text: 'Retry', onPress: handleStartPractice }, { text: 'OK' }]
+        'Kuuntelutehtävää ei voitu ladata',
+        error?.message || 'Tarkista yhteys ja yritä uudelleen.',
+        [{ text: 'Yritä uudelleen', onPress: handleStartPractice }, { text: 'Selvä' }]
       );
     } finally {
       setLoading(false);
@@ -94,12 +94,12 @@ export default function YKIPracticeListeningScreen({ navigation, route } = {}) {
     if (!currentExercise?.script) return;
     setAudioError('');
     if (replaysUsed >= replayLimit) {
-      Alert.alert('Replay limit reached', `You’ve used all ${replayLimit} replays for this exercise.`);
+      Alert.alert('Uusintakuunteluraja täynnä', `Olet käyttänyt kaikki ${replayLimit} kuuntelukertaa tähän tehtävään.`);
       return;
     }
     const provider = await playTTS(currentExercise.script, 'yki', { playbackRate: 0.95 });
     if (!provider) {
-      setAudioError('Audio failed. Please check your connection and tap Retry.');
+      setAudioError('Ääni ei toiminut. Tarkista yhteys ja paina “Yritä uudelleen”.');
       return;
     }
     setReplaysUsed((n) => n + 1);
@@ -139,7 +139,7 @@ export default function YKIPracticeListeningScreen({ navigation, route } = {}) {
           >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>YKI Listening Practice</Text>
+          <Text style={styles.headerTitle}>YKI: kuunteluharjoitus</Text>
           <HomeButton navigation={navigation} style={styles.homeButton} homeType="yki" />
         </View>
 
@@ -148,15 +148,15 @@ export default function YKIPracticeListeningScreen({ navigation, route } = {}) {
           
           {!currentExercise ? (
             <View style={styles.startContainer}>
-              <Text style={styles.startTitle}>Practice YKI Listening</Text>
+              <Text style={styles.startTitle}>Harjoittele YKI-kuuntelua</Text>
               <Text style={styles.startDescription}>
-                Short listening comprehension exercises to prepare for the YKI exam.
+                Lyhyitä kuullun ymmärtämisen harjoituksia YKI‑kokeeseen.
               </Text>
               {loading ? (
                 <ActivityIndicator size="large" color={palette.textPrimary} />
               ) : (
                 <PremiumEmbossedButton
-                  title="Start Practice"
+                  title="Aloita harjoitus"
                   onPress={handleStartPractice}
                   variant="primary"
                   size="large"
@@ -170,34 +170,34 @@ export default function YKIPracticeListeningScreen({ navigation, route } = {}) {
                 <View style={styles.examSummaryCard}>
                   <View style={styles.examSummaryRow}>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Mock ID</Text>
+                      <Text style={styles.examSummaryLabel}>Koe-ID</Text>
                       <Text style={styles.examSummaryValue}>{examInfo.examId}</Text>
                     </View>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Subtest</Text>
+                      <Text style={styles.examSummaryLabel}>Osakoe</Text>
                       <Text style={styles.examSummaryValue}>{examInfo.examType?.replace('_', ' ')}</Text>
                     </View>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Level</Text>
+                      <Text style={styles.examSummaryLabel}>Taso</Text>
                       <Text style={styles.examSummaryValue}>{examInfo.level}</Text>
                     </View>
                   </View>
                   <View style={styles.examSummaryRow}>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Time</Text>
-                      <Text style={styles.examSummaryValue}>{examInfo.totalTimeMinutes} mins</Text>
+                      <Text style={styles.examSummaryLabel}>Aika</Text>
+                      <Text style={styles.examSummaryValue}>{examInfo.totalTimeMinutes} min</Text>
                     </View>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Tasks</Text>
+                      <Text style={styles.examSummaryLabel}>Tehtävät</Text>
                       <Text style={styles.examSummaryValue}>{examInfo.totalTasks}</Text>
                     </View>
                   </View>
                 </View>
               )}
-              <Text style={styles.exerciseText}>Listen to the audio and answer the questions.</Text>
+              <Text style={styles.exerciseText}>Kuuntele äänite ja vastaa kysymyksiin.</Text>
               <View style={styles.audioPlayerContainer}>
                 <PremiumEmbossedButton
-                  title={replaysUsed === 0 ? 'Play audio' : `Replay audio (${replaysUsed}/${replayLimit})`}
+                  title={replaysUsed === 0 ? 'Toista äänite' : `Toista uudelleen (${replaysUsed}/${replayLimit})`}
                   onPress={handlePlayAudio}
                   variant="secondary"
                   size="large"
@@ -206,13 +206,13 @@ export default function YKIPracticeListeningScreen({ navigation, route } = {}) {
                 {!!audioError && (
                   <View style={{ marginTop: 10 }}>
                     <Text style={styles.errorText}>{audioError}</Text>
-                    <PremiumEmbossedButton title="Retry audio" onPress={handlePlayAudio} variant="primary" size="medium" />
+                    <PremiumEmbossedButton title="Yritä äänite uudelleen" onPress={handlePlayAudio} variant="primary" size="medium" />
                   </View>
                 )}
               </View>
               {currentExercise.questions && currentExercise.questions.length > 0 && (
                 <View style={styles.questionsContainer}>
-                  <Text style={styles.questionsTitle}>Questions:</Text>
+                  <Text style={styles.questionsTitle}>Kysymykset:</Text>
                   {currentExercise.questions.map((q, idx) => (
                     <View key={q.id || idx} style={styles.questionCard}>
                       <Text style={styles.questionText}>{q.question}</Text>
@@ -362,36 +362,36 @@ const buildListeningFixPack = (evaluation) => {
   const pack = [];
   if (evaluation?.scores?.gist < 3) {
     pack.push({
-      title: 'Main Idea Focus',
+      title: 'Pääajatus',
       detail:
-        'Listen again focusing on the opening sentence. Try to summarise the gist in one short line before answering.',
+        'Kuuntele uudelleen ja keskity avauslauseeseen. Tiivistä pääajatus yhdeksi lyhyeksi lauseeksi ennen vastaamista.',
     });
   }
   if (evaluation?.scores?.detail < 3) {
     pack.push({
-      title: 'Detail Drill',
+      title: 'Yksityiskohtaharjoitus',
       detail:
-        'Pause after each sentence, write down one detail (time, place, person) and then answer the matching question.',
+        'Pysäytä jokaisen lauseen jälkeen, kirjaa yksi yksityiskohta (aika, paikka, henkilö) ja vastaa sitten sopivaan kysymykseen.',
     });
   }
   if (evaluation?.scores?.inference < 3) {
     pack.push({
-      title: 'Inference Probe',
+      title: 'Päätelmäharjoitus',
       detail:
-        'Highlight one implied connection in the transcript. Ask “What does X refer to?” before submitting.',
+        'Merkitse litteroinnista yksi epäsuora yhteys. Kysy itseltäsi “Mihin X viittaa?” ennen lähettämistä.',
     });
   }
   if (evaluation?.scores?.numbers < 3) {
     pack.push({
-      title: 'Numbers Under Pressure',
+      title: 'Numerot paineessa',
       detail:
-        'Practice capturing amounts by repeating them aloud with a 4-second pause before answering.',
+        'Harjoittele lukujen poimimista: toista luvut ääneen ja pidä 4 sekunnin tauko ennen vastaamista.',
     });
   }
   pack.push({
-    title: 'Retake Schedule',
+    title: 'Uusintasuunnitelma',
     detail:
-      'Repeat this task tomorrow and again in seven days to make the insights sticky. Mark the planned days in your calendar.',
+      'Tee sama tehtävä huomenna ja uudelleen viikon päästä, jotta opit pysyvät. Merkitse päivät kalenteriin.',
   });
   return pack;
 };
@@ -403,16 +403,16 @@ const buildListeningReadiness = (evaluation) => {
     weakest: evaluation?.weakest,
     plan: [
       {
-        title: 'Today',
-        detail: `Replay the same recording while journaling one key detail per sentence about ${evaluation?.weakest?.label || 'listening'}.`,
+        title: 'Tänään',
+        detail: `Toista sama äänite ja kirjaa jokaisesta lauseesta yksi avainyksityiskohta (${evaluation?.weakest?.label || 'kuuntelu'}).`,
       },
       {
-        title: 'In 3 days',
-        detail: 'Pick a new passage and train inference + numbers back-to-back. Slower playback is OK.',
+        title: '3 päivän päästä',
+        detail: 'Valitse uusi teksti ja harjoittele peräkkäin päätelmiä + numeroita. Hitaampi toisto on ok.',
       },
       {
-        title: 'In 1 week',
-        detail: 'Combine this topic with a speaking check: explain the gist aloud and warn about the top blocker.',
+        title: '1 viikon päästä',
+        detail: 'Yhdistä aihe puhumisharjoitukseen: selitä pääajatus ääneen ja varoita suurimmasta kompastuskivestä.',
       },
     ],
   };

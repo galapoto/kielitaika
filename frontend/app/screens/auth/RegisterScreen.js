@@ -102,8 +102,8 @@ export default function RegisterScreen({ navigation }) {
               
               {/* Welcome Text */}
               <View style={styles.header}>
-                <Text style={styles.title}>Create Account!</Text>
-                <Text style={styles.subtitle}>Please sign up to start your journey</Text>
+                <Text style={styles.title}>Luo tili</Text>
+                <Text style={styles.subtitle}>Rekisteröidy aloittaaksesi</Text>
               </View>
 
               {/* Registration Form */}
@@ -112,7 +112,7 @@ export default function RegisterScreen({ navigation }) {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Name (Optional)"
+                    placeholder="Nimi (valinnainen)"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={name}
                     onChangeText={setName}
@@ -125,7 +125,7 @@ export default function RegisterScreen({ navigation }) {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Email"
+                    placeholder="Sähköposti"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={email}
                     onChangeText={setEmail}
@@ -140,7 +140,7 @@ export default function RegisterScreen({ navigation }) {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Password"
+                    placeholder="Salasana"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={password}
                     onChangeText={setPassword}
@@ -155,7 +155,7 @@ export default function RegisterScreen({ navigation }) {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Confirm Password"
+                    placeholder="Vahvista salasana"
                     placeholderTextColor="rgba(255, 255, 255, 0.5)"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -174,7 +174,7 @@ export default function RegisterScreen({ navigation }) {
                   disabled={loading}
                 >
                   <Text style={styles.signUpButtonText}>
-                    {loading ? 'Creating...' : 'Sign Up'}
+                    {loading ? 'Luodaan…' : 'Rekisteröidy'}
                   </Text>
                 </TouchableOpacity>
 

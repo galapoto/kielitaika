@@ -152,14 +152,14 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
         <View style={styles.questionCard}>
           <TouchableOpacity style={styles.hintButton}>
             <Text style={styles.hintIcon}>💡</Text>
-            <Text style={styles.hintText}>Hint</Text>
+            <Text style={styles.hintText}>Vinkki</Text>
           </TouchableOpacity>
           <Text style={styles.questionNumber}>
-            Task <Text style={styles.questionNumberHighlight}>{String(currentTaskIndex + 1).padStart(2, '0')}</Text>
+            Tehtävä <Text style={styles.questionNumberHighlight}>{String(currentTaskIndex + 1).padStart(2, '0')}</Text>
           </Text>
-          <Text style={styles.questionCategory}>YKI Speaking Exam</Text>
+          <Text style={styles.questionCategory}>YKI: puhuminen</Text>
           <Text style={styles.questionText}>
-            "{currentTask.prompt || currentTask.description || 'Speak about the topic below.'}"
+            "{currentTask.prompt || currentTask.description || 'Puhu alla olevasta aiheesta.'}"
           </Text>
           {currentTask.description && (
             <Text style={styles.taskDescription}>{currentTask.description}</Text>
@@ -184,11 +184,11 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
       <View style={styles.controlsContainer}>
         {!isRecording ? (
           <TouchableOpacity style={styles.recordButton} onPress={handleStartRecording}>
-            <Text style={styles.recordButtonText}>Start Recording</Text>
+            <Text style={styles.recordButtonText}>Aloita nauhoitus</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.stopButton} onPress={handleStopRecording}>
-            <Text style={styles.stopButtonText}>Stop Recording</Text>
+            <Text style={styles.stopButtonText}>Lopeta nauhoitus</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -200,20 +200,20 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
           onPress={() => {}}
           disabled
         >
-          <Text style={styles.navButtonText}>Previous</Text>
+          <Text style={styles.navButtonText}>Edellinen</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.navButton, styles.navButtonPrimary]}
           onPress={handleNext}
           disabled={currentTaskIndex >= tasks.length - 1}
         >
-          <Text style={styles.navButtonText}>Next</Text>
+          <Text style={styles.navButtonText}>Seuraava</Text>
         </TouchableOpacity>
       </View>
 
       {/* Task List - Flight Booking Style from 6th picture */}
         <ScrollView style={styles.tasksList} contentContainerStyle={styles.tasksListContent}>
-          <Text style={styles.tasksListTitle}>All Tasks</Text>
+          <Text style={styles.tasksListTitle}>Kaikki tehtävät</Text>
           {tasks.map((task, index) => (
             <TouchableOpacity
               key={task.id}
@@ -228,8 +228,8 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
               }}
             >
               <View style={styles.taskCardLeft}>
-                <Text style={styles.taskCardTitle}>Task {index + 1}</Text>
-                <Text style={styles.taskCardDescription}>{task.description || 'Speaking Task'}</Text>
+                <Text style={styles.taskCardTitle}>Tehtävä {index + 1}</Text>
+                <Text style={styles.taskCardDescription}>{task.description || 'Puhumistehtävä'}</Text>
                 <Text style={styles.taskCardTime}>~{task.time_limit}s</Text>
               </View>
               <View style={styles.taskCardRight}>

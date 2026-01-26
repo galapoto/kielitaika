@@ -69,8 +69,8 @@ export default function WorkplaceScreen({ navigation }) {
           </TouchableOpacity>
           <View style={styles.profileSection}>
             <ProfileImage size={40} />
-            <Text style={styles.userName}>Workplace Finnish</Text>
-            <Text style={styles.membershipDate}>Choose your profession</Text>
+            <Text style={styles.userName}>Työelämän suomi</Text>
+            <Text style={styles.membershipDate}>Valitse ammatti</Text>
           </View>
         </View>
         <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
@@ -91,41 +91,11 @@ export default function WorkplaceScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Schedule Section - From 3rd picture */}
-        <View style={styles.scheduleSection}>
-          <View style={styles.scheduleHeader}>
-            <Text style={styles.scheduleTitle}>RECENT PRACTICE</Text>
-          </View>
-
-          <View style={styles.activityCard}>
-            <View style={styles.timeAxis}>
-              {['9:00', '11:00'].map((time) => (
-                <View key={time} style={styles.timeMarker}>
-                  <Text style={styles.timeText}>{time}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.activityList}>
-              <View style={styles.activityItem}>
-                <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle}>Workplace Roleplay</Text>
-                  <Text style={styles.activitySubtitle}>Completed 3 scenarios</Text>
-                </View>
-                <Text style={styles.statusIcon}>✓</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
         {/* Profession List - Flight Booking Style from 6th picture */}
         {fields.length > 0 && (
           <View style={styles.professionsList}>
             <View style={styles.listHeader}>
-              <Text style={styles.listTitle}>Available Professions</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See all</Text>
-              </TouchableOpacity>
+              <Text style={styles.listTitle}>Saatavilla olevat ammatit</Text>
             </View>
 
             {fields.map((field) => (
@@ -136,7 +106,7 @@ export default function WorkplaceScreen({ navigation }) {
               >
                 <View style={styles.professionListLeft}>
                   <Text style={styles.professionListTitle}>{field.label}</Text>
-                  <Text style={styles.professionListDescription}>Workplace Finnish</Text>
+                  <Text style={styles.professionListDescription}>Työelämän suomi</Text>
                 </View>
                 <View style={styles.professionListRight}>
                   <Text style={styles.professionListArrow}>→</Text>
@@ -149,7 +119,7 @@ export default function WorkplaceScreen({ navigation }) {
         {isLoading && (
           <View style={styles.loader}>
             <ActivityIndicator size="large" color="#1E3A8A" />
-            <Text style={styles.loadingText}>Loading professions...</Text>
+            <Text style={styles.loadingText}>Ladataan ammatteja…</Text>
           </View>
         )}
 
@@ -157,7 +127,7 @@ export default function WorkplaceScreen({ navigation }) {
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={loadFields}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>Yritä uudelleen</Text>
             </TouchableOpacity>
           </View>
         )}

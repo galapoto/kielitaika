@@ -25,7 +25,7 @@ export default function SettingsScreen({ navigation }) {
   const { user, logout, updateUser } = useAuth();
   const { backgroundsEnabled, toggleBackgrounds, animationsEnabled, toggleAnimations, speechRate, setSpeechRate } = usePreferences();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-  const [language, setLanguage] = React.useState('en'); // 'en' or 'fi'
+  const [language, setLanguage] = React.useState('fi'); // 'en' or 'fi'
   const [profilePictureUrl, setProfilePictureUrl] = React.useState(user?.profile_picture_url || user?.profilePictureUrl || '');
   const [isUpdatingProfile, setIsUpdatingProfile] = React.useState(false);
   const [isProfileModalVisible, setProfileModalVisible] = React.useState(false);
@@ -71,10 +71,10 @@ export default function SettingsScreen({ navigation }) {
     try {
       await updateUser({ profile_picture_url: url });
       setProfilePictureUrl(url);
-      Alert.alert('Success', 'Profile picture updated!');
+      Alert.alert('Valmis', 'Profiilikuva päivitetty.');
       handleProfileModalClose();
     } catch (err) {
-      Alert.alert('Error', err?.message || 'Failed to update profile picture');
+      Alert.alert('Virhe', err?.message || 'Profiilikuvan päivitys epäonnistui');
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -104,8 +104,8 @@ export default function SettingsScreen({ navigation }) {
               setProfileModalVisible(true);
             }}
           />
-          <Text style={styles.userName}>Settings</Text>
-          <Text style={styles.membershipDate}>Customize your experience</Text>
+          <Text style={styles.userName}>Asetukset</Text>
+          <Text style={styles.membershipDate}>Mukauta käyttökokemustasi</Text>
         </View>
         <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
       </View>
@@ -114,9 +114,9 @@ export default function SettingsScreen({ navigation }) {
         {/* Profile Picture Settings */}
         <View style={styles.settingCard}>
           <View style={styles.settingCardLeft}>
-            <Text style={styles.settingCardTitle}>Profile Picture</Text>
+            <Text style={styles.settingCardTitle}>Profiilikuva</Text>
             <Text style={styles.settingCardDescription}>
-              {profilePictureUrl ? 'Tap to change' : 'Add a profile picture URL'}
+              {profilePictureUrl ? 'Paina vaihtaaksesi' : 'Lisää profiilikuvan URL-osoite'}
             </Text>
           </View>
           <TouchableOpacity
@@ -134,8 +134,8 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.settingsList}>
           <View style={styles.settingItem}>
             <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Dark Mode</Text>
-              <Text style={styles.settingItemDescription}>Switch between themes</Text>
+              <Text style={styles.settingItemLabel}>Tumma tila</Text>
+              <Text style={styles.settingItemDescription}>Vaihda teemaa</Text>
             </View>
             <Switch
               value={theme === 'dark'}
@@ -147,9 +147,9 @@ export default function SettingsScreen({ navigation }) {
 
           <View style={styles.settingItem}>
             <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Background Images</Text>
+              <Text style={styles.settingItemLabel}>Taustakuvat</Text>
               <Text style={styles.settingItemDescription}>
-                {backgroundsEnabled ? 'Show backgrounds' : 'Hide backgrounds'}
+                {backgroundsEnabled ? 'Näytä taustat' : 'Piilota taustat'}
               </Text>
             </View>
             <Switch
@@ -162,9 +162,9 @@ export default function SettingsScreen({ navigation }) {
 
           <View style={styles.settingItem}>
             <View style={styles.settingItemLeft}>
-              <Text style={styles.settingItemLabel}>Animations</Text>
+              <Text style={styles.settingItemLabel}>Animaatiot</Text>
               <Text style={styles.settingItemDescription}>
-                {animationsEnabled ? 'Enable animations' : 'Disable animations'}
+                {animationsEnabled ? 'Animaatiot käytössä' : 'Animaatiot pois'}
               </Text>
             </View>
             <Switch
@@ -178,9 +178,9 @@ export default function SettingsScreen({ navigation }) {
           {/* Speech */}
           <View style={styles.settingCard}>
             <View style={styles.settingCardLeft}>
-              <Text style={styles.settingCardTitle}>Speech speed</Text>
+              <Text style={styles.settingCardTitle}>Puhenopeus</Text>
               <Text style={styles.settingCardDescription}>
-                {speechRate === 'slow' ? 'Slow (recommended for A1)' : speechRate === 'fast' ? 'Fast' : 'Normal'}
+                {speechRate === 'slow' ? 'Hidas (suositus A1)' : speechRate === 'fast' ? 'Nopea' : 'Normaali'}
               </Text>
             </View>
             <View style={styles.languageButtons}>
@@ -189,7 +189,7 @@ export default function SettingsScreen({ navigation }) {
                 onPress={() => setSpeechRate('slow')}
               >
                 <Text style={[styles.languageButtonText, speechRate === 'slow' && styles.languageButtonTextActive]}>
-                  SLOW
+                  HIDAS
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -197,7 +197,7 @@ export default function SettingsScreen({ navigation }) {
                 onPress={() => setSpeechRate('normal')}
               >
                 <Text style={[styles.languageButtonText, speechRate === 'normal' && styles.languageButtonTextActive]}>
-                  NORMAL
+                  NORMAALI
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -205,7 +205,7 @@ export default function SettingsScreen({ navigation }) {
                 onPress={() => setSpeechRate('fast')}
               >
                 <Text style={[styles.languageButtonText, speechRate === 'fast' && styles.languageButtonTextActive]}>
-                  FAST
+                  NOPEA
                 </Text>
               </TouchableOpacity>
             </View>
@@ -217,8 +217,8 @@ export default function SettingsScreen({ navigation }) {
             onPress={() => navigation.navigate('Notifications')}
           >
             <View style={styles.settingCardLeft}>
-              <Text style={styles.settingCardTitle}>Notifications</Text>
-              <Text style={styles.settingCardDescription}>Manage reminders and alerts</Text>
+              <Text style={styles.settingCardTitle}>Ilmoitukset</Text>
+              <Text style={styles.settingCardDescription}>Hallinnoi muistutuksia ja hälytyksiä</Text>
             </View>
             <View style={styles.settingCardRight}>
               <Text style={styles.settingCardArrow}>→</Text>
@@ -231,8 +231,8 @@ export default function SettingsScreen({ navigation }) {
             onPress={() => navigation.navigate('PrivacySettings')}
           >
             <View style={styles.settingCardLeft}>
-              <Text style={styles.settingCardTitle}>Privacy Settings</Text>
-              <Text style={styles.settingCardDescription}>Data and privacy preferences</Text>
+              <Text style={styles.settingCardTitle}>Tietosuoja</Text>
+              <Text style={styles.settingCardDescription}>Tieto- ja yksityisyysasetukset</Text>
             </View>
             <View style={styles.settingCardRight}>
               <Text style={styles.settingCardArrow}>→</Text>
@@ -242,8 +242,8 @@ export default function SettingsScreen({ navigation }) {
           {/* Language */}
           <View style={styles.settingCard}>
             <View style={styles.settingCardLeft}>
-              <Text style={styles.settingCardTitle}>Language</Text>
-              <Text style={styles.settingCardDescription}>App interface language (English, Finnish, Swedish)</Text>
+              <Text style={styles.settingCardTitle}>Kieli</Text>
+              <Text style={styles.settingCardDescription}>Sovelluksen käyttöliittymän kieli (suomi, englanti, ruotsi)</Text>
             </View>
             <LanguageSelector
               onLanguageChange={(langCode) => {
@@ -281,7 +281,7 @@ export default function SettingsScreen({ navigation }) {
             style={[styles.settingCard, styles.signOutCard]}
             onPress={handleLogout}
           >
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.signOutText}>Kirjaudu ulos</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -293,11 +293,11 @@ export default function SettingsScreen({ navigation }) {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: themeColors.surface }]}>
-            <Text style={[styles.modalTitle, { color: themeColors.text }]}>Profile Picture</Text>
+            <Text style={[styles.modalTitle, { color: themeColors.text }]}>Profiilikuva</Text>
             <TextInput
               value={profileModalUrl}
               onChangeText={setProfileModalUrl}
-              placeholder="https://example.com/avatar.jpg"
+              placeholder="https://esimerkki.fi/avatar.jpg"
               placeholderTextColor="rgba(255,255,255,0.6)"
               style={[styles.modalInput, { borderColor: themeColors.border, color: themeColors.text }]}
               autoCapitalize="none"
@@ -310,7 +310,7 @@ export default function SettingsScreen({ navigation }) {
                 onPress={handleProfileModalClose}
                 disabled={isUpdatingProfile}
               >
-                <Text style={styles.modalButtonText}>Cancel</Text>
+                <Text style={styles.modalButtonText}>Peru</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonPrimary]}
@@ -320,7 +320,7 @@ export default function SettingsScreen({ navigation }) {
                 {isUpdatingProfile ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Save</Text>
+                  <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Tallenna</Text>
                 )}
               </TouchableOpacity>
             </View>

@@ -10,16 +10,13 @@ import { designTokens } from '../styles/designTokens';
 import RukaCard from '../components/ui/RukaCard';
 
 const MODULES = [
-  { id: 'Vocabulary', type: 'vocabulary', description: 'Study key terminology' },
-  { id: 'Listening', type: 'listening', description: 'Tune your ear' },
-  { id: 'Roleplay', screen: 'Roleplay', description: 'Practice live dialogue' },
-  { id: 'Grammar', type: 'grammar', description: 'Master structures' },
-  { id: 'Practice', screen: 'PracticeRound', description: 'Integrated skill round' },
-  { id: 'Review', type: 'review', description: 'Spaced review for this profession' },
-  { id: 'Dashboard', screen: 'CompetenceDashboard', description: 'View your progress' },
-  { id: 'Quiz', type: 'reading', description: 'Test comprehension' },
-  { id: 'Notes', type: 'writing', description: 'Capture notes' },
-  { id: 'Resources', type: 'grammar', description: 'Extra materials' },
+  { id: 'Vocabulary', labelFi: 'Sanasto', type: 'vocabulary', descriptionFi: 'Harjoittele keskeistä sanastoa' },
+  { id: 'Listening', labelFi: 'Kuuntelu', type: 'listening', descriptionFi: 'Virittäydy kuuntelemaan' },
+  { id: 'Roleplay', labelFi: 'Roolipeli', screen: 'Roleplay', descriptionFi: 'Harjoittele työtilanteen dialogia' },
+  { id: 'Grammar', labelFi: 'Kielioppi', type: 'grammar', descriptionFi: 'Hallitse rakenteet' },
+  { id: 'Review', labelFi: 'Kertaus', type: 'review', descriptionFi: 'Kertaa ammattialan sisältöä' },
+  { id: 'Quiz', labelFi: 'Koe', type: 'reading', descriptionFi: 'Testaa ymmärtäminen' },
+  { id: 'Resources', labelFi: 'Materiaalit', type: 'grammar', descriptionFi: 'Lisämateriaalit' },
 ];
 
 const MODULE_ICONS = {
@@ -41,28 +38,11 @@ const { typography = {}, spacing = {}, textColor = {} } = designTokens || {};
 export default function ProfessionDetailScreen({ route, navigation } = {}) {
   const { user } = useAuth();
   const field = route?.params?.field || route?.params?.professionId || route?.params?.professionId;
-  const fieldName = route?.params?.fieldName || 'Profession';
-  const profession = route?.params?.profession || { title: fieldName, description: 'Learn profession-specific Finnish' };
+  const fieldName = route?.params?.fieldName || 'Ammatti';
+  const profession = route?.params?.profession || { title: fieldName, description: 'Opiskele ammattikohtaista suomea' };
   const handleModulePress = (module) => {
     if (module.screen === 'Roleplay') {
       navigation?.navigate('Roleplay', { field, fieldName });
-      return;
-    }
-
-    if (module.screen === 'PracticeRound') {
-      navigation?.navigate('PracticeRound', { 
-        profession: field, 
-        field, 
-        level: 'B1' 
-      });
-      return;
-    }
-
-    if (module.screen === 'CompetenceDashboard') {
-      navigation?.navigate('CompetenceDashboard', { 
-        profession: field, 
-        field 
-      });
       return;
     }
 
@@ -78,17 +58,6 @@ export default function ProfessionDetailScreen({ route, navigation } = {}) {
         sourceType: module.type || 'reading',
         level: module.level || 'B1',
         type: module.type || 'reading',
-      });
-      return;
-    }
-
-    if (module.id === 'Notes') {
-      navigation?.navigate('Notes', {
-        path: 'workplace',
-        field,
-        sourceType: module.type || 'writing',
-        level: module.level || 'B1',
-        title: `${fieldName} Notes`,
       });
       return;
     }
@@ -135,17 +104,13 @@ export default function ProfessionDetailScreen({ route, navigation } = {}) {
         <View style={styles.infoCard}>
           <View style={styles.infoCardLeft}>
             <Text style={styles.infoCardTitle}>{profession.title || fieldName}</Text>
-            <Text style={styles.infoCardDescription}>{profession.description || 'Workplace Finnish training'}</Text>
-            <Text style={styles.infoCardProgress}>Progress: 45%</Text>
-          </View>
-          <View style={styles.infoCardRight}>
-            <Text style={styles.infoCardTime}>30 min</Text>
+            <Text style={styles.infoCardDescription}>{profession.description || 'Työelämän suomen harjoittelua'}</Text>
           </View>
         </View>
 
         {/* Learning Modules - Card Grid from 2nd picture */}
         <View style={styles.modulesSection}>
-          <Text style={styles.sectionTitle}>Learning Modules</Text>
+          <Text style={styles.sectionTitle}>Oppimismoduulit</Text>
           <View style={styles.modulesGrid}>
             {MODULES.map((module) => (
               <TouchableOpacity
@@ -162,9 +127,9 @@ export default function ProfessionDetailScreen({ route, navigation } = {}) {
                       color={palette.accentPrimary}
                     />
                   </View>
-                  <Text style={styles.moduleLabel}>{module.id}</Text>
-                  {module.description && (
-                    <Text style={styles.moduleDescription}>{module.description}</Text>
+                  <Text style={styles.moduleLabel}>{module.labelFi || module.id}</Text>
+                  {(module.descriptionFi || module.description) && (
+                    <Text style={styles.moduleDescription}>{module.descriptionFi || module.description}</Text>
                   )}
                 </RukaCard>
               </TouchableOpacity>
@@ -172,32 +137,6 @@ export default function ProfessionDetailScreen({ route, navigation } = {}) {
           </View>
         </View>
 
-        {/* Schedule - From 3rd picture */}
-        <View style={styles.scheduleSection}>
-          <View style={styles.scheduleHeader}>
-            <Text style={styles.scheduleTitle}>UPCOMING SESSIONS</Text>
-          </View>
-
-          <View style={styles.scheduleCard}>
-            <View style={styles.timeAxis}>
-              {['10:00', '14:00'].map((time) => (
-                <View key={time} style={styles.timeMarker}>
-                  <Text style={styles.timeText}>{time}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.sessionsList}>
-              <View style={styles.sessionItem}>
-                <View style={styles.sessionContent}>
-                  <Text style={styles.sessionTitle}>Vocabulary Review</Text>
-                  <Text style={styles.sessionSubtitle}>20 new words</Text>
-                </View>
-                <Text style={styles.statusIcon}>⚠</Text>
-              </View>
-            </View>
-          </View>
-        </View>
       </ScrollView>
 
       {/* Removed placeholder bottom navigation */}

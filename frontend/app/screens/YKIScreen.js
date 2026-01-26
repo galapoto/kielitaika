@@ -32,8 +32,8 @@ const YKI_PRACTICE_CARDS = [
   {
     id: 'reading',
     icon: '📖',
-    label: 'Reading',
-    description: 'Timed articles, comprehension questions',
+    label: 'Lukeminen',
+    description: 'Ajastetut tekstit ja ymmärtämiskysymykset',
     screen: 'YKIPracticeReading',
     gradientColors: ['#0f172a', '#1e293b'],
     glowColor: '#38bdf8',
@@ -41,8 +41,8 @@ const YKI_PRACTICE_CARDS = [
   {
     id: 'speaking',
     icon: '🎤',
-    label: 'Speaking',
-    description: 'Prompts + guided recorders',
+    label: 'Puhuminen',
+    description: 'Aiheita ja ohjattu nauhoitus',
     screen: 'YKIPracticeSpeaking',
     gradientColors: ['#111827', '#312e81'],
     glowColor: '#a855f7',
@@ -50,8 +50,8 @@ const YKI_PRACTICE_CARDS = [
   {
     id: 'writing',
     icon: '✍️',
-    label: 'Writing',
-    description: 'Plan + polish short essays',
+    label: 'Kirjoittaminen',
+    description: 'Suunnittele ja viimeistele lyhyitä tekstejä',
     screen: 'YKIPracticeWriting',
     gradientColors: ['#0f172a', '#1c1917'],
     glowColor: '#f97316',
@@ -59,8 +59,8 @@ const YKI_PRACTICE_CARDS = [
   {
     id: 'listening',
     icon: '👂',
-    label: 'Listening',
-    description: 'Fast speech, quizzes, transcript reviews',
+    label: 'Kuuntelu',
+    description: 'Nopeaa puhetta, monivalintoja ja litterointikertaus',
     screen: 'YKIPracticeListening',
     gradientColors: ['#0f172a', '#0f766e'],
     glowColor: '#14b8a6',
@@ -127,14 +127,14 @@ export default function YKIScreen({ navigation }) {
       const { exam: newExam } = await generateYkiExam(examType, level);
       console.log('[YKIScreen] Exam loaded successfully:', newExam?.exam_id, 'tasks:', newExam?.tasks?.length);
       if (!newExam || !newExam.tasks || newExam.tasks.length === 0) {
-        throw new Error('Exam generated but contains no tasks. Please try again.');
+        throw new Error('Koe luotiin, mutta siinä ei ole tehtäviä. Yritä uudelleen.');
       }
       setExam(newExam);
       setSpeakingResponses({});
       setWritingResponses({});
     } catch (err) {
       console.error('[YKIScreen] Failed to load exam:', err);
-      const errorMessage = err?.message || 'Failed to load YKI exam. Please check your connection and try again.';
+      const errorMessage = err?.message || 'YKI-kokeen lataus epäonnistui. Tarkista yhteys ja yritä uudelleen.';
       setError(errorMessage);
     } finally {
       setLoadingExam(false);
@@ -210,7 +210,7 @@ export default function YKIScreen({ navigation }) {
 
       {/* Main Title */}
       <View style={styles.titleSection}>
-        <Text style={styles.mainTitle}>YKI Exam Preparation</Text>
+        <Text style={styles.mainTitle}>YKI-kokeeseen valmistautuminen</Text>
       </View>
 
       <ScrollView style={styles.ykiScrollView} contentContainerStyle={styles.ykiScrollContent}>
@@ -222,22 +222,22 @@ export default function YKIScreen({ navigation }) {
           style={[styles.examConfigCard, { marginBottom: 16 }]}
           onPress={() => navigation.navigate('YKIDailySession', { mode: 'training' })}
         >
-          <Text style={styles.practiceTitle}>Today's YKI Session</Text>
+          <Text style={styles.practiceTitle}>Päivän YKI-harjoitus</Text>
           <View style={styles.modeIndicator}>
-            <Text style={styles.modeIndicatorText}>🎓 Training Mode</Text>
+            <Text style={styles.modeIndicatorText}>🎓 Harjoittelutila</Text>
           </View>
           <Text style={styles.practiceSubtitle}>
-            A short plan picked by the system so you never need to decide what to practice next.
+            Lyhyt järjestelmän valitsema harjoitus, jotta sinun ei tarvitse miettiä mitä harjoitella seuraavaksi.
           </Text>
           <View style={{ marginTop: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
             <View>
-              <Text style={styles.inputLabel}>Estimated</Text>
+              <Text style={styles.inputLabel}>Arvio</Text>
               <Text style={styles.inputValue}>
                 {loadingSession ? '…' : `≈ ${(todaySession?.plan?.estimated_minutes || 15)} min`}
               </Text>
             </View>
             <View>
-              <Text style={styles.inputLabel}>Progress</Text>
+              <Text style={styles.inputLabel}>Edistyminen</Text>
               <Text style={styles.inputValue}>
                 {loadingSession ? '…' : `${todaySession?.completed_count || 0}/${todaySession?.total_count || todaySession?.plan?.progress?.total || 0}`}
               </Text>
@@ -248,7 +248,9 @@ export default function YKIScreen({ navigation }) {
             onPress={() => navigation.navigate('YKIDailySession', { mode: 'training' })}
           >
             <Text style={styles.searchButtonText}>
-              {(todaySession?.completed === true || todaySession?.completed === 'true') ? "Review today's session" : "Start / Continue today's session"}
+              {(todaySession?.completed === true || todaySession?.completed === 'true')
+                ? 'Kertaa päivän harjoitus'
+                : 'Aloita / jatka päivän harjoitusta'}
             </Text>
           </TouchableOpacity>
         </EnhancedCard>
@@ -262,15 +264,15 @@ export default function YKIScreen({ navigation }) {
             style={[styles.examConfigCard, { marginBottom: 16 }]}
             onPress={() => navigation.navigate('YKIPlacement')}
           >
-            <Text style={styles.practiceTitle}>📊 Placement Diagnostic</Text>
+            <Text style={styles.practiceTitle}>📊 Tasotesti</Text>
             <Text style={styles.practiceSubtitle}>
-              New to YKI? Take a 10-15 minute diagnostic to determine your level and get a personalized training plan.
+              Oletko uusi YKI:ssä? Tee 10–15 minuutin tasotesti ja saat henkilökohtaisen harjoitussuunnitelman.
             </Text>
             <TouchableOpacity
               style={[styles.searchButton, { marginTop: 14 }]}
               onPress={() => navigation.navigate('YKIPlacement')}
             >
-              <Text style={styles.searchButtonText}>Start Placement</Text>
+              <Text style={styles.searchButtonText}>Aloita tasotesti</Text>
             </TouchableOpacity>
           </EnhancedCard>
         )}
@@ -283,15 +285,15 @@ export default function YKIScreen({ navigation }) {
           style={[styles.examConfigCard, { marginBottom: 16 }]}
           onPress={() => navigation.navigate('YKIGoal')}
         >
-          <Text style={styles.practiceTitle}>🎯 Set Your Goal</Text>
+          <Text style={styles.practiceTitle}>🎯 Aseta tavoite</Text>
           <Text style={styles.practiceSubtitle}>
-            Set your target exam date and level band. We'll create a personalized training plan to get you ready.
+            Aseta tavoitekokeen päivämäärä ja taso. Luomme henkilökohtaisen harjoitussuunnitelman.
           </Text>
           <TouchableOpacity
             style={[styles.searchButton, { marginTop: 14 }]}
             onPress={() => navigation.navigate('YKIGoal')}
           >
-            <Text style={styles.searchButtonText}>Set Goal</Text>
+            <Text style={styles.searchButtonText}>Aseta tavoite</Text>
           </TouchableOpacity>
         </EnhancedCard>
 
@@ -303,15 +305,15 @@ export default function YKIScreen({ navigation }) {
           style={[styles.examConfigCard, { marginBottom: 16 }]}
           onPress={() => navigation.navigate('YKIProgress')}
         >
-          <Text style={styles.practiceTitle}>📊 Your Progress</Text>
+          <Text style={styles.practiceTitle}>📊 Edistymisesi</Text>
           <Text style={styles.practiceSubtitle}>
-            View your progress across all skills and see how close you are to YKI Level 3.
+            Näe edistymisesi eri osa-alueissa ja kuinka lähellä olet YKI-tasoa 3.
           </Text>
           <TouchableOpacity
             style={[styles.searchButton, { marginTop: 14 }]}
             onPress={() => navigation.navigate('YKIProgress')}
           >
-            <Text style={styles.searchButtonText}>View Progress</Text>
+            <Text style={styles.searchButtonText}>Näytä edistyminen</Text>
           </TouchableOpacity>
         </EnhancedCard>
 
@@ -338,9 +340,9 @@ export default function YKIScreen({ navigation }) {
         <View style={styles.practiceSection}>
           <View style={styles.practiceHeader}>
             <View>
-              <Text style={styles.practiceTitle}>YKI Practice</Text>
+              <Text style={styles.practiceTitle}>YKI-harjoitukset</Text>
               <Text style={styles.practiceSubtitle}>
-                Short drills per skill so you can warm up before attempting a full mock exam.
+                Lyhyitä harjoituksia osa-alueittain – lämmittele ennen koko koetta.
               </Text>
             </View>
           </View>
@@ -362,7 +364,7 @@ export default function YKIScreen({ navigation }) {
                 <Text style={styles.practiceIcon}>{card.icon}</Text>
                 <Text style={styles.practiceLabel}>{card.label}</Text>
                 <Text style={styles.practiceDescription}>{card.description}</Text>
-                <Text style={styles.practiceAction}>Launch practice</Text>
+                <Text style={styles.practiceAction}>Aloita harjoitus</Text>
               </EnhancedCard>
             ))}
           </ScrollView>
@@ -380,14 +382,14 @@ export default function YKIScreen({ navigation }) {
               <Text style={styles.inputIcon}>📝</Text>
             </View>
             <View style={styles.inputContent}>
-              <Text style={styles.inputLabel}>Exam Type</Text>
+              <Text style={styles.inputLabel}>Koetyyppi</Text>
               <TouchableOpacity onPress={() => {
                 const types = ['full', 'speaking_only', 'writing_only'];
                 const currentIndex = types.indexOf(examType);
                 setExamType(types[(currentIndex + 1) % types.length]);
               }}>
                 <Text style={styles.inputValue}>
-                  {examType === 'full' ? 'Full Exam' : examType === 'speaking_only' ? 'Speaking Only' : 'Writing Only'}
+                  {examType === 'full' ? 'Koko koe' : examType === 'speaking_only' ? 'Vain puhuminen' : 'Vain kirjoittaminen'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -399,7 +401,7 @@ export default function YKIScreen({ navigation }) {
               <Text style={styles.inputIcon}>📊</Text>
             </View>
             <View style={styles.inputContent}>
-              <Text style={styles.inputLabel}>Difficulty Level</Text>
+              <Text style={styles.inputLabel}>Taso</Text>
               <TouchableOpacity onPress={() => {
                 const currentIndex = YKI_LEVELS.findIndex((item) => item.key === level);
                 setLevel(YKI_LEVELS[(currentIndex + 1) % YKI_LEVELS.length].key);
@@ -440,7 +442,7 @@ export default function YKIScreen({ navigation }) {
             disabled={loadingExam}
           >
             <Text style={styles.searchButtonText}>
-              {loadingExam ? 'Generating Exam...' : 'Generate Exam'}
+              {loadingExam ? 'Luodaan koetta…' : 'Luo koe'}
             </Text>
           </TouchableOpacity>
         </EnhancedCard>
@@ -449,9 +451,9 @@ export default function YKIScreen({ navigation }) {
         {exam && (
           <View style={styles.upcomingSection}>
             <View style={styles.upcomingHeader}>
-              <Text style={styles.upcomingTitle}>Upcoming exams</Text>
+              <Text style={styles.upcomingTitle}>Tulevat kokeet</Text>
               <TouchableOpacity onPress={() => navigation.navigate('YKIDailySession', { mode: 'exam' })}>
-                <Text style={styles.seeAllText}>See all</Text>
+                <Text style={styles.seeAllText}>Näytä kaikki</Text>
               </TouchableOpacity>
             </View>
 
@@ -479,12 +481,12 @@ export default function YKIScreen({ navigation }) {
               }}
             >
               <View style={styles.examCardLeft}>
-                <Text style={styles.examAirline}>YKI Exam</Text>
+                <Text style={styles.examAirline}>YKI-koe</Text>
                 <Text style={styles.examRoute}>
                   {examType.replace('_', ' ').toUpperCase()}
                 </Text>
                 <Text style={styles.examDate}>
-                  Level: {currentLevelInfo.label}
+                  Taso: {currentLevelInfo.label}
                 </Text>
               </View>
               <View style={styles.examCardRight}>
@@ -540,7 +542,7 @@ export default function YKIScreen({ navigation }) {
           onPress={() => navigation?.navigate('Home')}
         >
           <Text style={[styles.navIcon, styles.navIconActive]}>🏠</Text>
-          <Text style={[styles.navLabel, styles.navLabelActive]}>Home</Text>
+          <Text style={[styles.navLabel, styles.navLabelActive]}>Koti</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
@@ -550,21 +552,21 @@ export default function YKIScreen({ navigation }) {
           }}
         >
           <Text style={styles.navIcon}>🎫</Text>
-          <Text style={styles.navLabel}>Exams</Text>
+          <Text style={styles.navLabel}>Kokeet</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation?.navigate('Conversation')}
         >
           <Text style={styles.navIcon}>💬</Text>
-          <Text style={styles.navLabel}>Chat</Text>
+          <Text style={styles.navLabel}>Keskustelu</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigation?.navigate('Settings')}
         >
           <Text style={styles.navIcon}>👤</Text>
-          <Text style={styles.navLabel}>Profile</Text>
+          <Text style={styles.navLabel}>Asetukset</Text>
         </TouchableOpacity>
       </View>
       </View>

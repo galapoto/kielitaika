@@ -90,7 +90,7 @@ export default function NotesScreen({ route, navigation } = {}) {
           <TextInput
             value={draft}
             onChangeText={setDraft}
-            placeholder="Write a quick note…"
+            placeholder="Kirjoita nopea muistiinpano…"
             placeholderTextColor={palette.textSecondary}
             multiline
             style={styles.input}

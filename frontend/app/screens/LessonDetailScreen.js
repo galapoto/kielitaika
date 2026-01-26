@@ -23,41 +23,41 @@ const FALLBACK_LESSONS = {
   grammar: {
     id: 'grammar_fallback',
     type: 'grammar',
-    title: 'Grammar Basics',
-    description: 'Learn grammar foundations for Finnish',
+    title: 'Kieliopin perusteet',
+    description: 'Opiskele suomen kielen perusrakenteita',
     steps: [
-      { id: 'g1', title: 'Introducing Grammar', content: 'Focus on verb conjugation and noun cases.' },
-      { id: 'g2', title: 'Apply the Rules', content: 'Try exercises that highlight subjects and objects.' },
-      { id: 'g3', title: 'Review', content: 'Summarize grammar points and record your progress.' },
+      { id: 'g1', title: 'Kieliopin johdanto', content: 'Keskity verbien taivutukseen ja sijamuotoihin.' },
+      { id: 'g2', title: 'Sovella sääntöjä', content: 'Tee harjoituksia, joissa erotat subjektin ja objektin.' },
+      { id: 'g3', title: 'Kertaus', content: 'Kertaa tärkeimmät asiat ja seuraa edistymistäsi.' },
     ],
   },
   vocabulary: {
     id: 'vocab_fallback',
     type: 'vocabulary',
-    title: 'Vocabulary Building',
-    description: 'Learn and practice high-frequency words',
+    title: 'Sanaston kartuttaminen',
+    description: 'Opettele ja harjoittele yleisiä sanoja',
     steps: [
-      { id: 'v1', title: 'Learn Words', content: 'Discover 10 new useful words.' },
-      { id: 'v2', title: 'Practice Usage', content: 'Use the new words in sentences out loud.' },
-      { id: 'v3', title: 'Review', content: 'Quiz yourself with flashcards.' },
+      { id: 'v1', title: 'Opettele sanoja', content: 'Opi 10 uutta hyödyllistä sanaa.' },
+      { id: 'v2', title: 'Harjoittele käyttöä', content: 'Käytä uusia sanoja lauseissa ääneen.' },
+      { id: 'v3', title: 'Kertaus', content: 'Testaa itseäsi korteilla.' },
     ],
   },
   listening: {
     id: 'listening_fallback',
     type: 'listening',
-    title: 'Listening Comprehension',
-    description: 'Practice understanding spoken Finnish',
+    title: 'Kuullun ymmärtäminen',
+    description: 'Harjoittele puhutun suomen ymmärtämistä',
     steps: [
       {
         id: 'l1',
-        title: 'Listen',
-        content: 'Listen carefully to the Finnish dialogue.',
+        title: 'Kuuntele',
+        content: 'Kuuntele suomenkielinen dialogi huolellisesti.',
         transcript: 'Hei! Tervetuloa. Olen täällä auttamassa sinua.',
       },
       {
         id: 'l2',
-        title: 'Answer Questions',
-        content: 'Answer the questions about the audio.',
+        title: 'Vastaa kysymyksiin',
+        content: 'Vastaa kuulemaasi liittyviin kysymyksiin.',
         questions: [
           { id: 'q1', question: 'Kuka puhuu?', options: ['Mikko', 'Anni', 'Laura'], correct: 0 },
           { id: 'q2', question: 'Mistä puhutaan?', options: ['Veneestä', 'Huoneesta', 'Tapahtumasta'], correct: 1 },
@@ -65,8 +65,8 @@ const FALLBACK_LESSONS = {
       },
       {
         id: 'l3',
-        title: 'Review',
-        content: 'Read the transcript and highlight new words.',
+        title: 'Kertaus',
+        content: 'Lue litterointi ja poimi uudet sanat.',
         vocabulary: ['tervetuloa', 'auttaa', 'huone'],
       },
     ],
@@ -74,26 +74,26 @@ const FALLBACK_LESSONS = {
   speaking: {
     id: 'speaking_fallback',
     type: 'speaking',
-    title: 'Speaking Practice',
-    description: 'Practice speaking simple Finnish phrases',
+    title: 'Puhumisharjoitus',
+    description: 'Harjoittele suomen perusfraaseja puhumalla',
     steps: [
       {
         id: 's1',
-        title: 'Warm-up',
-        content: 'Practice greetings and introduce yourself.',
-        tips: ['Pronounce vowel pairs clearly', 'Use short sentences'],
+        title: 'Lämmittely',
+        content: 'Harjoittele tervehdyksiä ja esittäytymistä.',
+        tips: ['Äännä vokaalit selkeästi', 'Käytä lyhyitä lauseita'],
       },
       {
         id: 's2',
-        title: 'Record',
-        content: 'Record a short response about your day.',
+        title: 'Nauhoita',
+        content: 'Nauhoita lyhyt vastaus päivästäsi.',
         prompts: ['Kerrotko mitä teit tänään?', 'Mikä on suosikkiruokasi?'],
         requires_recording: true,
       },
       {
         id: 's3',
-        title: 'Vocabulary',
-        content: 'Review key phrases from today.',
+        title: 'Sanasto',
+        content: 'Kertaa päivän avainfraasit.',
         vocabulary: ['minä olen', 'tykkään', 'tänään'],
       },
     ],
@@ -101,29 +101,29 @@ const FALLBACK_LESSONS = {
   reading: {
     id: 'reading_fallback',
     type: 'reading',
-    title: 'Reading Comprehension',
-    description: 'Practice reading Finnish texts',
+    title: 'Luetun ymmärtäminen',
+    description: 'Harjoittele suomenkielisten tekstien lukemista',
     steps: [
-      { id: 'r1', title: 'Read Text', content: 'Lue teksti ja keskity pääajatuksiin.' },
-      { id: 'r2', title: 'Answer Questions', content: 'Vastaa kysymyksiin lukemastasi.' },
-      { id: 'r3', title: 'Review', content: 'Kerro mitä opit tekstistä.' },
+      { id: 'r1', title: 'Lue teksti', content: 'Lue teksti ja keskity pääajatuksiin.' },
+      { id: 'r2', title: 'Vastaa kysymyksiin', content: 'Vastaa kysymyksiin lukemastasi.' },
+      { id: 'r3', title: 'Kertaus', content: 'Kerro mitä opit tekstistä.' },
     ],
   },
   writing: {
     id: 'writing_fallback',
     type: 'writing',
-    title: 'Writing Practice',
-    description: 'Write short texts in Finnish',
+    title: 'Kirjoitusharjoitus',
+    description: 'Kirjoita lyhyitä tekstejä suomeksi',
     steps: [
       {
         id: 'w1',
-        title: 'Tips',
-        content: 'Think about sentence structure and verb forms.',
+        title: 'Vinkit',
+        content: 'Kiinnitä huomiota lauserakenteeseen ja verbimuotoihin.',
         tips: ['Puhu minusta -muodossa', 'Yhdistä lauseet konjunktiolla'],
       },
       {
         id: 'w2',
-        title: 'Write',
+        title: 'Kirjoita',
         content: 'Kirjoita pieni postausteksti omasta päivästäsi.',
         prompt: 'Kuvaile aamurutiinisi, lempiruoat ja mitä teet viikonloppuna.',
         requires_writing: true,
@@ -131,7 +131,7 @@ const FALLBACK_LESSONS = {
       },
       {
         id: 'w3',
-        title: 'Review',
+        title: 'Kertaus',
         content: 'Tarkista kirjoituksesi ja hahmottele parannuksia.',
         vocabulary: ['kirjoittaa', 'kertoa', 'viikonloppu'],
       },
@@ -140,9 +140,9 @@ const FALLBACK_LESSONS = {
 };
 
 const SECTION_FALLBACK_COPY = {
-  introduction: 'We kick things off with the core grammar rules you need to understand this lesson.',
-  practice: 'Practice the rule with guided exercises, speak aloud, and spot the patterns in each sentence.',
-  review: 'Summarize what you learned, note the key points, and prepare questions to revisit later.',
+  introduction: 'Aloitetaan säännöistä ja perusasioista, joita tarvitset tämän oppitunnin ymmärtämiseen.',
+  practice: 'Harjoittele sääntöä ohjatuilla tehtävillä, puhu ääneen ja tunnista toistuvat rakenteet.',
+  review: 'Kertaa opittu, kirjaa tärkeimmät havainnot ja valmistele kysymykset seuraavaa kertaa varten.',
 };
 
 const cloneDeep = (target) => JSON.parse(JSON.stringify(target));
@@ -394,7 +394,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#1E3A8A" style={styles.loader} />
-        <Text style={styles.loadingText}>Loading lesson...</Text>
+        <Text style={styles.loadingText}>Ladataan oppituntia…</Text>
       </View>
     );
   }
@@ -404,7 +404,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
       <View style={styles.container}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>Takaisin</Text>
         </TouchableOpacity>
       </View>
     );
@@ -418,7 +418,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
       <View style={styles.headerBar}>
         <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.headerLeft}>
           <Text style={styles.headerIcon}>←</Text>
-          <Text style={styles.headerText}>Lesson</Text>
+          <Text style={styles.headerText}>Oppitunti</Text>
         </TouchableOpacity>
         <View style={styles.progressBarContainer}>
           <View style={[styles.progressBar, { width: `${((currentStep + 1) / (lesson?.steps?.length || 3)) * 100}%` }]} />
@@ -439,16 +439,16 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
         {lesson && (
         <RukaCard style={styles.lessonCard}>
           <Text style={styles.lessonNumber}>
-            Lesson <Text style={styles.lessonNumberHighlight}>{String(currentStep + 1).padStart(2, '0')}</Text>
+            Oppitunti <Text style={styles.lessonNumberHighlight}>{String(currentStep + 1).padStart(2, '0')}</Text>
             </Text>
             <Text style={styles.lessonCategory}>{lesson.title}</Text>
             <Text style={styles.lessonText}>
               {lesson.steps?.[currentStep]?.content || lesson.description}
             </Text>
             <View style={styles.topActions}>
-              {[{ label: 'Introduction', desc: 'Learn grammar rules', onPress: handleIntroduction },
-                { label: 'Practice', desc: 'Practice exercises', onPress: handlePracticeAction },
-                { label: 'Review', desc: 'Review what you learned', onPress: handleReviewAction }].map((item) => {
+              {[{ label: 'Introduction', labelFi: 'Johdanto', desc: 'Learn grammar rules', descFi: 'Opiskele sääntöjä', onPress: handleIntroduction },
+                { label: 'Practice', labelFi: 'Harjoittelu', desc: 'Practice exercises', descFi: 'Tee harjoituksia', onPress: handlePracticeAction },
+                { label: 'Review', labelFi: 'Kertaus', desc: 'Review what you learned', descFi: 'Kertaa opittu', onPress: handleReviewAction }].map((item) => {
                 const key = item.label.toLowerCase();
                 return (
                   <TouchableOpacity
@@ -459,8 +459,8 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
                     ]}
                     onPress={item.onPress}
                   >
-                    <Text style={styles.topActionLabel}>{item.label}</Text>
-                    <Text style={styles.topActionSubLabel}>{item.desc}</Text>
+                    <Text style={styles.topActionLabel}>{item.labelFi || item.label}</Text>
+                    <Text style={styles.topActionSubLabel}>{item.descFi || item.desc}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -516,7 +516,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
                   activeSection === 'practice' && styles.sectionActive,
                 ]}
               >
-                <Text style={styles.sectionHeading}>Practice</Text>
+                <Text style={styles.sectionHeading}>Harjoittelu</Text>
                 <Text style={styles.sectionSubtitle}>{practiceStep.title}</Text>
                 <Text style={styles.sectionContent}>{practiceStep.content}</Text>
                 {practiceStep.exercises?.map((exercise) => (
@@ -526,7 +526,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
                       <>
                         <TextInput
                           style={styles.exerciseInput}
-                          placeholder="Type your answer"
+                          placeholder="Kirjoita vastauksesi"
                           placeholderTextColor="rgba(255,255,255,0.4)"
                           value={exerciseState[exercise.id]?.response || ''}
                           onChangeText={(value) => updateExerciseState(exercise.id, { response: value })}
@@ -537,10 +537,10 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
                             handleExerciseSubmit(exercise, exerciseState[exercise.id]?.response)
                           }
                         >
-                          <Text style={styles.exerciseButtonText}>Check</Text>
+                          <Text style={styles.exerciseButtonText}>Tarkista</Text>
                         </TouchableOpacity>
                         {exercise.hint && (
-                          <Text style={styles.exerciseHint}>Hint: {exercise.hint}</Text>
+                          <Text style={styles.exerciseHint}>Vihje: {exercise.hint}</Text>
                         )}
                       </>
                     )}
@@ -778,9 +778,9 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
                 />
                 <View style={styles.wordCountContainer}>
                   <Text style={styles.wordCountText}>
-                    {wordCount} {wordCount === 1 ? 'word' : 'words'}
+                    {wordCount} {wordCount === 1 ? 'sana' : 'sanaa'}
                     {lesson.steps[currentStep]?.word_limit && 
-                      ` / ${lesson.steps[currentStep].word_limit} target`}
+                      ` / ${lesson.steps[currentStep].word_limit} tavoite`}
                   </Text>
                 </View>
                 <TouchableOpacity 
@@ -789,16 +789,16 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
                   onPress={() => {
                     console.log('[LessonDetailScreen] Writing submitted:', writingText);
                     // Could send to backend for evaluation
-                    alert('Writing submitted! Feedback coming soon.');
+                    alert('Teksti lähetetty.');
                   }}
                 >
-                  <Text style={styles.submitButtonText}>Submit Writing</Text>
+                  <Text style={styles.submitButtonText}>Lähetä teksti</Text>
                 </TouchableOpacity>
               </View>
             )}
             {lesson.type === 'writing' && lesson.steps?.[currentStep]?.vocabulary && (
               <View style={styles.vocabContainer}>
-                <Text style={styles.vocabLabel}>Key Vocabulary:</Text>
+                <Text style={styles.vocabLabel}>Keskeinen sanasto:</Text>
                 <View style={styles.vocabList}>
                   {lesson.steps[currentStep].vocabulary.map((word, idx) => (
                     <View key={idx} style={styles.vocabItem}>
@@ -810,7 +810,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
             )}
           {lesson.type === 'writing' && lesson.steps?.[currentStep]?.grammar_points && (
             <View style={styles.grammarContainer}>
-              <Text style={styles.grammarLabel}>Grammar Points:</Text>
+              <Text style={styles.grammarLabel}>Kielioppikohdat:</Text>
               {lesson.steps[currentStep].grammar_points.map((point, idx) => (
                 <View key={idx} style={styles.grammarItem}>
                   <Text style={styles.grammarBullet}>•</Text>
@@ -978,7 +978,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
               stepsLayoutRef.current.sectionTop = event.nativeEvent.layout.y;
             }}
           >
-            <Text style={styles.sectionTitle}>Lesson Steps</Text>
+            <Text style={styles.sectionTitle}>Oppitunnin vaiheet</Text>
             {lesson.steps.map((step, index) => (
               <TouchableOpacity
                 key={step.id}
@@ -1004,36 +1004,9 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
           </View>
         )}
 
-        {/* Practice Schedule - From 3rd picture */}
-        <View style={styles.scheduleSection}>
-          <View style={styles.scheduleHeader}>
-            <Text style={styles.scheduleTitle}>PRACTICE SCHEDULE</Text>
-          </View>
-
-          <View style={styles.scheduleCard}>
-            <View style={styles.timeAxis}>
-              {['9:00', '11:00', '14:00'].map((time) => (
-                <View key={time} style={styles.timeMarker}>
-                  <Text style={styles.timeText}>{time}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.practiceList}>
-              <View style={styles.practiceItem}>
-                <View style={styles.practiceContent}>
-                  <Text style={styles.practiceTitle}>Grammar Exercise</Text>
-                  <Text style={styles.practiceSubtitle}>Complete 10 questions</Text>
-                </View>
-                <Text style={styles.statusIcon}>✓</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
         {/* Quick Actions - Card Grid from 2nd picture */}
         <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>Pikatoiminnot</Text>
           <View style={styles.actionsGrid}>
             {['Practice', 'Review', 'Quiz', 'Notes'].map((action, index) => (
               <TouchableOpacity
@@ -1116,7 +1089,14 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
                 }}
               >
                 <Text style={styles.actionIcon}>{['💪', '📖', '📝', '📝'][index]}</Text>
-                <Text style={styles.actionLabel}>{action}</Text>
+                <Text style={styles.actionLabel}>
+                  {{
+                    Practice: 'Harjoittele',
+                    Review: 'Kertaa',
+                    Quiz: 'Koe',
+                    Notes: 'Muistiinpanot',
+                  }[action] || action}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>

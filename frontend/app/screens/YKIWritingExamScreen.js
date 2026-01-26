@@ -93,7 +93,7 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
       .filter((item) => item.text.length > 0);
 
     if (writingPayload.length === 0) {
-      Alert.alert('No Responses', 'Please complete at least one writing task before submitting.');
+      Alert.alert('Ei vastauksia', 'Täytä vähintään yksi kirjoitustehtävä ennen lähettämistä.');
       return;
     }
 
@@ -102,17 +102,17 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
     tasks.forEach((task) => {
       const words = wordCount(responses[task.id] || '');
       if (words > 0 && words < task.word_limit * 0.5) {
-        warnings.push(`${task.id}: Only ${words} words (target: ${task.word_limit})`);
+        warnings.push(`${task.id}: vain ${words} sanaa (tavoite: ${task.word_limit})`);
       }
     });
 
     if (warnings.length > 0) {
       Alert.alert(
-        'Low Word Count',
-        `Some tasks have very few words:\n${warnings.join('\n')}\n\nSubmit anyway?`,
+        'Vähän sanoja',
+        `Joissakin tehtävissä on hyvin vähän sanoja:\n${warnings.join('\n')}\n\nLähetetäänkö silti?`,
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Submit', onPress: () => doSubmit(writingPayload) },
+          { text: 'Peru', style: 'cancel' },
+          { text: 'Lähetä', onPress: () => doSubmit(writingPayload) },
         ]
       );
     } else {
@@ -129,7 +129,7 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
         params: { evaluation },
       });
     } catch (err) {
-      Alert.alert('Submission Error', err.message || 'Failed to submit writing exam');
+      Alert.alert('Lähetysvirhe', err.message || 'Kirjoituskokeen lähetys epäonnistui');
     } finally {
       setIsSubmitting(false);
     }
@@ -139,9 +139,9 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No Writing Tasks</Text>
+          <Text style={styles.emptyTitle}>Ei kirjoitustehtäviä</Text>
           <Text style={styles.emptyText}>
-            No writing tasks provided. Please generate an exam from the main YKI screen.
+            Kirjoitustehtäviä ei löytynyt. Luo koe YKI‑päänäkymästä.
           </Text>
           <TouchableOpacity
             style={styles.backButton}
@@ -150,7 +150,7 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
               else navigation?.navigate?.('Home');
             }}
           >
-            <Text style={styles.backButtonText}>Go Back</Text>
+            <Text style={styles.backButtonText}>Takaisin</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -179,7 +179,7 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
         >
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>YKI Writing Exam</Text>
+        <Text style={styles.headerTitle}>YKI: kirjoittaminen</Text>
         <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
       </View>
 
@@ -202,24 +202,24 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
         <View style={styles.mainCard}>
           {/* Task Prompt Card - Instead of image card from 7th picture */}
           <View style={styles.promptCard}>
-            <Text style={styles.promptTitle}>{currentTask.description || 'Writing Task'}</Text>
+            <Text style={styles.promptTitle}>{currentTask.description || 'Kirjoitustehtävä'}</Text>
             <Text style={styles.promptText}>{currentTask.prompt}</Text>
             <View style={styles.promptMeta}>
               <Text style={styles.promptMetaText}>
-                Target: {currentTask.word_limit} words • Time: {formatTime(currentTime)}
+                Tavoite: {currentTask.word_limit} sanaa • Aika: {formatTime(currentTime)}
               </Text>
             </View>
           </View>
 
           {/* Instruction Text - From 7th picture */}
-          <Text style={styles.instructionText}>Write your response in Finnish</Text>
+          <Text style={styles.instructionText}>Kirjoita vastauksesi suomeksi</Text>
 
           {/* Text Input Area - Instead of answer grid from 7th picture */}
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.textInput}
               multiline
-              placeholder="Type your answer here..."
+              placeholder="Kirjoita vastauksesi tähän…"
               placeholderTextColor="rgba(255,255,255,0.55)"
               value={currentResponse}
               onChangeText={(text) => updateResponse(currentTask.id, text)}
@@ -232,7 +232,7 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
                 currentWordCount >= currentTask.word_limit * 0.8 && styles.wordCountGood,
                 currentWordCount >= currentTask.word_limit && styles.wordCountExcellent,
               ]}>
-                {currentWordCount} / {currentTask.word_limit} words
+                {currentWordCount} / {currentTask.word_limit} sanaa
               </Text>
             </View>
           </View>
@@ -244,14 +244,14 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
               onPress={() => setActiveTaskIndex(Math.max(0, activeTaskIndex - 1))}
               disabled={activeTaskIndex === 0}
             >
-              <Text style={styles.navButtonText}>Previous</Text>
+              <Text style={styles.navButtonText}>Edellinen</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.navButton, styles.navButtonPrimary]}
               onPress={() => setActiveTaskIndex(Math.min(tasks.length - 1, activeTaskIndex + 1))}
               disabled={activeTaskIndex >= tasks.length - 1}
             >
-              <Text style={styles.navButtonText}>Next</Text>
+              <Text style={styles.navButtonText}>Seuraava</Text>
             </TouchableOpacity>
           </View>
 
@@ -262,7 +262,7 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
             disabled={isSubmitting}
           >
             <Text style={styles.submitButtonText}>
-              {isSubmitting ? 'Submitting...' : 'Submit All Tasks'}
+              {isSubmitting ? 'Lähetetään…' : 'Lähetä kaikki'}
             </Text>
           </TouchableOpacity>
         </View>

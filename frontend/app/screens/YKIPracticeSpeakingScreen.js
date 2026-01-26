@@ -126,7 +126,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
 
       const combinedEvaluation = {
         score: voiceResult?.score ?? ykiResult?.scores?.fluency ?? null,
-        feedback: voiceResult?.feedback || 'Your response has been recorded. Keep practicing!',
+        feedback: voiceResult?.feedback || 'Vastauksesi on tallennettu. Jatka harjoittelua!',
         issues: voiceResult?.issues || [],
         suggestions: voiceResult?.suggestions || [],
         scores: ykiResult?.scores || {},
@@ -140,7 +140,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
       console.error('[YKI Speaking] Evaluation error:', error);
       setEvaluation({
         score: null,
-        feedback: 'Your response has been recorded. Keep practicing!',
+        feedback: 'Vastauksesi on tallennettu. Jatka harjoittelua!',
         issues: [],
         suggestions: [],
         scores: {},
@@ -156,8 +156,8 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
   const handleNextTask = () => {
     if (currentTaskIndex >= speakingTasks.length - 1) {
       Alert.alert(
-        'Great job!',
-        'You have completed all available speaking tasks. Tap "Start Practice" again for a new set.',
+        'Hyvä työ!',
+        'Olet suorittanut kaikki saatavilla olevat puhumistehtävät. Aloita uusi setti painamalla “Aloita harjoitus”.',
         [
           {
             text: 'OK',
@@ -179,7 +179,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
     setCurrentTaskIndex(nextIndex);
     setCurrentExercise({
       id: nextTask.id,
-      prompt: nextTask.prompt || nextTask.text || 'Continue speaking...',
+      prompt: nextTask.prompt || nextTask.text || 'Jatka puhumista…',
       timeLimit: nextTask.time_limit || 60,
       description: nextTask.description,
     });
@@ -210,7 +210,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
         setTtsError(new YKIError(
           YKIErrorType.TTS_FAILURE,
           error?.message || 'TTS error occurred',
-          'Failed to play audio. Please try again.',
+          'Äänen toisto epäonnistui. Yritä uudelleen.',
           { originalError: error }
         ));
       }
@@ -262,8 +262,8 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
             // Fallback for non-YKIError exceptions
             setTtsError(new YKIError(
               YKIErrorType.TTS_FAILURE,
-              error?.message || 'TTS error occurred',
-              'Failed to play audio. Please try again.',
+              error?.message || 'TTS-virhe',
+              'Äänen toisto epäonnistui. Yritä uudelleen.',
               { originalError: error }
             ));
             setPendingTtsText(res.initial_prompt);
@@ -273,7 +273,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
         }
       }
     } catch (e) {
-      Alert.alert('Failed to start dialogue', e?.message || 'Please try again.');
+      Alert.alert('Vuoropuhelun aloitus epäonnistui', e?.message || 'Yritä uudelleen.');
     } finally {
       setLoading(false);
     }
@@ -348,8 +348,8 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
             // Fallback for non-YKIError exceptions
             setTtsError(new YKIError(
               YKIErrorType.TTS_FAILURE,
-              error?.message || 'TTS error occurred',
-              'Failed to play audio. Please try again.',
+              error?.message || 'TTS-virhe',
+              'Äänen toisto epäonnistui. Yritä uudelleen.',
               { originalError: error }
             ));
             setPendingTtsText(response.reply);
@@ -370,7 +370,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
         setTranscript('');
       }
     } catch (e) {
-      Alert.alert('Failed to get response', e?.message || 'Please try again.');
+      Alert.alert('Vastauksen haku epäonnistui', e?.message || 'Yritä uudelleen.');
       setWaitingForUser(true);
     } finally {
       setIsEvaluating(false);
@@ -384,7 +384,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
           <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>YKI Speaking Practice</Text>
+          <Text style={styles.headerTitle}>YKI: puhumisharjoitus</Text>
           <HomeButton navigation={navigation} style={styles.homeButton} homeType="yki" />
         </View>
 
@@ -393,9 +393,9 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
           
           {practiceMode === 'dialogue' && !dialogueSession ? (
             <View style={styles.startContainer}>
-              <Text style={styles.startTitle}>Turn-by-Turn Speaking Practice</Text>
+              <Text style={styles.startTitle}>Vuoropuheluharjoitus</Text>
               <Text style={styles.startDescription}>
-                Practice speaking in a natural dialogue with AI. Choose a mode:
+                Harjoittele puhumista luonnollisessa keskustelussa tekoälyn kanssa. Valitse tila:
               </Text>
               {availableModes && (
                 <View style={styles.modeSelector}>
@@ -407,7 +407,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                     >
                       <Text style={styles.modeTitle}>{modeInfo.name}</Text>
                       <Text style={styles.modeDescription}>{modeInfo.description}</Text>
-                      <Text style={styles.modeMeta}>{modeInfo.max_turns} turns • {modeInfo.style}</Text>
+                      <Text style={styles.modeMeta}>{modeInfo.max_turns} vuoroa • {modeInfo.style}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -417,20 +417,20 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                   style={[styles.modeToggleButton, practiceMode === 'single' && styles.modeToggleButtonActive]}
                   onPress={() => setPracticeMode('single')}
                 >
-                  <Text style={styles.modeToggleText}>Single Practice</Text>
+                  <Text style={styles.modeToggleText}>Yksittäinen harjoitus</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeToggleButton, practiceMode === 'dialogue' && styles.modeToggleButtonActive]}
                   onPress={() => setPracticeMode('dialogue')}
                 >
-                  <Text style={styles.modeToggleText}>Turn-by-Turn</Text>
+                  <Text style={styles.modeToggleText}>Vuoropuhelu</Text>
                 </TouchableOpacity>
               </View>
               {loading ? (
                 <ActivityIndicator size="large" color={palette.textPrimary} />
               ) : (
                 <PremiumEmbossedButton
-                  title="Start Dialogue"
+                  title="Aloita vuoropuhelu"
                   onPress={handleStartDialogue}
                   variant="primary"
                   size="large"
@@ -441,8 +441,8 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
           ) : practiceMode === 'dialogue' && dialogueSession ? (
             <View style={styles.dialogueContainer}>
               <View style={styles.dialogueHeader}>
-                <Text style={styles.dialogueTitle}>{dialogueSession.mode_info?.name || 'Dialogue'}</Text>
-                <Text style={styles.dialogueSubtitle}>Turn {currentTurn} / {dialogueSession.mode_info?.max_turns || 6}</Text>
+                <Text style={styles.dialogueTitle}>{dialogueSession.mode_info?.name || 'Vuoropuhelu'}</Text>
+                <Text style={styles.dialogueSubtitle}>Vuoro {currentTurn} / {dialogueSession.mode_info?.max_turns || 6}</Text>
               </View>
               
               {aiPrompt && (
@@ -455,7 +455,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
               {/* TTS Error Display - Non-blocking, user can continue conversation */}
               {ttsError && (
                 <View style={styles.errorCard}>
-                  <Text style={styles.errorTitle}>⚠️ Audio Playback Error</Text>
+                  <Text style={styles.errorTitle}>⚠️ Äänen toisto epäonnistui</Text>
                   <Text style={styles.errorMessage}>{ttsError.userMessage}</Text>
                   {ttsError.fixSteps && ttsError.fixSteps.length > 0 && (
                     <View style={styles.fixStepsContainer}>
@@ -469,10 +469,10 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                       onPress={handleTTSRetry}
                       style={styles.retryButton}
                     >
-                      <Text style={styles.retryButtonText}>🔊 Retry Audio</Text>
+                      <Text style={styles.retryButtonText}>🔊 Yritä ääntä uudelleen</Text>
                     </TouchableOpacity>
                   )}
-                  <Text style={styles.errorNote}>You can continue the conversation below.</Text>
+                  <Text style={styles.errorNote}>Voit jatkaa keskustelua alla.</Text>
                 </View>
               )}
               
@@ -490,7 +490,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
               
               {waitingForUser && (
                 <View style={styles.recordingSection}>
-                  <Text style={styles.recordingLabel}>Your turn - Record your response:</Text>
+                  <Text style={styles.recordingLabel}>Sinun vuorosi – nauhoita vastauksesi:</Text>
                   
                   {/* STT Error Display */}
                   {sttError && (
@@ -503,7 +503,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                           ))}
                         </View>
                       )}
-                      <Text style={styles.errorNote}>Please record again below.</Text>
+                      <Text style={styles.errorNote}>Nauhoita uudelleen alla.</Text>
                     </View>
                   )}
                   
@@ -520,20 +520,20 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
               {isEvaluating && (
                 <View style={styles.evaluatingContainer}>
                   <ActivityIndicator size="large" color={palette?.accentPrimary || '#4ECDC4'} />
-                  <Text style={styles.evaluatingText}>Getting AI response...</Text>
+                  <Text style={styles.evaluatingText}>Haetaan tekoälyn vastausta…</Text>
                 </View>
               )}
               
               {evaluation && evaluation.hint && (
                 <View style={styles.hintCard}>
-                  <Text style={styles.hintTitle}>💡 Hint</Text>
+                  <Text style={styles.hintTitle}>💡 Vinkki</Text>
                   <Text style={styles.hintText}>{evaluation.hint}</Text>
                 </View>
               )}
               
               {evaluation && (
                 <View style={styles.evaluationSection}>
-                  <Text style={styles.sectionTitle}>Evaluation:</Text>
+                  <Text style={styles.sectionTitle}>Arvio:</Text>
                   {evaluation.scores && (
                     <View style={styles.scoreContainer}>
                       {Object.entries(evaluation.scores).map(([key, value]) => (
@@ -566,29 +566,29 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
             </View>
           ) : !currentExercise ? (
             <View style={styles.startContainer}>
-              <Text style={styles.startTitle}>Practice YKI Speaking</Text>
+              <Text style={styles.startTitle}>Harjoittele YKI-puhumista</Text>
               <Text style={styles.startDescription}>
-                Short speaking exercises to prepare for the YKI exam.
+                Lyhyitä puhumisharjoituksia YKI‑kokeeseen.
               </Text>
               <View style={styles.modeToggle}>
                 <TouchableOpacity
                   style={[styles.modeToggleButton, practiceMode === 'single' && styles.modeToggleButtonActive]}
                   onPress={() => setPracticeMode('single')}
                 >
-                  <Text style={styles.modeToggleText}>Single Practice</Text>
+                  <Text style={styles.modeToggleText}>Yksittäinen harjoitus</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeToggleButton, practiceMode === 'dialogue' && styles.modeToggleButtonActive]}
                   onPress={() => setPracticeMode('dialogue')}
                 >
-                  <Text style={styles.modeToggleText}>Turn-by-Turn</Text>
+                  <Text style={styles.modeToggleText}>Vuoropuhelu</Text>
                 </TouchableOpacity>
               </View>
               {loading ? (
                 <ActivityIndicator size="large" color={palette.textPrimary} />
               ) : (
                 <PremiumEmbossedButton
-                  title="Start Practice"
+                  title="Aloita harjoitus"
                   onPress={handleStartPractice}
                   variant="primary"
                   size="large"
@@ -602,20 +602,20 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                 <View style={styles.examSummaryCard}>
                   <View style={styles.examSummaryRow}>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Mock ID</Text>
+                      <Text style={styles.examSummaryLabel}>Koe-ID</Text>
                       <Text style={styles.examSummaryValue}>{examInfo.examId}</Text>
                     </View>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Subtest</Text>
+                      <Text style={styles.examSummaryLabel}>Osakoe</Text>
                       <Text style={styles.examSummaryValue}>{examInfo.examType?.replace('_', ' ')}</Text>
                     </View>
                     <View>
-                      <Text style={styles.examSummaryLabel}>Time</Text>
-                      <Text style={styles.examSummaryValue}>{examInfo.totalTimeMinutes} mins</Text>
+                      <Text style={styles.examSummaryLabel}>Aika</Text>
+                      <Text style={styles.examSummaryValue}>{examInfo.totalTimeMinutes} min</Text>
                     </View>
                   </View>
                   <View style={styles.examSummaryRow}>
-                    <Text style={styles.examSummaryLabel}>Level</Text>
+                    <Text style={styles.examSummaryLabel}>Taso</Text>
                     <Text style={styles.examSummaryValue}>{examInfo.level}</Text>
                   </View>
                 </View>
@@ -624,7 +624,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
               {currentExercise.description && (
                 <Text style={styles.exerciseDescription}>{currentExercise.description}</Text>
               )}
-              <Text style={styles.timeLimit}>Time limit: {currentExercise.timeLimit}s</Text>
+              <Text style={styles.timeLimit}>Aikaraja: {currentExercise.timeLimit}s</Text>
               
               {/* STT Error Display for single practice mode */}
               {sttError && !transcript && (
@@ -637,7 +637,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                       ))}
                     </View>
                   )}
-                  <Text style={styles.errorNote}>Please record again below.</Text>
+                  <Text style={styles.errorNote}>Nauhoita uudelleen alla.</Text>
                 </View>
               )}
               
@@ -646,21 +646,21 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
               ) : (
                 <View style={styles.resultContainer}>
                   <View style={styles.transcriptSection}>
-                    <Text style={styles.sectionTitle}>You said:</Text>
+                    <Text style={styles.sectionTitle}>Sanoit:</Text>
                     <Text style={styles.transcriptText}>{transcript}</Text>
                   </View>
                   
                   {isEvaluating ? (
                     <View style={styles.evaluatingContainer}>
                       <ActivityIndicator size="large" color={palette?.accentPrimary || '#4ECDC4'} />
-                      <Text style={styles.evaluatingText}>Evaluating your response...</Text>
+                      <Text style={styles.evaluatingText}>Arvioidaan vastausta…</Text>
                     </View>
                   ) : evaluation ? (
                     <View style={styles.evaluationSection}>
-                      <Text style={styles.sectionTitle}>Evaluation:</Text>
+                      <Text style={styles.sectionTitle}>Arvio:</Text>
                       {evaluation.score !== null && (
                         <View style={styles.scoreContainer}>
-                          <Text style={styles.scoreLabel}>Score:</Text>
+                          <Text style={styles.scoreLabel}>Pisteet:</Text>
                           <Text style={styles.scoreValue}>
                             {evaluation.score.toFixed(1)} / 4.0
                           </Text>
@@ -669,7 +669,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                       <Text style={styles.feedbackText}>{evaluation.feedback}</Text>
                       {evaluation.issues && evaluation.issues.length > 0 && (
                         <View style={styles.issuesContainer}>
-                          <Text style={styles.issuesTitle}>Areas to improve:</Text>
+                          <Text style={styles.issuesTitle}>Kehityskohteet:</Text>
                           {evaluation.issues.map((issue, idx) => (
                             <Text key={idx} style={styles.issueItem}>• {issue}</Text>
                           ))}
@@ -677,7 +677,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                       )}
                       {evaluation.suggestions && evaluation.suggestions.length > 0 && (
                         <View style={styles.suggestionsContainer}>
-                          <Text style={styles.suggestionsTitle}>Suggestions:</Text>
+                          <Text style={styles.suggestionsTitle}>Ehdotukset:</Text>
                           {evaluation.suggestions.map((suggestion, idx) => (
                             <Text key={idx} style={styles.suggestionItem}>• {suggestion}</Text>
                           ))}
@@ -688,7 +688,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                   
                   <View style={styles.actionButtons}>
                     <PremiumEmbossedButton
-                      title="Try Again"
+                      title="Yritä uudelleen"
                       onPress={handleRetry}
                       variant="secondary"
                       size="medium"
@@ -696,7 +696,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                     />
                     {speakingTasks.length > 1 && (
                       <PremiumEmbossedButton
-                        title="Next Task"
+                        title="Seuraava tehtävä"
                         onPress={handleNextTask}
                         variant="primary"
                         size="medium"
@@ -706,7 +706,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
                   </View>
                   {evaluation?.scores && (
                     <View style={styles.rubricSection}>
-                      <Text style={styles.rubricTitle}>Rubric Highlights</Text>
+                      <Text style={styles.rubricTitle}>Arviointikriteerit</Text>
                       <View style={styles.rubricGrid}>
                         {RUBRIC_BUCKETS.map(bucket => {
                           const score = evaluation?.scores?.[bucket.key];

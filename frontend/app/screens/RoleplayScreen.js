@@ -37,7 +37,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     try {
       await speak(prompt, 'professional');
     } catch (err) {
-      setError(err?.message || 'Failed to play prompt audio.');
+      setError(err?.message || 'Ohjeen äänen toisto epäonnistui.');
     }
   }, [scenario?.roleplay_prompt, speak]);
 
@@ -58,7 +58,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         }
       } catch (err) {
         if (!mounted) return;
-        setError(err?.message || 'Failed to load roleplay scenario.');
+        setError(err?.message || 'Roolipelin lataus epäonnistui.');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -80,7 +80,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         const result = await evaluateRoleplay(field, normalized);
         setEvaluation(result);
       } catch (err) {
-        setError(err?.message || 'Failed to evaluate roleplay response.');
+        setError(err?.message || 'Vastauksen arviointi epäonnistui.');
       } finally {
         setIsEvaluating(false);
       }
@@ -105,7 +105,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   useEffect(() => {
     const handleBack = () => {
       if (sessionLockRef.current) {
-        Alert.alert('Session in progress', 'Finish the current speaking turn before leaving.');
+        Alert.alert('Harjoitus kesken', 'Viimeistele käynnissä oleva puhevuoro ennen poistumista.');
         return true;
       }
       return false;
@@ -115,7 +115,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     const unsubscribe = navigation?.addListener?.('beforeRemove', (e) => {
       if (!sessionLockRef.current) return;
       e.preventDefault();
-      Alert.alert('Session in progress', 'Finish the current speaking turn before leaving.');
+      Alert.alert('Harjoitus kesken', 'Viimeistele käynnissä oleva puhevuoro ennen poistumista.');
     });
 
     return () => {
@@ -149,13 +149,13 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   return (
     <Background module="workplace" variant="brown" imageVariant="workplace">
       <View style={styles.container}>
-        <Text style={styles.title}>{scenario?.title || 'Roleplay'}</Text>
-        <Text style={styles.subtitle}>Nursing benchmark • {level}</Text>
+        <Text style={styles.title}>{scenario?.title || 'Roolipeli'}</Text>
+        <Text style={styles.subtitle}>Ammattiharjoitus • {level}</Text>
         <Text style={styles.prompt}>{scenario?.roleplay_prompt}</Text>
 
         {!!keyPhrases.length && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Key phrases</Text>
+            <Text style={styles.sectionTitle}>Avainfraasit</Text>
             {keyPhrases.map((phrase) => (
               <Text key={phrase} style={styles.sectionItem}>• {phrase}</Text>
             ))}
@@ -164,13 +164,13 @@ export default function RoleplayScreen({ navigation, route } = {}) {
 
         {scenario?.grammar_tip ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Grammar focus</Text>
+            <Text style={styles.sectionTitle}>Kielioppiteema</Text>
             <Text style={styles.sectionItem}>{scenario.grammar_tip}</Text>
           </View>
         ) : null}
 
         <TouchableOpacity style={styles.promptButton} onPress={handleSpeakPrompt}>
-          <Text style={styles.promptButtonText}>Play Prompt</Text>
+          <Text style={styles.promptButtonText}>Toista ohje</Text>
         </TouchableOpacity>
 
         <View style={styles.micRow}>
@@ -181,30 +181,30 @@ export default function RoleplayScreen({ navigation, route } = {}) {
             isActive={isRecording}
           />
           <Text style={styles.micStatus}>
-            {isRecording ? 'Listening…' : isProcessing ? 'Processing…' : 'Hold to respond'}
+            {isRecording ? 'Kuunnellaan…' : isProcessing ? 'Käsitellään…' : 'Pidä pohjassa vastataksesi'}
           </Text>
         </View>
 
         {transcript ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your response</Text>
+            <Text style={styles.sectionTitle}>Vastauksesi</Text>
             <Text style={styles.sectionItem}>{transcript}</Text>
           </View>
         ) : null}
 
         {isEvaluating ? (
-          <Text style={styles.sectionItem}>Evaluating…</Text>
+          <Text style={styles.sectionItem}>Arvioidaan…</Text>
         ) : null}
 
         {evaluation ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Feedback</Text>
+            <Text style={styles.sectionTitle}>Palaute</Text>
             {(evaluation.feedback || []).map((line) => (
               <Text key={line} style={styles.sectionItem}>• {line}</Text>
             ))}
             {evaluation.missing_phrases?.length ? (
               <Text style={styles.sectionItem}>
-                Missing phrases: {evaluation.missing_phrases.join(', ')}
+                Puuttuvat fraasit: {evaluation.missing_phrases.join(', ')}
               </Text>
             ) : null}
           </View>
