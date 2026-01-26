@@ -1,13 +1,16 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Request
 from pydantic import BaseModel
 
+from app.core.config import get_settings
 from app.services import stt_service, tts_service
 from app.services.pronunciation_engine import PronunciationEngine
 from app.services.pronunciation_engine_v2 import analyze_pronunciation_v2
 from app.services.pronunciation_nudge import mini_nudge
+from app.services.tts_resolver import resolve_tts_provider, resolve_tts_voice
 
 router = APIRouter()
 _pronunciation_engine = PronunciationEngine()
+_settings = get_settings()
 
 
 class PronunciationRequest(BaseModel):
@@ -49,6 +52,11 @@ async def tts_stream(ws: WebSocket):
         while True:
             payload = await ws.receive_json()
             text = payload.get("text", "")
+            tts_provider = None
+            tts_voice = None
+            if _settings.tts_enabled:
+                tts_provider = resolve_tts_provider(_settings)
+                tts_voice = resolve_tts_voice(_settings, tts_provider)
             async for chunk in tts_service.stream_tts(text):
                 await ws.send_bytes(chunk)
     except WebSocketDisconnect:
