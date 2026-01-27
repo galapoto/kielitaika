@@ -17,8 +17,8 @@ import {
   completeSpeakingSession,
   setSpeakingTurnAiTranscript,
   setSpeakingTurnUserTranscript,
-  useSpeakingSession,
 } from '../utils/speakingAttempts';
+import { useSpeakingSessionContext } from '../context/SpeakingSessionContext';
 
 export default function RoleplayScreen({ navigation, route } = {}) {
   const {
@@ -27,13 +27,8 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     level = 'B1',
   } = route?.params || {};
 
-  const sessionId = useMemo(
-    () => `roleplay:${field}:${scenarioTitle || 'default'}:${level}:${Date.now()}`,
-    [field, scenarioTitle, level]
-  );
-  const session = useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
-  const sessionStatus = session?.status || 'idle';
-  const turn0 = session?.turns?.[0] || null;
+  // Get session from context (provided by SpeakingScreenWrapper)
+  const { sessionId, session, status: sessionStatus, currentTurn: turn0 } = useSpeakingSessionContext();
   const transcript = turn0?.userSpeech?.transcript || '';
 
   const [scenario, setScenario] = useState(null);

@@ -12,8 +12,8 @@ import {
   completeSpeakingSession,
   setSpeakingTurnAiTranscript,
   setSpeakingTurnUserTranscript,
-  useSpeakingSession,
 } from '../utils/speakingAttempts';
+import { useSpeakingSessionContext } from '../context/SpeakingSessionContext';
 
 /**
  * ConversationScreen (SpeakingSession contract)
@@ -28,14 +28,8 @@ export default function ConversationScreen({ navigation, route } = {}) {
   const socketUserId = user?.id || null;
   const { messages: wsMessages, sendUserMessage, connected } = useConversationSocket(socketUserId);
 
-  const sessionId = useMemo(
-    () => `conversation:${socketUserId || 'anon'}:${path}:${field || 'none'}:${type}:${Date.now()}`,
-    [socketUserId, path, field, type]
-  );
-  const session = useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
-  const sessionStatus = session?.status || 'idle';
-  const turnIndex = session?.currentTurnIndex || 0;
-  const turn = session?.turns?.[turnIndex] || null;
+  // Get session from context (provided by SpeakingScreenWrapper)
+  const { sessionId, session, status: sessionStatus, currentTurnIndex: turnIndex, currentTurn: turn } = useSpeakingSessionContext();
   const aiText = turn?.aiSpeech?.transcript || '';
   const userText = turn?.userSpeech?.transcript || '';
 

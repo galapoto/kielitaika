@@ -20,12 +20,12 @@ import {
   persistSpeakingAttempt,
 } from '../utils/speakingAttempts';
 import {
-  useSpeakingSession,
   setSpeakingTurnUserTranscript,
   setSpeakingTurnAiTranscript,
   advanceSpeakingTurn,
   completeSpeakingSession,
 } from '../utils/speakingAttempts';
+import { useSpeakingSessionContext } from '../context/SpeakingSessionContext';
 import { getRubricExplanation, getRubricLabel, normalizeRubricDimension } from '../utils/feedbackRubric';
 import { generateSpeakingTurn } from '../utils/speakingTurnEngine';
 
@@ -73,11 +73,8 @@ const pickFollowUpPrompt = ({ topic, paceWpm, fillerCount, pauseMarkers }) => {
 };
 
 export default function FluencyScreen() {
-  const sessionId = useMemo(() => `fluency:${Date.now()}`, []);
-  const session = useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
-  const sessionStatus = session?.status || 'idle';
-  const turnIndex = session?.currentTurnIndex || 0;
-  const currentTurn = session?.turns?.[turnIndex] || null;
+  // Get session from context (provided by SpeakingScreenWrapper)
+  const { sessionId, session, status: sessionStatus, currentTurnIndex: turnIndex, currentTurn } = useSpeakingSessionContext();
   const transcript = currentTurn?.userSpeech?.transcript || '';
   const aiReply = currentTurn?.aiSpeech?.transcript || '';
   const [reviewTurnIndex, setReviewTurnIndex] = useState(0);

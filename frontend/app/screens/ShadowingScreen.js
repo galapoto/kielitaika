@@ -12,12 +12,12 @@ import {
   loadSpeakingAttempts,
   persistSpeakingAttempt,
   filterAttempts,
-  useSpeakingSession,
   setSpeakingTurnUserTranscript,
   setSpeakingTurnAiTranscript,
   advanceSpeakingTurn,
   completeSpeakingSession,
 } from '../utils/speakingAttempts';
+import { useSpeakingSessionContext } from '../context/SpeakingSessionContext';
 import { Audio } from 'expo-av';
 import Background from '../components/ui/Background';
 import MicButton from '../components/MicButton';
@@ -86,11 +86,8 @@ const buildFeedbackLabel = (dimension) =>
   `${getRubricLabel(normalizeRubricDimension(dimension))} focus`;
 
 export default function ShadowingScreen() {
-  const sessionId = useMemo(() => `shadowing:${Date.now()}`, []);
-  const session = useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
-  const sessionStatus = session?.status || 'idle';
-  const promptIndex = session?.currentTurnIndex || 0;
-  const currentTurn = session?.turns?.[promptIndex] || null;
+  // Get session from context (provided by SpeakingScreenWrapper)
+  const { sessionId, session, status: sessionStatus, currentTurnIndex: promptIndex, currentTurn } = useSpeakingSessionContext();
   const transcript = currentTurn?.userSpeech?.transcript || '';
   const aiReply = currentTurn?.aiSpeech?.transcript || '';
   const [reviewTurnIndex, setReviewTurnIndex] = useState(0);

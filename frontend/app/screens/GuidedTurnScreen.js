@@ -87,17 +87,8 @@ const generateFeedback = (transcript, prompt) => {
 };
 
 export default function GuidedTurnScreen({ route } = {}) {
-  const source = route?.params?.source || 'unknown';
-  const entrypoint = route?.params?.entrypoint || 'unknown';
-
-  const sessionId = useMemo(
-    () => `guided:${source}:${entrypoint}:${Date.now()}`,
-    [source, entrypoint]
-  );
-  const session = useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
-  const sessionStatus = session?.status || 'idle';
-  const promptIndex = session?.currentTurnIndex || 0;
-  const currentTurn = session?.turns?.[promptIndex] || null;
+  // Get session from context (provided by SpeakingScreenWrapper)
+  const { sessionId, session, status: sessionStatus, currentTurnIndex: promptIndex, currentTurn } = useSpeakingSessionContext();
   const transcript = currentTurn?.userSpeech?.transcript || '';
   const aiReply = currentTurn?.aiSpeech?.transcript || '';
   const [reviewTurnIndex, setReviewTurnIndex] = useState(0);

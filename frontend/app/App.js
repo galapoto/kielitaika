@@ -12,7 +12,7 @@ import { PreferencesProvider } from './context/PreferencesContext';
 
 function NavigationRoot() {
   const { colors, isDark } = useTheme();
-  const AppNavigator = require('./navigation/AppNavigator').default;
+  const RootNavigator = require('./navigation/RootNavigator').default;
 
   return (
     <PathProvider>
@@ -36,7 +36,7 @@ function NavigationRoot() {
           },
         }}
       >
-        <AppNavigator />
+        <RootNavigator />
       </NavigationContainer>
     </PathProvider>
   );

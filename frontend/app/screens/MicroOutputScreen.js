@@ -6,8 +6,8 @@ import {
   completeSpeakingSession,
   setSpeakingTurnAiTranscript,
   setSpeakingTurnUserTranscript,
-  useSpeakingSession,
 } from '../utils/speakingAttempts';
+import { useSpeakingSessionContext } from '../context/SpeakingSessionContext';
 import MicButton from '../components/MicButton';
 import WaveformVisualizer from '../components/features/ConversationUI/WaveformVisualizer';
 import SceneBackground from '../components/SceneBackground';
@@ -27,8 +27,8 @@ export default function MicroOutputScreen() {
   const [timeRemaining, setTimeRemaining] = useState(10);
   const [timerActive, setTimerActive] = useState(false);
   const { playTap, playMicOn } = useSound();
-  const sessionId = useMemo(() => `micro-output:${task?.id || 'pending'}:${Date.now()}`, [task?.id]);
-  useSpeakingSession(sessionId, { maxTurns: 5, autoStart: true });
+  // Get session from context (provided by SpeakingScreenWrapper)
+  const { sessionId } = useSpeakingSessionContext();
 
   const {
     isRecording,
