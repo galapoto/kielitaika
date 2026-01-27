@@ -1,0 +1,93 @@
+/**
+ * AppNavigator - Top-level navigation that handles onboarding vs main app
+ * 
+ * Flow:
+ * - If not authenticated → AuthCheck → Login/Register
+ * - If authenticated but onboarding not completed → Onboarding flow
+ * - If authenticated and onboarding completed → Main app (RootNavigator)
+ */
+
+import React, { useState, useEffect } from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useAuth } from '../context/AuthContext';
+import { getCurrentUser } from '../services/authService';
+import RootNavigator from './RootNavigator';
+import WelcomeScreen from '../screens/WelcomeScreen';
+import IntentQuizScreen from '../screens/IntentQuizScreen';
+import PlanSelectionScreen from '../screens/PlanSelectionScreen';
+import ProfessionSelectionScreen from '../screens/ProfessionSelectionScreen';
+import PracticeFrequencyScreen from '../screens/PracticeFrequencyScreen';
+import LoginScreen from '../screens/auth/LoginScreen';
+import RegisterScreen from '../screens/auth/RegisterScreen';
+
+const Stack = createNativeStackNavigator();
+
+export default function AppNavigator() {
+  const { isAuthenticated, loading, token } = useAuth();
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      if (!isAuthenticated || !token) {
+        setOnboardingCompleted(null);
+        setCheckingOnboarding(false);
+        return;
+      }
+
+      try {
+        const userData = await getCurrentUser(token);
+        // Check if user profile has onboarding_completed flag
+        // Assuming backend returns user with profile data
+        const completed = userData?.onboarding_completed === true || userData?.profile?.onboarding_completed === true;
+        setOnboardingCompleted(completed);
+      } catch (error) {
+        console.error('Failed to check onboarding status:', error);
+        // Default to showing onboarding if check fails
+        setOnboardingCompleted(false);
+      } finally {
+        setCheckingOnboarding(false);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, [isAuthenticated, token]);
+
+  // Show nothing while checking auth/onboarding status
+  if (loading || checkingOnboarding) {
+    return null; // Or a loading screen
+  }
+
+  // Not authenticated - show auth screens
+  if (!isAuthenticated) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        <Stack.Screen name="IntentQuiz" component={IntentQuizScreen} />
+        <Stack.Screen name="PlanSelection" component={PlanSelectionScreen} />
+        <Stack.Screen name="ProfessionSelection" component={ProfessionSelectionScreen} />
+        <Stack.Screen name="Auth" component={RegisterScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="PracticeFrequency" component={PracticeFrequencyScreen} />
+      </Stack.Navigator>
+    );
+  }
+
+  // Authenticated but onboarding not completed - show onboarding flow
+  if (!onboardingCompleted) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        <Stack.Screen name="IntentQuiz" component={IntentQuizScreen} />
+        <Stack.Screen name="PlanSelection" component={PlanSelectionScreen} />
+        <Stack.Screen name="ProfessionSelection" component={ProfessionSelectionScreen} />
+        <Stack.Screen name="Auth" component={RegisterScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="PracticeFrequency" component={PracticeFrequencyScreen} />
+      </Stack.Navigator>
+    );
+  }
+
+  // Authenticated and onboarding completed - show main app
+  return <RootNavigator />;
+}
