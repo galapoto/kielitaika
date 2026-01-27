@@ -13,7 +13,6 @@ import {
   loadSpeakingAttempts,
   persistSpeakingAttempt,
   filterAttempts,
-  useSpeakingSession,
   setSpeakingTurnUserTranscript,
   setSpeakingTurnAiTranscript,
   advanceSpeakingTurn,
