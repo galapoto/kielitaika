@@ -274,3 +274,13 @@ export async function createPortalSession() {
   });
   return handleResponse(res);
 }
+
+export async function updateUserProfile(profileData, userId = null) {
+  if (!userId) userId = await getUserId();
+  const res = await fetchWithAuth('/user/profile', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, ...profileData }),
+  });
+  return handleResponse(res);
+}

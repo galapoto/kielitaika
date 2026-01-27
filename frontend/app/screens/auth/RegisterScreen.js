@@ -16,6 +16,8 @@ import { useAuth } from '../../context/AuthContext';
 import GoogleLogo from '../../ui/icons/GoogleLogo';
 import RukaLogo3D from '../../components/RukaLogo3D';
 import Background from '../../components/ui/Background';
+import useOnboardingSession from '../../state/useOnboardingSession';
+import { updateUserProfile } from '../../utils/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -29,6 +31,7 @@ export default function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { register, loginWithGoogle } = useAuth();
+  const { getSessionData, clearSession } = useOnboardingSession();
   const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '946481356194-v8t6riiihp9oetqd1fl6gc1onhi2quf1.apps.googleusercontent.com';
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: googleClientId,
@@ -57,8 +60,29 @@ export default function RegisterScreen({ navigation }) {
 
     setLoading(true);
     try {
-      await register(email.trim(), password, name.trim() || null);
-      // Navigation will be handled by AuthProvider/AppNavigator
+      const authResponse = await register(email.trim(), password, name.trim() || null);
+      
+      // Persist onboarding data after successful signup
+      const sessionData = getSessionData();
+      if (sessionData.intent_type || sessionData.profession || sessionData.selected_plan) {
+        try {
+          await updateUserProfile({
+            intent_type: sessionData.intent_type,
+            profession: sessionData.profession,
+            selected_plan: sessionData.selected_plan,
+            onboarding_completed: true,
+          }, authResponse.user_id);
+        } catch (profileError) {
+          console.error('Failed to persist onboarding data:', profileError);
+          // Continue even if profile update fails
+        }
+      }
+      
+      // Clear temporary session
+      clearSession();
+      
+      // Navigate to PracticeFrequencyScreen
+      navigation?.navigate('PracticeFrequency');
     } catch (error) {
       Alert.alert('Registration Failed', error.message || 'Please try again');
     } finally {
