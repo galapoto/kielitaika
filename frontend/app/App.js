@@ -1,4 +1,5 @@
 // RECOVERY MODE: Architecture restoration in progress. Feature work frozen.
+import 'react-native-reanimated';
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
