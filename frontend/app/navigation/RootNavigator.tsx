@@ -1,4 +1,6 @@
 // RootNavigator - Drawer navigation wrapper
+// Ensure Reanimated is configured before drawer is created
+import 'react-native-reanimated';
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../screens/HomeScreen";
@@ -132,8 +134,6 @@ export default function RootNavigator() {
     <Drawer.Navigator
       initialRouteName="Home"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
-      // Explicitly disable legacy implementation for Reanimated 3+
-      useLegacyImplementation={false}
       screenOptions={{
         headerShown: false,
         drawerStyle: {
