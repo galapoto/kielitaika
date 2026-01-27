@@ -59,7 +59,7 @@ export function useVoiceStreaming(options = {}) {
         setIsProcessing(false);
         return;
       }
-      // Update transcript
+      // Update transcript buffer and state
       transcriptBufferRef.current = data;
       setTranscript(data);
       if (onTranscript) {
@@ -67,6 +67,9 @@ export function useVoiceStreaming(options = {}) {
       }
       // Reset VAD timer on transcript update (voice activity detected)
       lastVoiceActivityRef.current = Date.now();
+    } else if (data instanceof Blob || data instanceof ArrayBuffer) {
+      // Binary audio data - should not happen in STT stream, but handle gracefully
+      console.warn('Unexpected binary data in STT WebSocket stream');
     }
   }, [onTranscript]);
 
@@ -211,16 +214,25 @@ export function useVoiceStreaming(options = {}) {
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((track) => track.stop());
         audioStreamRef.current = null;
+        setIsRecording(false);
+        setIsListening(false);
 
         // Final transcript if WebSocket was used
         if (transcriptBufferRef.current && onTranscriptComplete) {
-          onTranscriptComplete(transcriptBufferRef.current);
+          const finalTranscript = transcriptBufferRef.current;
+          transcriptBufferRef.current = '';
+          onTranscriptComplete(finalTranscript);
+          setIsProcessing(false);
+          return;
         }
 
         // Fallback: send final audio blob if WebSocket wasn't fully used
         if (!isSTTConnected && audioChunksRef.current.length > 0) {
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          audioChunksRef.current = [];
           await sendToAPI(audioBlob, { callTranscriptComplete: true });
+        } else {
+          setIsProcessing(false);
         }
       };
 
@@ -275,6 +287,7 @@ export function useVoiceStreaming(options = {}) {
   const sendToAPI = useCallback(
     async (audioBlob, { callTranscriptComplete = false, audioFormat = 'webm' } = {}) => {
     try {
+      setIsProcessing(true);
       const normalizedFormat = audioFormat?.startsWith('audio/')
         ? audioFormat.split('/')[1]
         : audioFormat;
@@ -283,16 +296,27 @@ export function useVoiceStreaming(options = {}) {
         audioBlob,
         audioFormat: normalizedFormat || 'webm',
       });
-      setTranscript(finalTranscript);
-      if (onTranscript) {
-        onTranscript(finalTranscript);
+      const normalized = (finalTranscript || '').trim();
+      if (normalized) {
+        setTranscript(normalized);
+        if (onTranscript) {
+          onTranscript(normalized);
+        }
+        if (callTranscriptComplete && onTranscriptComplete) {
+          onTranscriptComplete(normalized, meta);
+        }
+      } else if (callTranscriptComplete && onTranscriptComplete) {
+        // Even if transcript is empty, call complete to signal recording finished
+        onTranscriptComplete('', meta);
       }
-      if (callTranscriptComplete && onTranscriptComplete) {
-        onTranscriptComplete(finalTranscript, meta);
-      }
-      return finalTranscript;
+      return normalized;
     } catch (err) {
-      setError(err.message || 'STT transcription failed');
+      const errorMessage = err.message || 'STT transcription failed';
+      setError(errorMessage);
+      if (callTranscriptComplete && onTranscriptComplete) {
+        // Signal completion even on error so UI can update
+        onTranscriptComplete('', { error: errorMessage });
+      }
       throw err;
     } finally {
       setIsProcessing(false);
@@ -301,20 +325,38 @@ export function useVoiceStreaming(options = {}) {
 
   const sendNativeAudio = useCallback(
     async (fileUri, options) => {
-      const uriExtMatch = fileUri?.split(".").pop()?.split("?")[0];
-      const finalFormat = uriExtMatch || options?.audioFormat;
-      const { text, meta } = await transcribeAudio({
-        fileUri,
-        audioFormat: finalFormat || 'wav',
-      });
-      setTranscript(text);
-      if (onTranscript) {
-        onTranscript(text);
+      try {
+        setIsProcessing(true);
+        const uriExtMatch = fileUri?.split(".").pop()?.split("?")[0];
+        const finalFormat = uriExtMatch || options?.audioFormat;
+        const { text, meta } = await transcribeAudio({
+          fileUri,
+          audioFormat: finalFormat || 'wav',
+        });
+        const normalized = (text || '').trim();
+        if (normalized) {
+          setTranscript(normalized);
+          if (onTranscript) {
+            onTranscript(normalized);
+          }
+          if (options?.callTranscriptComplete && onTranscriptComplete) {
+            onTranscriptComplete(normalized, meta);
+          }
+        } else if (options?.callTranscriptComplete && onTranscriptComplete) {
+          // Even if transcript is empty, call complete to signal recording finished
+          onTranscriptComplete('', meta);
+        }
+        return normalized;
+      } catch (err) {
+        setError(err.message || 'STT transcription failed');
+        if (options?.callTranscriptComplete && onTranscriptComplete) {
+          // Signal completion even on error so UI can update
+          onTranscriptComplete('', { error: err.message });
+        }
+        throw err;
+      } finally {
+        setIsProcessing(false);
       }
-      if (options?.callTranscriptComplete && onTranscriptComplete) {
-        onTranscriptComplete(text, meta);
-      }
-      return text;
     },
     [onTranscript, onTranscriptComplete]
   );
