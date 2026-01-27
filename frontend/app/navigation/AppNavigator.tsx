@@ -58,9 +58,13 @@ export default function AppNavigator() {
 
       try {
         const userData = await getCurrentUser(token);
+        console.log('AppNavigator: User data from /auth/me:', userData);
         // Check if user profile has onboarding_completed flag
-        // Assuming backend returns user with profile data
-        const completed = userData?.onboarding_completed === true || userData?.profile?.onboarding_completed === true;
+        // If not present, assume existing users have completed onboarding
+        const completed = userData?.onboarding_completed === true 
+          || userData?.profile?.onboarding_completed === true
+          || userData?.onboarding_completed === undefined; // Default to true for existing users
+        console.log('AppNavigator: Onboarding completed status:', completed);
         setOnboardingCompleted(completed);
       } catch (error) {
         console.error('Failed to check onboarding status:', error);
