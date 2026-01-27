@@ -10,9 +10,10 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { PreferencesProvider } from './context/PreferencesContext';
 
+import RootNavigator from './navigation/RootNavigator';
+
 function NavigationRoot() {
   const { colors, isDark } = useTheme();
-  const RootNavigator = require('./navigation/RootNavigator').default;
 
   return (
     <PathProvider>

@@ -51,8 +51,12 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSCameraUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your camera</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow KieliTaika to access your microphone for speaking practice.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Allow KieliTaika to access your photos to select a profile picture.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
     <key>UILaunchStoryboardName</key>
