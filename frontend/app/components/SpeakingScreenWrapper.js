@@ -10,46 +10,75 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { SpeakingSessionProvider } from '../context/SpeakingSessionContext';
 
+// Session ID cache per route key to prevent duplicate sessions on re-renders
+const sessionIdCache = new Map();
+
 /**
  * Generate session ID based on screen name and route params
+ * Uses route.key to ensure stable ID per navigation instance
  */
 function generateSessionId(screenName, route, user) {
   const params = route?.params || {};
+  const routeKey = route?.key || `${screenName}-${Date.now()}`;
+  
+  // Check cache first to prevent duplicate sessions
+  if (sessionIdCache.has(routeKey)) {
+    return sessionIdCache.get(routeKey);
+  }
+  
+  let sessionId;
   
   switch (screenName) {
     case 'Conversation': {
       const { level = 'A1', path = 'general', field = null, type = 'speaking' } = params;
       const userId = user?.id || 'anon';
-      return `conversation:${userId}:${path}:${field || 'none'}:${type}:${Date.now()}`;
+      sessionId = `conversation:${userId}:${path}:${field || 'none'}:${type}:${Date.now()}`;
+      break;
     }
     
     case 'Roleplay': {
       const { field = 'sairaanhoitaja', scenarioTitle = null, level = 'B1' } = params;
-      return `roleplay:${field}:${scenarioTitle || 'default'}:${level}:${Date.now()}`;
+      sessionId = `roleplay:${field}:${scenarioTitle || 'default'}:${level}:${Date.now()}`;
+      break;
     }
     
     case 'Fluency': {
-      return `fluency:${Date.now()}`;
+      sessionId = `fluency:${Date.now()}`;
+      break;
     }
     
     case 'GuidedTurn': {
       const { source = 'unknown', entrypoint = 'unknown' } = params;
-      return `guided:${source}:${entrypoint}:${Date.now()}`;
+      sessionId = `guided:${source}:${entrypoint}:${Date.now()}`;
+      break;
     }
     
     case 'Shadowing': {
-      return `shadowing:${Date.now()}`;
+      sessionId = `shadowing:${Date.now()}`;
+      break;
     }
     
     case 'MicroOutput': {
       const { taskId = 'pending' } = params;
-      return `micro-output:${taskId}:${Date.now()}`;
+      sessionId = `micro-output:${taskId}:${Date.now()}`;
+      break;
     }
     
     default: {
-      return `${screenName.toLowerCase()}:${Date.now()}`;
+      sessionId = `${screenName.toLowerCase()}:${Date.now()}`;
+      break;
     }
   }
+  
+  // Cache the session ID for this route key
+  sessionIdCache.set(routeKey, sessionId);
+  
+  // Clean up cache after 5 minutes to prevent memory leaks
+  setTimeout(() => {
+    sessionIdCache.delete(routeKey);
+  }, 5 * 60 * 1000);
+  
+  return sessionId;
 }
 
 /**
@@ -70,14 +99,19 @@ function getSessionOptions(screenName) {
  * Wraps a speaking screen component with SpeakingSessionProvider.
  * Generates session ID from route params and provides session context.
  */
-export default function SpeakingScreenWrapper({ screenName, ScreenComponent }) {
-  const route = useRoute();
-  const navigation = useNavigation();
+export default function SpeakingScreenWrapper({ screenName, ScreenComponent, route: routeProp, navigation: navigationProp, ...otherProps }) {
+  // Use hooks as fallback, but prefer props if provided (React Navigation passes them)
+  const routeHook = useRoute();
+  const navigationHook = useNavigation();
+  const route = routeProp || routeHook;
+  const navigation = navigationProp || navigationHook;
   const { user } = useAuth();
   
+  // Generate session ID once per route instance
+  // Use route.key to ensure stable ID per navigation instance (prevents duplicate sessions)
   const sessionId = useMemo(
     () => generateSessionId(screenName, route, user),
-    [screenName, route, user]
+    [screenName, route?.key, route?.params, user?.id]
   );
   
   const options = useMemo(
@@ -87,7 +121,7 @@ export default function SpeakingScreenWrapper({ screenName, ScreenComponent }) {
   
   return (
     <SpeakingSessionProvider sessionId={sessionId} options={options}>
-      <ScreenComponent route={route} navigation={navigation} />
+      <ScreenComponent route={route} navigation={navigation} {...otherProps} />
     </SpeakingSessionProvider>
   );
 }

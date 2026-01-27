@@ -53,8 +53,10 @@ export function SpeakingSessionProvider({ sessionId, options = {}, children }) {
         if (options?.autoStart !== false) {
           startSpeakingSession(key);
           const started = getSpeakingSession(key);
-          setSession(started);
-          setStatus(started?.status || 'live');
+          if (started) {
+            setSession(started);
+            setStatus(started.status || 'live');
+          }
         }
       }
     }
@@ -89,19 +91,16 @@ export function SpeakingSessionProvider({ sessionId, options = {}, children }) {
       sessionId: key,
       session,
       status,
-      currentTurnIndex: session?.currentTurnIndex || 0,
-      currentTurn: session?.turns?.[session?.currentTurnIndex || 0] || null,
-      maxTurns: session?.maxTurns || 0,
-      turns: session?.turns || [],
+      currentTurnIndex: session?.currentTurnIndex ?? 0,
+      currentTurn: session?.turns?.[session?.currentTurnIndex ?? 0] ?? null,
+      maxTurns: session?.maxTurns ?? 0,
+      turns: session?.turns ?? [],
     }),
     [key, session, status]
   );
 
-  if (!key) {
-    // No session ID provided - render children without context
-    return <>{children}</>;
-  }
-
+  // Always provide context, even if session is null (screens should handle loading state)
+  // This ensures screens can mount and check for session availability
   return <SpeakingSessionContext.Provider value={value}>{children}</SpeakingSessionContext.Provider>;
 }
 
