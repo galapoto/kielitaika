@@ -59,13 +59,31 @@ export default function AppNavigator() {
     checkOnboardingStatus();
   }, [isAuthenticated, token]);
 
-  // Show nothing while checking auth/onboarding status
+  // Show loading screen while checking auth/onboarding status
   if (loading || checkingOnboarding) {
     // Return a minimal loading state - don't return null as it causes blank screen
     // Use key to force re-render when auth state changes
+    const LoadingScreen = () => {
+      const React = require('react');
+      const { View, ActivityIndicator, StyleSheet } = require('react-native');
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#7dd3fc" />
+        </View>
+      );
+    };
+    const styles = require('react-native').StyleSheet.create({
+      loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#0f172a',
+      },
+    });
+    
     return (
       <Stack.Navigator key="loading" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Loading" component={() => null} />
+        <Stack.Screen name="Loading" component={LoadingScreen} />
       </Stack.Navigator>
     );
   }
