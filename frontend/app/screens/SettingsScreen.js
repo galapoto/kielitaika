@@ -10,7 +10,9 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import Background from '../components/ui/Background';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +21,7 @@ import HomeButton from '../components/HomeButton';
 import ProfileImage from '../components/ProfileImage';
 import PremiumEmbossedButton from '../components/PremiumEmbossedButton';
 import LanguageSelector, { getStoredLanguage, setStoredLanguage } from '../components/LanguageSelector';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SettingsScreen({ navigation }) {
   const { colors: themeColors, theme, toggleTheme } = useTheme();
@@ -61,10 +64,39 @@ export default function SettingsScreen({ navigation }) {
     setProfileModalVisible(false);
   };
 
+  const handlePickImage = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Lupa vaaditaan', 'Tarvitsemme luvan käyttää kuvagalleriaa.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        // For local images, use the file:// URI directly
+        // In production, you might want to upload to a server first
+        setProfileModalUrl(uri);
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Virhe', 'Kuvan valinta epäonnistui. Yritä uudelleen.');
+    }
+  };
+
   const handleProfileSave = async () => {
     const url = (profileModalUrl || '').trim();
     if (!url) {
-      Alert.alert('Missing URL', 'Please enter a valid image URL.');
+      Alert.alert('Puuttuu', 'Anna kuvan URL-osoite tai valitse kuva laitteesta.');
       return;
     }
     setIsUpdatingProfile(true);
@@ -294,6 +326,19 @@ export default function SettingsScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: themeColors.surface }]}>
             <Text style={[styles.modalTitle, { color: themeColors.text }]}>Profiilikuva</Text>
+            
+            {/* Image Picker Button */}
+            <TouchableOpacity
+              style={styles.imagePickerButton}
+              onPress={handlePickImage}
+              disabled={isUpdatingProfile}
+            >
+              <Ionicons name="image-outline" size={24} color="#7dd3fc" />
+              <Text style={styles.imagePickerText}>Valitse kuva laitteesta</Text>
+            </TouchableOpacity>
+
+            <Text style={[styles.modalDivider, { color: themeColors.textSecondary }]}>tai</Text>
+
             <TextInput
               value={profileModalUrl}
               onChangeText={setProfileModalUrl}
@@ -502,6 +547,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 12,
+  },
+  imagePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(125, 211, 252, 0.15)',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(125, 211, 252, 0.3)',
+  },
+  imagePickerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7dd3fc',
+  },
+  modalDivider: {
+    textAlign: 'center',
+    fontSize: 12,
+    marginBottom: 12,
+    opacity: 0.6,
   },
   modalInput: {
     borderWidth: 1,
