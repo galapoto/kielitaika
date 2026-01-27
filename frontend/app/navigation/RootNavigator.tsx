@@ -16,6 +16,10 @@ import YKISpeakingExamScreen from "../screens/YKISpeakingExamScreen";
 import YKIWritingExamScreen from "../screens/YKIWritingExamScreen";
 import YKIInfoScreen from "../screens/YKIInfoScreen";
 import ConversationScreen from "../screens/ConversationScreen";
+import FluencyScreen from "../screens/FluencyScreen";
+import GuidedTurnScreen from "../screens/GuidedTurnScreen";
+import ShadowingScreen from "../screens/ShadowingScreen";
+import MicroOutputScreen from "../screens/MicroOutputScreen";
 import WorkplaceScreen from "../screens/WorkplaceScreen";
 import ProfessionDetailScreen from "../screens/ProfessionDetailScreen";
 import RoleplayScreen from "../screens/RoleplayScreen";
@@ -51,6 +55,10 @@ function YKIPlanStack() {
       <YKIStack.Screen name="YKIWritingExam" component={YKIWritingExamScreen} />
       <YKIStack.Screen name="YKIInfo" component={YKIInfoScreen} />
       <YKIStack.Screen name="Conversation" component={ConversationScreen} />
+      <YKIStack.Screen name="Fluency" component={FluencyScreen} />
+      <YKIStack.Screen name="GuidedTurn" component={GuidedTurnScreen} />
+      <YKIStack.Screen name="Shadowing" component={ShadowingScreen} />
+      <YKIStack.Screen name="MicroOutput" component={MicroOutputScreen} />
       <YKIStack.Screen name="Settings" component={SettingsScreen} />
       <YKIStack.Screen name="Notifications" component={NotificationSettingsScreen} />
       <YKIStack.Screen name="PrivacySettings" component={PrivacySettingsScreen} />
@@ -68,6 +76,11 @@ function WorkPlanStack() {
       <WorkStack.Screen name="Vocabulary" component={VocabularyScreen} />
       <WorkStack.Screen name="Quiz" component={QuizScreen} />
       <WorkStack.Screen name="LessonDetail" component={LessonDetailScreen} />
+      <WorkStack.Screen name="Fluency" component={FluencyScreen} />
+      <WorkStack.Screen name="GuidedTurn" component={GuidedTurnScreen} />
+      <WorkStack.Screen name="Shadowing" component={ShadowingScreen} />
+      <WorkStack.Screen name="MicroOutput" component={MicroOutputScreen} />
+      <WorkStack.Screen name="Conversation" component={ConversationScreen} />
       <WorkStack.Screen name="Subscription" component={SubscriptionScreen} />
       <WorkStack.Screen name="Settings" component={SettingsScreen} />
       <WorkStack.Screen name="Notifications" component={NotificationSettingsScreen} />
