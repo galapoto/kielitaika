@@ -76,7 +76,7 @@ export default function AppNavigator() {
   // Authenticated but onboarding not completed - show onboarding flow
   if (!onboardingCompleted) {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Welcome">
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="IntentQuiz" component={IntentQuizScreen} />
         <Stack.Screen name="PlanSelection" component={PlanSelectionScreen} />
@@ -84,6 +84,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Auth" component={RegisterScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="PracticeFrequency" component={PracticeFrequencyScreen} />
+        <Stack.Screen name="Home" component={RootNavigator} />
       </Stack.Navigator>
     );
   }

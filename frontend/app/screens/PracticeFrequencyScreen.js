@@ -19,6 +19,7 @@ import AnimatedCTA from '../components/AnimatedCTA';
 import { spacing } from '../styles/spacing';
 import { typography } from '../styles/typography';
 import { useAuth } from '../context/AuthContext';
+import { updateUserProfile } from '../utils/api';
 
 const FREQUENCY_OPTIONS = [
   {
@@ -57,22 +58,37 @@ export default function PracticeFrequencyScreen({ navigation }) {
 
     setSaving(true);
     try {
-      // TODO: Persist practice_frequency to user_profile via API
-      // For now, we'll just navigate - API call will be added when endpoint is available
-      // await updateUserProfile({ practice_frequency: selectedFrequency });
+      // Persist practice_frequency to user_profile via API
+      if (token) {
+        try {
+          await updateUserProfile({ practice_frequency: selectedFrequency });
+        } catch (profileError) {
+          console.error('Failed to save practice frequency:', profileError);
+          // Continue even if save fails
+        }
+      }
       
-      // Navigate to personalized HomeScreen
-      navigation?.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
+      // Navigate to personalized HomeScreen (which will route based on intent_type)
+      // Use replace to prevent going back to onboarding
+      if (navigation?.replace) {
+        navigation.replace('Home');
+      } else if (navigation?.reset) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      }
     } catch (error) {
       console.error('Failed to save practice frequency:', error);
       // Still navigate even if save fails
-      navigation?.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
+      if (navigation?.replace) {
+        navigation.replace('Home');
+      } else if (navigation?.reset) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      }
     } finally {
       setSaving(false);
     }
