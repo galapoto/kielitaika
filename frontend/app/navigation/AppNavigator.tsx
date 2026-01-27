@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { getCurrentUser } from '../services/authService';
@@ -19,6 +20,21 @@ import ProfessionSelectionScreen from '../screens/ProfessionSelectionScreen';
 import PracticeFrequencyScreen from '../screens/PracticeFrequencyScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
+
+const LoadingScreen = () => (
+  <View style={loadingStyles.container}>
+    <ActivityIndicator size="large" color="#7dd3fc" />
+  </View>
+);
+
+const loadingStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+  },
+});
 
 const Stack = createNativeStackNavigator();
 
@@ -63,24 +79,6 @@ export default function AppNavigator() {
   if (loading || checkingOnboarding) {
     // Return a minimal loading state - don't return null as it causes blank screen
     // Use key to force re-render when auth state changes
-    const LoadingScreen = () => {
-      const React = require('react');
-      const { View, ActivityIndicator, StyleSheet } = require('react-native');
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#7dd3fc" />
-        </View>
-      );
-    };
-    const styles = require('react-native').StyleSheet.create({
-      loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#0f172a',
-      },
-    });
-    
     return (
       <Stack.Navigator key="loading" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Loading" component={LoadingScreen} />
