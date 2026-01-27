@@ -43,8 +43,9 @@ export default function AppNavigator() {
         setOnboardingCompleted(completed);
       } catch (error) {
         console.error('Failed to check onboarding status:', error);
-        // Default to showing onboarding if check fails
-        setOnboardingCompleted(false);
+        // For returning authenticated users, default to completed onboarding
+        // This allows them to access the app even if the check fails
+        setOnboardingCompleted(true);
       } finally {
         setCheckingOnboarding(false);
       }
