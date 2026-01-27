@@ -26,7 +26,9 @@ import SettingsScreen from "../screens/SettingsScreen";
 import NotificationSettingsScreen from "../screens/NotificationSettingsScreen";
 import PrivacySettingsScreen from "../screens/PrivacySettingsScreen";
 import SubscriptionScreen from "../screens/SubscriptionScreen";
+import PracticeScreen from "../screens/PracticeScreen";
 import { useAuth } from "../context/AuthContext";
+import CustomDrawerContent from "../components/CustomDrawerContent";
 
 const Drawer = createDrawerNavigator();
 const YKIStack = createNativeStackNavigator();
@@ -85,13 +87,16 @@ export default function RootNavigator() {
       // Force modern drawer to avoid `useLegacyImplementation` crashes.
       useLegacyImplementation={false}
       initialRouteName="Home"
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         headerShown: false,
         drawerStyle: {
           backgroundColor: "#0f172a",
+          width: '75%', // Sidebar covers ~75% of screen based on attachment
         },
         drawerActiveTintColor: "#7dd3fc",
         drawerInactiveTintColor: "#94a3b8",
+        overlayColor: 'rgba(0, 0, 0, 0.5)', // Dark overlay when drawer is open
       }}
     >
       <Drawer.Screen
@@ -113,6 +118,30 @@ export default function RootNavigator() {
         component={canAccessWork ? WorkPlanStack : HomeScreen}
         options={{
           title: "Työvalmius‑suunnitelma",
+        }}
+      />
+      <Drawer.Screen
+        name="Practice"
+        component={PracticeScreen}
+        options={{
+          title: "Harjoittelu",
+          drawerItemStyle: { display: "none" }, // Hidden from default drawer, shown in custom content
+        }}
+      />
+      <Drawer.Screen
+        name="Conversation"
+        component={ConversationScreen}
+        options={{
+          title: "Puhuminen",
+          drawerItemStyle: { display: "none" }, // Hidden from default drawer, shown in custom content
+        }}
+      />
+      <Drawer.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{
+          title: "Asetukset",
+          drawerItemStyle: { display: "none" }, // Hidden from default drawer, shown in custom content
         }}
       />
     </Drawer.Navigator>
