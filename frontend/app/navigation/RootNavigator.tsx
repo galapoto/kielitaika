@@ -1,8 +1,7 @@
 // RootNavigator - Drawer navigation wrapper
-// Ensure Reanimated is configured before drawer is created
-import Reanimated from 'react-native-reanimated';
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useSharedValue } from "react-native-reanimated";
 import HomeScreen from "../screens/HomeScreen";
 import YKIScreen from "../screens/YKIScreen";
 import YKIDailySessionScreen from "../screens/YKIDailySessionScreen";
@@ -37,20 +36,7 @@ import { useAuth } from "../context/AuthContext";
 import CustomDrawerContent from "../components/CustomDrawerContent";
 import SpeakingScreenWrapper from "../components/SpeakingScreenWrapper";
 
-// Create drawer after ensuring Reanimated is available
-// Use a function to delay creation until runtime
-let Drawer: ReturnType<typeof createDrawerNavigator>;
-function getDrawer() {
-  if (!Drawer) {
-    // Ensure Reanimated is imported and available
-    if (typeof Reanimated !== 'undefined') {
-      Drawer = createDrawerNavigator();
-    } else {
-      throw new Error('Reanimated is not available');
-    }
-  }
-  return Drawer;
-}
+const Drawer = createDrawerNavigator();
 const YKIStack = createNativeStackNavigator();
 const WorkStack = createNativeStackNavigator();
 
@@ -143,7 +129,9 @@ export default function RootNavigator() {
   const canAccessYki = accessState?.yki === true;
   const canAccessWork = accessState?.work === true;
   
-  const Drawer = getDrawer();
+  // Force Reanimated to be configured by using a hook
+  // This ensures isConfigured() returns true before Drawer is used
+  useSharedValue(0);
 
   return (
     <Drawer.Navigator
