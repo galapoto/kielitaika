@@ -108,10 +108,14 @@ export function AuthProvider({ children }) {
 
   const handleLogin = async (email, password) => {
     try {
+      console.log('AuthContext: Starting login for', email);
       const response = await login(email, password);
+      console.log('AuthContext: Login response received', { user_id: response?.user_id, email: response?.email });
       await saveAuthState(response);
+      console.log('AuthContext: Auth state saved, isAuthenticated should be true');
       return response;
     } catch (error) {
+      console.error('AuthContext: Login failed', error);
       throw error;
     }
   };
@@ -147,6 +151,8 @@ export function AuthProvider({ children }) {
       subscriptionTier: authData.subscription_tier,
     };
 
+    console.log('AuthContext: Saving auth state', { userId: userData.id, email: userData.email });
+    
     await Promise.all([
       AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: userData })),
       AsyncStorage.setItem(TOKEN_STORAGE_KEY, authData.access_token),
@@ -157,6 +163,8 @@ export function AuthProvider({ children }) {
     setToken(authData.access_token);
     setRefreshTokenValue(authData.refresh_token);
     setIsAuthenticated(true);
+    
+    console.log('AuthContext: Auth state updated, isAuthenticated = true');
   };
 
   const logout = async () => {
