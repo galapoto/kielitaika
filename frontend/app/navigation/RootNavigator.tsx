@@ -132,6 +132,8 @@ export default function RootNavigator() {
     <Drawer.Navigator
       initialRouteName="Home"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
+      // Explicitly disable legacy implementation for Reanimated 3+
+      useLegacyImplementation={false}
       screenOptions={{
         headerShown: false,
         drawerStyle: {
