@@ -13,7 +13,7 @@ import {
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../../context/AuthContext';
-import GoogleLogo from '../../ui/icons/GoogleLogo';
+// import GoogleLogo from '../../ui/icons/GoogleLogo'; // Disabled to avoid SVG Fabric error
 import RukaLogo3D from '../../components/RukaLogo3D';
 import Background from '../../components/ui/Background';
 import useOnboardingSession from '../../state/useOnboardingSession';
@@ -211,7 +211,9 @@ export default function RegisterScreen({ navigation }) {
                   disabled={googleLoading || !request}
                 >
                   <View style={styles.googleButtonContent}>
-                    <GoogleLogo size={20} />
+                    <View style={styles.googleIconContainer}>
+                      <Text style={styles.googleIconText}>G</Text>
+                    </View>
                     <Text style={styles.googleButtonText}>
                       {googleLoading ? 'Connecting...' : 'Sign Up With Google'}
                     </Text>
@@ -322,6 +324,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  googleIconContainer: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
+  },
+  googleIconText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4285F4',
   },
   googleButtonText: {
     fontSize: 16,
