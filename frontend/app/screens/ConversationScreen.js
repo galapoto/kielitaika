@@ -45,15 +45,22 @@ export default function ConversationScreen({ navigation, route } = {}) {
       if (sessionStatus === 'completed') return;
       const normalized = String(text || '').trim();
       if (!normalized) return;
+      // Store user transcript in engine first
       setSpeakingTurnUserTranscript(sessionId, turnIndex, normalized);
       setInputText('');
+      // Then send to backend via WebSocket
       try {
-        sendUserMessage?.(normalized, { level, path, profession: field });
-      } catch (_) {
+        if (sendUserMessage && connected) {
+          sendUserMessage(normalized, { level, path, profession: field });
+        } else {
+          console.warn('Conversation WebSocket not connected. Message not sent.');
+        }
+      } catch (err) {
+        console.error('Failed to send user message:', err);
         // transport failures are ignored at UI level
       }
     },
-    [field, level, path, sendUserMessage, sessionId, sessionStatus, turnIndex]
+    [field, level, path, sendUserMessage, connected, sessionId, sessionStatus, turnIndex]
   );
 
   const { startRecording, stopRecording, isRecording, isProcessing } = useVoiceStreaming({
@@ -72,21 +79,31 @@ export default function ConversationScreen({ navigation, route } = {}) {
   }, [sessionStatus, stopRecording]);
 
   // Store latest AI message as transcript for the current turn.
+  // Only process new messages that arrive after the current turn's user message was sent.
   useEffect(() => {
     if (sessionStatus === 'completed') return;
     if (!Array.isArray(wsMessages) || wsMessages.length === 0) return;
 
+    // Find the most recent assistant message
     const lastAssistant = [...wsMessages].reverse().find((m) => m?.role === 'assistant' && m?.text);
     if (!lastAssistant) return;
 
     const msgId = lastAssistant.id || lastAssistant.ts || lastAssistant.createdAt || lastAssistant.text;
+    // Skip if this is the same message we already processed
     if (msgId === lastAiMessageIdRef.current) return;
-    lastAiMessageIdRef.current = msgId;
+    
+    // Only update if we have a user transcript for this turn (ensures AI response matches current turn)
+    const currentUserText = turn?.userSpeech?.transcript;
+    if (!currentUserText) {
+      // No user message for this turn yet, wait for it
+      return;
+    }
 
+    lastAiMessageIdRef.current = msgId;
     setSpeakingTurnAiTranscript(sessionId, turnIndex, String(lastAssistant.text || ''), {
       isConclusive: turnIndex >= 4,
     });
-  }, [sessionId, sessionStatus, turnIndex, wsMessages]);
+  }, [sessionId, sessionStatus, turnIndex, wsMessages, turn?.userSpeech?.transcript]);
 
   // Live-mode audio playback only (never in review mode).
   useEffect(() => {
