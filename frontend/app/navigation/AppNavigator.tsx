@@ -56,7 +56,12 @@ export default function AppNavigator() {
 
   // Show nothing while checking auth/onboarding status
   if (loading || checkingOnboarding) {
-    return null; // Or a loading screen
+    // Return a minimal loading state - don't return null as it causes blank screen
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Loading" component={() => null} />
+      </Stack.Navigator>
+    );
   }
 
   // Not authenticated - show auth screens

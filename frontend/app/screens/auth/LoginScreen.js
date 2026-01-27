@@ -61,11 +61,15 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       // Use email as username for now (or update auth service to accept username)
-      await withTimeout(login(email.trim(), password), 12000);
+      const response = await withTimeout(login(email.trim(), password), 12000);
+      console.log('Login successful:', response);
       // Navigation will be handled automatically by AppNavigator based on auth state
       // AppNavigator will route to HomeScreen (personalized) for returning users
       // or onboarding flow for new users
+      // Force a small delay to ensure state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
+      console.error('Login error:', error);
       const message = error?.message || 'Please check your credentials and try again.';
       setErrorMessage(message);
       Alert.alert('Login Failed', message);
