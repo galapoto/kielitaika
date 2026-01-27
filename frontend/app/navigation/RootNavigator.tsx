@@ -1,6 +1,11 @@
 // RootNavigator - Drawer navigation wrapper
 // Ensure Reanimated is configured before drawer is created
-import 'react-native-reanimated';
+import Reanimated from 'react-native-reanimated';
+// Force Reanimated to be configured by using it
+if (Reanimated.isConfigured && !Reanimated.isConfigured()) {
+  // This should not happen if babel plugin is working, but ensures initialization
+  console.warn('Reanimated may not be properly configured');
+}
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../screens/HomeScreen";
