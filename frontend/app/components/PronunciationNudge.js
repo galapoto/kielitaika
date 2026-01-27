@@ -14,8 +14,9 @@ import {
   setSpeakingTurnUserTranscript,
   useSpeakingSession,
 } from '../utils/speakingAttempts';
+import { HTTP_API_BASE } from '../config/backend';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
+const API_BASE = HTTP_API_BASE;
 
 /**
  * Pronunciation Nudge Component

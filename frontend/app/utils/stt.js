@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
+import { HTTP_API_BASE } from '../config/backend';
 
 const OPENAI_TRANSCRIBE_URL = 'https://api.openai.com/v1/audio/transcriptions';
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
+const API_BASE = HTTP_API_BASE;
 
 const safeString = (value) => (typeof value === 'string' ? value : '');
 
@@ -126,4 +127,3 @@ export async function transcribeAudio({
     },
   };
 }
-

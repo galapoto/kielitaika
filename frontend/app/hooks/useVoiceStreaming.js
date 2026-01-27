@@ -3,9 +3,10 @@ import { AppState, Platform } from 'react-native';
 import { useAudioRecorder } from './useAudioRecorder';
 import useWebSocket from './useWebSocket';
 import { transcribeAudio } from '../utils/stt';
+import { HTTP_API_BASE, WS_API_BASE } from '../config/backend';
 import { assertSpeakingSessionActive, isSpeakingReviewActive } from '../utils/speakingAttempts';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
+const API_BASE = HTTP_API_BASE;
 
 /**
  * Enhanced voice streaming hook with VAD, WebSocket streaming, and state management
@@ -237,7 +238,7 @@ export function useVoiceStreaming(options = {}) {
       };
 
       // Connect to STT WebSocket
-      const wsUrl = API_BASE.replace('http', 'ws') + '/voice/stt-stream';
+      const wsUrl = `${WS_API_BASE}/voice/stt-stream`;
       connectSTT(wsUrl);
 
       // Start recording (send chunks every 100ms)
@@ -381,7 +382,7 @@ export function useVoiceStreaming(options = {}) {
       }
 
       // Connect to TTS WebSocket
-      const wsUrl = API_BASE.replace('http', 'ws') + '/voice/tts-stream';
+      const wsUrl = `${WS_API_BASE}/voice/tts-stream`;
       connectTTS(wsUrl);
 
       // Wait for connection, then send text
@@ -392,6 +393,7 @@ export function useVoiceStreaming(options = {}) {
           setTimeout(() => waitForConnection(attempt + 1), 150);
         } else {
           // Fallback to HTTP TTS
+          console.error('TTS WebSocket failed to connect. Falling back to HTTP TTS.');
           speakTextHTTP(text);
         }
       };

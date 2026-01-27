@@ -27,6 +27,7 @@ export function useConversationSocket(userId) {
     
     ws.onerror = (error) => {
       setConnected(false);
+      console.error('Conversation WebSocket error:', error);
     };
     
     ws.onmessage = (event) => {
@@ -38,7 +39,7 @@ export function useConversationSocket(userId) {
           setMessages((prev) => [...prev, messageWithId]);
         }
       } catch (_) {
-        // ignore parse errors
+        console.error('Conversation WebSocket message parse error');
       }
     };
     
@@ -49,7 +50,10 @@ export function useConversationSocket(userId) {
   }, [userId]);
 
   const sendUserMessage = useCallback((text, options = {}) => {
-    if (!wsRef.current || wsRef.current.readyState !== 1) return;
+    if (!wsRef.current || wsRef.current.readyState !== 1) {
+      console.error('Conversation WebSocket is not connected. Message not sent.');
+      return;
+    }
     const payload = {
       role: 'user',
       text,

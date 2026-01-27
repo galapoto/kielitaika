@@ -108,7 +108,7 @@ export default function useWebSocket(onMessage, onError, options = {}) {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(data);
     } else {
-      console.warn('WebSocket is not connected');
+      console.error('WebSocket is not connected. Message not sent.');
     }
   }, []);
 

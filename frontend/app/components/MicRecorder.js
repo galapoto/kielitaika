@@ -3,9 +3,10 @@ import { TouchableOpacity, View, Text, StyleSheet, ActivityIndicator, Platform }
 import useWebSocket from '../hooks/useWebSocket';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { handleSTTFailure, handleNetworkError, handlePermissionError, handleEmptyRecording, YKIError, YKIErrorType } from '../services/ykiErrorService';
+import { HTTP_API_BASE, WS_API_BASE } from '../config/backend';
 import { assertSpeakingSessionActive } from '../utils/speakingAttempts';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
+const API_BASE = HTTP_API_BASE;
 const hasMediaRecorder =
   typeof window !== 'undefined' &&
   typeof MediaRecorder !== 'undefined' &&
@@ -125,7 +126,7 @@ export default function MicRecorder({ onTranscript, minSeconds = 0 }) {
       };
 
       // Connect to WebSocket STT endpoint
-      const wsUrl = API_BASE.replace('http', 'ws') + '/voice/stt-stream';
+      const wsUrl = `${WS_API_BASE}/voice/stt-stream`;
       transcriptRef.current = '';
       connect(wsUrl);
 

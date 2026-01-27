@@ -9,8 +9,9 @@
 import { Audio } from 'expo-av';
 import { Platform } from 'react-native';
 import { handleTTSFailure, handleNetworkError, YKIError, YKIErrorType } from './ykiErrorService';
+import { HTTP_API_BASE } from '../config/backend';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
+const API_BASE = HTTP_API_BASE;
 
 // Get auth token for authenticated requests
 async function getAuthToken(): Promise<string | null> {
