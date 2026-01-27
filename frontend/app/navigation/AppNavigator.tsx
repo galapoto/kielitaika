@@ -23,9 +23,14 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const { isAuthenticated, loading, token } = useAuth();
+  const { isAuthenticated, loading, token, user } = useAuth();
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('AppNavigator state:', { isAuthenticated, loading, checkingOnboarding, onboardingCompleted, hasToken: !!token, userId: user?.id });
+  }, [isAuthenticated, loading, checkingOnboarding, onboardingCompleted, token, user]);
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
@@ -57,8 +62,9 @@ export default function AppNavigator() {
   // Show nothing while checking auth/onboarding status
   if (loading || checkingOnboarding) {
     // Return a minimal loading state - don't return null as it causes blank screen
+    // Use key to force re-render when auth state changes
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator key="loading" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Loading" component={() => null} />
       </Stack.Navigator>
     );
@@ -67,7 +73,7 @@ export default function AppNavigator() {
   // Not authenticated - show auth screens
   if (!isAuthenticated) {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator key="auth" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="IntentQuiz" component={IntentQuizScreen} />
         <Stack.Screen name="PlanSelection" component={PlanSelectionScreen} />
@@ -82,7 +88,7 @@ export default function AppNavigator() {
   // Authenticated but onboarding not completed - show onboarding flow
   if (!onboardingCompleted) {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Welcome">
+      <Stack.Navigator key="onboarding" screenOptions={{ headerShown: false }} initialRouteName="Welcome">
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="IntentQuiz" component={IntentQuizScreen} />
         <Stack.Screen name="PlanSelection" component={PlanSelectionScreen} />
@@ -97,8 +103,9 @@ export default function AppNavigator() {
 
   // Authenticated and onboarding completed - show main app
   // Wrap in Stack to allow navigation from onboarding flow
+  // Use key to force re-render when transitioning from auth to authenticated
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator key="main" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainApp" component={RootNavigator} />
       <Stack.Screen name="Home" component={RootNavigator} />
     </Stack.Navigator>
