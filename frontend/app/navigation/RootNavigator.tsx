@@ -1,11 +1,6 @@
 // RootNavigator - Drawer navigation wrapper
 // Ensure Reanimated is configured before drawer is created
 import Reanimated from 'react-native-reanimated';
-// Force Reanimated to be configured by using it
-if (Reanimated.isConfigured && !Reanimated.isConfigured()) {
-  // This should not happen if babel plugin is working, but ensures initialization
-  console.warn('Reanimated may not be properly configured');
-}
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../screens/HomeScreen";
@@ -42,7 +37,20 @@ import { useAuth } from "../context/AuthContext";
 import CustomDrawerContent from "../components/CustomDrawerContent";
 import SpeakingScreenWrapper from "../components/SpeakingScreenWrapper";
 
-const Drawer = createDrawerNavigator();
+// Create drawer after ensuring Reanimated is available
+// Use a function to delay creation until runtime
+let Drawer: ReturnType<typeof createDrawerNavigator>;
+function getDrawer() {
+  if (!Drawer) {
+    // Ensure Reanimated is imported and available
+    if (typeof Reanimated !== 'undefined') {
+      Drawer = createDrawerNavigator();
+    } else {
+      throw new Error('Reanimated is not available');
+    }
+  }
+  return Drawer;
+}
 const YKIStack = createNativeStackNavigator();
 const WorkStack = createNativeStackNavigator();
 
@@ -134,6 +142,8 @@ export default function RootNavigator() {
   const { accessState } = useAuth();
   const canAccessYki = accessState?.yki === true;
   const canAccessWork = accessState?.work === true;
+  
+  const Drawer = getDrawer();
 
   return (
     <Drawer.Navigator
