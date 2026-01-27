@@ -84,11 +84,17 @@ export default function AppNavigator() {
         <Stack.Screen name="Auth" component={RegisterScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="PracticeFrequency" component={PracticeFrequencyScreen} />
-        <Stack.Screen name="Home" component={RootNavigator} />
+        <Stack.Screen name="MainApp" component={RootNavigator} />
       </Stack.Navigator>
     );
   }
 
   // Authenticated and onboarding completed - show main app
-  return <RootNavigator />;
+  // Wrap in Stack to allow navigation from onboarding flow
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainApp" component={RootNavigator} />
+      <Stack.Screen name="Home" component={RootNavigator} />
+    </Stack.Navigator>
+  );
 }

@@ -68,14 +68,14 @@ export default function PracticeFrequencyScreen({ navigation }) {
         }
       }
       
-      // Navigate to personalized HomeScreen (which will route based on intent_type)
+      // Navigate to main app (which will show personalized HomeScreen)
       // Use replace to prevent going back to onboarding
       if (navigation?.replace) {
-        navigation.replace('Home');
+        navigation.replace('MainApp');
       } else if (navigation?.reset) {
         navigation.reset({
           index: 0,
-          routes: [{ name: 'Home' }],
+          routes: [{ name: 'MainApp' }],
         });
       }
     } catch (error) {
