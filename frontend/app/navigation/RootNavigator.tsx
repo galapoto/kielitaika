@@ -174,7 +174,7 @@ export default function RootNavigator() {
       />
       <Drawer.Screen
         name="Conversation"
-        component={ConversationScreen}
+        component={(props) => <SpeakingScreenWrapper screenName="Conversation" ScreenComponent={ConversationScreen} {...props} />}
         options={{
           title: "Puhuminen",
           drawerItemStyle: { display: "none" }, // Hidden from default drawer, shown in custom content
