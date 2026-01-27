@@ -40,6 +40,12 @@
         {
           "microphonePermission": "Allow KieliTaika to access your microphone for speaking practice."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow KieliTaika to access your photos to select a profile picture."
+        }
       ]
     ]
   }
