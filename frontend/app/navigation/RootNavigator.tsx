@@ -148,6 +148,9 @@ export default function RootNavigator() {
     <Drawer.Navigator
       initialRouteName="Home"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
+      // Explicitly disable legacy implementation - required for Reanimated 3+
+      // The library defaults to true if isConfigured() returns false, which causes the error
+      useLegacyImplementation={false}
       screenOptions={{
         headerShown: false,
         drawerStyle: {
