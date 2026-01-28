@@ -27,6 +27,14 @@ export default function PracticeRoundScreen({ route, navigation } = {}) {
   const profession = route?.params?.profession || route?.params?.field || 'nurse';
   const professionLabel = getProfessionLabel(profession);
   const level = route?.params?.level || 'B1';
+
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
   
   const [round, setRound] = useState(null);
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
@@ -323,6 +331,18 @@ export default function PracticeRoundScreen({ route, navigation } = {}) {
 }
 
 const styles = StyleSheet.create({
+  authGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  authGuardText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: 'transparent',
@@ -507,7 +527,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
-
 
 
 

@@ -49,6 +49,14 @@ export default function PracticeFrequencyScreen({ navigation }) {
   const [selectedFrequency, setSelectedFrequency] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  if (!token) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
+
   const handleSelectFrequency = (frequencyId) => {
     setSelectedFrequency(frequencyId);
   };
@@ -134,6 +142,18 @@ export default function PracticeFrequencyScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  authGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: spacing?.lg || 24,
+  },
+  authGuardText: {
+    color: '#e2e8f0',
+    fontSize: typography?.body?.fontSize || 16,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     paddingHorizontal: spacing.l,

@@ -33,8 +33,16 @@ const API_BASE = process.env.EXPO_PUBLIC_API_BASE || 'http://localhost:8000';
 export default function DeleteAccountScreen({ navigation }) {
   const [confirmText, setConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const requiredText = 'DELETE';
+
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
 
   const handleDelete = async () => {
     if (confirmText !== requiredText) {
@@ -132,6 +140,18 @@ export default function DeleteAccountScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  authGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  authGuardText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: 'transparent',

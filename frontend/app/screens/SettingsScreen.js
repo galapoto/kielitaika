@@ -34,6 +34,14 @@ export default function SettingsScreen({ navigation }) {
   const [isProfileModalVisible, setProfileModalVisible] = React.useState(false);
   const [profileModalUrl, setProfileModalUrl] = React.useState(profilePictureUrl);
 
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
+
   React.useEffect(() => {
     setProfilePictureUrl(user?.profile_picture_url || user?.profilePictureUrl || '');
   }, [user]);
@@ -378,6 +386,18 @@ export default function SettingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  authGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  authGuardText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: 'transparent',

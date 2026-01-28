@@ -171,6 +171,13 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
     trackScreen('LessonDetailScreen', { type, level, title });
   }, [trackScreen, route?.params]);
   const { user } = useAuth();
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
   const { lessonId, type = 'grammar', level = 'A1', path = 'general', field: routeField, professionId } = route?.params || {};
   const field = routeField || professionId || null;
   // For workplace we preserve module ids like "practice" and "review" to keep flows distinct.
@@ -1108,6 +1115,18 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
 }
 
 const styles = StyleSheet.create({
+  authGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  authGuardText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: 'transparent',

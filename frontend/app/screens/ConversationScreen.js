@@ -25,6 +25,13 @@ export default function ConversationScreen({ navigation, route } = {}) {
   const { level = 'A1', path = 'general', field = null, type = 'speaking' } = route?.params || {};
 
   const { user } = useAuth();
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
   const socketUserId = user?.id || null;
   const { messages: wsMessages, sendUserMessage, connected } = useConversationSocket(socketUserId);
 
@@ -215,6 +222,18 @@ export default function ConversationScreen({ navigation, route } = {}) {
 }
 
 const styles = StyleSheet.create({
+  authGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  authGuardText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     padding: 18,

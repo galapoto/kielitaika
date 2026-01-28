@@ -36,6 +36,14 @@ export default function CompetenceDashboardScreen({ route, navigation } = {}) {
   const profession = route?.params?.profession || route?.params?.field || 'nurse';
   const professionLabel = getProfessionLabel(profession);
   
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
+
   const [dashboard, setDashboard] = useState(null);
   const [progress, setProgress] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -251,6 +259,18 @@ export default function CompetenceDashboardScreen({ route, navigation } = {}) {
 }
 
 const styles = StyleSheet.create({
+  authGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  authGuardText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: 'transparent',
@@ -461,7 +481,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
 
 
 

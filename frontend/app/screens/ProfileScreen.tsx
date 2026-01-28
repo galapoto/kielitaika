@@ -6,6 +6,13 @@ import Background from "../components/ui/Background";
 
 export default function ProfileScreen({ navigation }) {
   const { user } = useAuth();
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
 
   // Using 16th picture design - Profile screen with user info, settings options
   return (
@@ -83,6 +90,18 @@ export default function ProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  authGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  authGuardText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: 'transparent',
@@ -195,6 +214,5 @@ const styles = StyleSheet.create({
     color: '#1E3A8A',
   },
 });
-
 
 

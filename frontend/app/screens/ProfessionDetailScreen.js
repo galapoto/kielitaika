@@ -40,6 +40,13 @@ export default function ProfessionDetailScreen({ route, navigation } = {}) {
   const field = route?.params?.field || route?.params?.professionId || route?.params?.professionId;
   const fieldName = route?.params?.fieldName || 'Ammatti';
   const profession = route?.params?.profession || { title: fieldName, description: 'Opiskele ammattikohtaista suomea' };
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
   const handleModulePress = (module) => {
     if (module.screen === 'Roleplay') {
       navigation?.navigate('Roleplay', { field, fieldName });
@@ -146,6 +153,18 @@ export default function ProfessionDetailScreen({ route, navigation } = {}) {
 }
 
 const styles = StyleSheet.create({
+  authGuard: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  authGuardText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: 'transparent',
