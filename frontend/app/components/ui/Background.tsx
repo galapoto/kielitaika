@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, useColorScheme, ImageBackground, Platform } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme, ImageBackground, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Animated, { 
@@ -128,6 +128,25 @@ interface BackgroundProps {
 import { getBackgroundImage } from '../../lib/backgroundLoader';
 
 const styles = StyleSheet.create({
+  lockedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    padding: 24,
+  },
+  lockedTitle: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  lockedMessage: {
+    color: '#cbd5f5',
+    fontSize: 14,
+    textAlign: 'center',
+  },
   imageBackground: {
     resizeMode: 'cover',
     opacity: 0.72,
@@ -486,6 +505,24 @@ export function ReadabilityPanel({
       ]}
     >
       {children}
+    </View>
+  );
+}
+
+/**
+ * LockedFeature - Visible placeholder for gated or unavailable screens
+ */
+export function LockedFeature({
+  title = 'Ei saatavilla',
+  message = 'Tämä ominaisuus ei ole saatavilla nykyisessä tilassa.',
+}: {
+  title?: string;
+  message?: string;
+}) {
+  return (
+    <View style={styles.lockedContainer}>
+      <Text style={styles.lockedTitle}>{title}</Text>
+      <Text style={styles.lockedMessage}>{message}</Text>
     </View>
   );
 }

@@ -21,7 +21,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import Background from '../components/ui/Background';
+import Background, { LockedFeature } from '../components/ui/Background';
 import useOnboardingStore from '../state/useOnboardingStore';
 import PremiumEmbossedButton from '../components/PremiumEmbossedButton';
 import RukaLogo3D from '../components/RukaLogo3D';
@@ -429,7 +429,12 @@ export default function OnboardingScreen({ navigation }) {
   }
 
   // Should not reach here, but fallback
-  return null;
+  return (
+    <LockedFeature
+      title="Onboarding ei ole käytettävissä"
+      message="Tätä näkymää ei voida näyttää tässä tilassa."
+    />
+  );
 }
 
 const styles = StyleSheet.create({

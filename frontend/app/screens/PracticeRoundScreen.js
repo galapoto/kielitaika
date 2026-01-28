@@ -15,7 +15,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import Background from '../components/ui/Background';
+import Background, { LockedFeature } from '../components/ui/Background';
 import { generatePracticeRoundV2 } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import HomeButton from '../components/HomeButton';
@@ -136,10 +136,24 @@ export default function PracticeRoundScreen({ route, navigation } = {}) {
   };
 
   const renderCurrentTask = () => {
-    if (!round || !round.tasks || round.tasks.length === 0) return null;
+    if (!round || !round.tasks || round.tasks.length === 0) {
+      return (
+        <LockedFeature
+          title="Harjoituskierros ei ole käytettävissä"
+          message="Tehtäviä ei löytynyt. Tarkista yhteys ja yritä uudelleen."
+        />
+      );
+    }
     
     const currentTask = round.tasks[currentTaskIndex];
-    if (!currentTask) return null;
+    if (!currentTask) {
+      return (
+        <LockedFeature
+          title="Tehtävä ei ole käytettävissä"
+          message="Valittua tehtävää ei löytynyt. Valitse toinen tehtävä."
+        />
+      );
+    }
 
     return (
       <View style={styles.currentTaskContainer}>
@@ -527,7 +541,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
-
 
 
 
