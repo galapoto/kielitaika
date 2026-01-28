@@ -101,6 +101,7 @@ export function AuthProvider({ children }) {
       }
     } catch (error) {
       console.error('Error loading auth state:', error);
+      clearAuthState();
     } finally {
       setLoading(false);
     }
@@ -167,17 +168,25 @@ export function AuthProvider({ children }) {
     console.log('AuthContext: Auth state updated, isAuthenticated = true');
   };
 
-  const logout = async () => {
-    await Promise.all([
-      AsyncStorage.removeItem(AUTH_STORAGE_KEY),
-      AsyncStorage.removeItem(TOKEN_STORAGE_KEY),
-      AsyncStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY),
-    ]);
-
+  const clearAuthState = () => {
     setUser(null);
     setToken(null);
     setRefreshTokenValue(null);
     setIsAuthenticated(false);
+  };
+
+  const logout = async () => {
+    // Clear in-memory state immediately so UI reacts even if storage ops fail.
+    clearAuthState();
+    try {
+      await Promise.all([
+        AsyncStorage.removeItem(AUTH_STORAGE_KEY),
+        AsyncStorage.removeItem(TOKEN_STORAGE_KEY),
+        AsyncStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY),
+      ]);
+    } catch (error) {
+      console.error('Error clearing auth storage:', error);
+    }
   };
 
   const value = {
