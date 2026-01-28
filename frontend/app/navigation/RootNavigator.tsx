@@ -50,6 +50,7 @@ import PracticeScreen from "../screens/PracticeScreen";
 import { useAuth } from "../context/AuthContext";
 import CustomDrawerContent from "../components/CustomDrawerContent";
 import SpeakingScreenWrapper from "../components/SpeakingScreenWrapper";
+import { LockedFeature } from "../components/ui/Background";
 
 const Drawer = createDrawerNavigator();
 const YKIStack = createNativeStackNavigator();
@@ -130,6 +131,24 @@ function WorkPlanStack() {
   );
 }
 
+function YkiLockedScreen() {
+  return (
+    <LockedFeature
+      title="YKI ei saatavilla"
+      message="YKI‑suunnitelma vaatii aktiivisen tilauksen."
+    />
+  );
+}
+
+function WorkLockedScreen() {
+  return (
+    <LockedFeature
+      title="Työvalmius ei saatavilla"
+      message="Työvalmius‑suunnitelma vaatii aktiivisen tilauksen."
+    />
+  );
+}
+
 export default function RootNavigator() {
   const { accessState } = useAuth();
   const devBypass = __DEV__ && process.env.EXPO_PUBLIC_DEV_BYPASS === 'true';
@@ -163,14 +182,14 @@ export default function RootNavigator() {
       />
       <Drawer.Screen
         name="YKIPlan"
-        component={canAccessYki ? YKIPlanStack : HomeScreen}
+        component={canAccessYki ? YKIPlanStack : YkiLockedScreen}
         options={{
           title: "YKI‑suunnitelma",
         }}
       />
       <Drawer.Screen
         name="WorkPlan"
-        component={canAccessWork ? WorkPlanStack : HomeScreen}
+        component={canAccessWork ? WorkPlanStack : WorkLockedScreen}
         options={{
           title: "Työvalmius‑suunnitelma",
         }}
