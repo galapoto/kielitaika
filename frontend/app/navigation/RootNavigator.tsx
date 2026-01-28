@@ -1,7 +1,22 @@
 // RootNavigator - Drawer navigation wrapper
+// CRITICAL: Import Reanimated FIRST to ensure it's configured before Drawer creation
+import 'react-native-reanimated';
+import Reanimated from 'react-native-reanimated';
+
+// Force Reanimated to be configured at module level before Drawer is created
+// This ensures isConfigured() returns true when the library checks it
+if (typeof Reanimated !== 'undefined' && Reanimated.isConfigured) {
+  // Touch Reanimated to ensure it's initialized
+  try {
+    // Access a property to trigger initialization
+    const _ = Reanimated.isConfigured();
+  } catch (e) {
+    // Ignore errors
+  }
+}
+
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useSharedValue } from "react-native-reanimated";
 import HomeScreen from "../screens/HomeScreen";
 import YKIScreen from "../screens/YKIScreen";
 import YKIDailySessionScreen from "../screens/YKIDailySessionScreen";
@@ -128,10 +143,6 @@ export default function RootNavigator() {
   const { accessState } = useAuth();
   const canAccessYki = accessState?.yki === true;
   const canAccessWork = accessState?.work === true;
-  
-  // Force Reanimated to be configured by using a hook
-  // This ensures isConfigured() returns true before Drawer is used
-  useSharedValue(0);
 
   return (
     <Drawer.Navigator
