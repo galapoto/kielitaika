@@ -12,7 +12,6 @@ import com.facebook.react.ReactHost
 import com.facebook.react.common.ReleaseLevel
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 import com.facebook.react.defaults.DefaultReactNativeHost
-import com.swmansion.gesturehandler.RNGestureHandlerPackage
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
@@ -24,8 +23,14 @@ class MainApplication : Application(), ReactApplication {
       object : DefaultReactNativeHost(this) {
         override fun getPackages(): List<ReactPackage> =
             PackageList(this).packages.apply {
-                // Ensure gesture handler is registered explicitly.
-                add(RNGestureHandlerPackage())
+                // Register gesture handler via reflection to avoid compile-time linkage issues.
+                try {
+                    val clazz = Class.forName("com.swmansion.gesturehandler.RNGestureHandlerPackage")
+                    val pkg = clazz.getDeclaredConstructor().newInstance() as ReactPackage
+                    add(pkg)
+                } catch (e: Exception) {
+                    android.util.Log.e("MainApplication", "✗ RNGestureHandlerPackage class not found", e)
+                }
             }
 
           override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
