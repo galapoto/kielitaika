@@ -4,11 +4,11 @@
   "private": true,
   "description": "Frontend app for KieliTaika - Finnish language learning platform",
   "scripts": {
-    "start": "expo start --port 8082",
-    "android": "expo start --android --port 8083",
-    "web": "expo start --web --port 8084",
-    "prebuild": "expo prebuild",
-    "ios": "expo run:ios"
+    "start": "npx expo start --port 8082",
+    "android": "npx expo start --android --port 8083",
+    "web": "npx expo start --web --port 8084",
+    "prebuild": "npx expo prebuild",
+    "ios": "npx expo run:ios"
   },
   "dependencies": {
     "@expo/metro-runtime": "^6.1.2",
@@ -46,6 +46,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "@types/react-native": "^0.73.0",
     "typescript": "~5.9.2"
   }
 }
