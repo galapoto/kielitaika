@@ -47,6 +47,9 @@ function NavigationRoot() {
 export default function App() {
   useEffect(() => {
     console.log('RUNTIME BUILD ID (App.js):', runtimeBuildId);
+    if (__DEV__ && process.env.EXPO_PUBLIC_DEV_BYPASS === 'true') {
+      console.warn('DEV BYPASS ENABLED: gated features unlocked for local development.');
+    }
     // Verification: Test backend connection on app start
     fetch(`${HTTP_API_BASE}/`)
       .then(r => r.json().catch(() => ({ status: 'ok' })))

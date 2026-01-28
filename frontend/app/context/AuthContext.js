@@ -37,6 +37,7 @@ const AuthContext = createContext(null);
 const AUTH_STORAGE_KEY = '@ruka_auth';
 const TOKEN_STORAGE_KEY = '@ruka_token';
 const REFRESH_TOKEN_STORAGE_KEY = '@ruka_refresh_token';
+const DEV_BYPASS = __DEV__ && process.env.EXPO_PUBLIC_DEV_BYPASS === 'true';
 
 const deriveAccessState = (tier) => {
   const normalizedTier = tier || 'free';
@@ -58,6 +59,19 @@ export function AuthProvider({ children }) {
 
   // Load auth state from storage on mount
   useEffect(() => {
+    if (DEV_BYPASS) {
+      setUser({
+        id: 'dev',
+        email: 'dev@local',
+        subscriptionTier: 'professional_premium',
+      });
+      setToken('dev-bypass');
+      setRefreshTokenValue('dev-bypass');
+      setIsAuthenticated(true);
+      setLoading(false);
+      console.warn('DEV BYPASS ENABLED: auth state is mocked for local development.');
+      return;
+    }
     loadAuthState();
   }, []);
 

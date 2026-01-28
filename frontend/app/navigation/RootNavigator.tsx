@@ -132,8 +132,9 @@ function WorkPlanStack() {
 
 export default function RootNavigator() {
   const { accessState } = useAuth();
-  const canAccessYki = accessState?.yki === true;
-  const canAccessWork = accessState?.work === true;
+  const devBypass = __DEV__ && process.env.EXPO_PUBLIC_DEV_BYPASS === 'true';
+  const canAccessYki = devBypass || accessState?.yki === true;
+  const canAccessWork = devBypass || accessState?.work === true;
 
   return (
     <Drawer.Navigator
