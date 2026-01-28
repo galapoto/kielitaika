@@ -55,6 +55,30 @@ const Drawer = createDrawerNavigator();
 const YKIStack = createNativeStackNavigator();
 const WorkStack = createNativeStackNavigator();
 
+function ConversationScreenWrapped(props) {
+  return <SpeakingScreenWrapper screenName="Conversation" ScreenComponent={ConversationScreen} {...props} />;
+}
+
+function FluencyScreenWrapped(props) {
+  return <SpeakingScreenWrapper screenName="Fluency" ScreenComponent={FluencyScreen} {...props} />;
+}
+
+function GuidedTurnScreenWrapped(props) {
+  return <SpeakingScreenWrapper screenName="GuidedTurn" ScreenComponent={GuidedTurnScreen} {...props} />;
+}
+
+function ShadowingScreenWrapped(props) {
+  return <SpeakingScreenWrapper screenName="Shadowing" ScreenComponent={ShadowingScreen} {...props} />;
+}
+
+function MicroOutputScreenWrapped(props) {
+  return <SpeakingScreenWrapper screenName="MicroOutput" ScreenComponent={MicroOutputScreen} {...props} />;
+}
+
+function RoleplayScreenWrapped(props) {
+  return <SpeakingScreenWrapper screenName="Roleplay" ScreenComponent={RoleplayScreen} {...props} />;
+}
+
 function YKIPlanStack() {
   return (
     <YKIStack.Navigator screenOptions={{ headerShown: false }}>
@@ -71,26 +95,11 @@ function YKIPlanStack() {
       <YKIStack.Screen name="YKISpeakingExam" component={YKISpeakingExamScreen} />
       <YKIStack.Screen name="YKIWritingExam" component={YKIWritingExamScreen} />
       <YKIStack.Screen name="YKIInfo" component={YKIInfoScreen} />
-      <YKIStack.Screen
-        name="Conversation"
-        component={(props) => <SpeakingScreenWrapper screenName="Conversation" ScreenComponent={ConversationScreen} {...props} />}
-      />
-      <YKIStack.Screen
-        name="Fluency"
-        component={(props) => <SpeakingScreenWrapper screenName="Fluency" ScreenComponent={FluencyScreen} {...props} />}
-      />
-      <YKIStack.Screen
-        name="GuidedTurn"
-        component={(props) => <SpeakingScreenWrapper screenName="GuidedTurn" ScreenComponent={GuidedTurnScreen} {...props} />}
-      />
-      <YKIStack.Screen
-        name="Shadowing"
-        component={(props) => <SpeakingScreenWrapper screenName="Shadowing" ScreenComponent={ShadowingScreen} {...props} />}
-      />
-      <YKIStack.Screen
-        name="MicroOutput"
-        component={(props) => <SpeakingScreenWrapper screenName="MicroOutput" ScreenComponent={MicroOutputScreen} {...props} />}
-      />
+      <YKIStack.Screen name="Conversation" component={ConversationScreenWrapped} />
+      <YKIStack.Screen name="Fluency" component={FluencyScreenWrapped} />
+      <YKIStack.Screen name="GuidedTurn" component={GuidedTurnScreenWrapped} />
+      <YKIStack.Screen name="Shadowing" component={ShadowingScreenWrapped} />
+      <YKIStack.Screen name="MicroOutput" component={MicroOutputScreenWrapped} />
       <YKIStack.Screen name="Settings" component={SettingsScreen} />
       <YKIStack.Screen name="Notifications" component={NotificationSettingsScreen} />
       <YKIStack.Screen name="PrivacySettings" component={PrivacySettingsScreen} />
@@ -104,33 +113,15 @@ function WorkPlanStack() {
     <WorkStack.Navigator screenOptions={{ headerShown: false }}>
       <WorkStack.Screen name="Workplace" component={WorkplaceScreen} />
       <WorkStack.Screen name="ProfessionDetail" component={ProfessionDetailScreen} />
-      <WorkStack.Screen
-        name="Roleplay"
-        component={(props) => <SpeakingScreenWrapper screenName="Roleplay" ScreenComponent={RoleplayScreen} {...props} />}
-      />
+      <WorkStack.Screen name="Roleplay" component={RoleplayScreenWrapped} />
       <WorkStack.Screen name="Vocabulary" component={VocabularyScreen} />
       <WorkStack.Screen name="Quiz" component={QuizScreen} />
       <WorkStack.Screen name="LessonDetail" component={LessonDetailScreen} />
-      <WorkStack.Screen
-        name="Fluency"
-        component={(props) => <SpeakingScreenWrapper screenName="Fluency" ScreenComponent={FluencyScreen} {...props} />}
-      />
-      <WorkStack.Screen
-        name="GuidedTurn"
-        component={(props) => <SpeakingScreenWrapper screenName="GuidedTurn" ScreenComponent={GuidedTurnScreen} {...props} />}
-      />
-      <WorkStack.Screen
-        name="Shadowing"
-        component={(props) => <SpeakingScreenWrapper screenName="Shadowing" ScreenComponent={ShadowingScreen} {...props} />}
-      />
-      <WorkStack.Screen
-        name="MicroOutput"
-        component={(props) => <SpeakingScreenWrapper screenName="MicroOutput" ScreenComponent={MicroOutputScreen} {...props} />}
-      />
-      <WorkStack.Screen
-        name="Conversation"
-        component={(props) => <SpeakingScreenWrapper screenName="Conversation" ScreenComponent={ConversationScreen} {...props} />}
-      />
+      <WorkStack.Screen name="Fluency" component={FluencyScreenWrapped} />
+      <WorkStack.Screen name="GuidedTurn" component={GuidedTurnScreenWrapped} />
+      <WorkStack.Screen name="Shadowing" component={ShadowingScreenWrapped} />
+      <WorkStack.Screen name="MicroOutput" component={MicroOutputScreenWrapped} />
+      <WorkStack.Screen name="Conversation" component={ConversationScreenWrapped} />
       <WorkStack.Screen name="Subscription" component={SubscriptionScreen} />
       <WorkStack.Screen name="Settings" component={SettingsScreen} />
       <WorkStack.Screen name="Notifications" component={NotificationSettingsScreen} />
@@ -193,7 +184,7 @@ export default function RootNavigator() {
       />
       <Drawer.Screen
         name="Conversation"
-        component={(props) => <SpeakingScreenWrapper screenName="Conversation" ScreenComponent={ConversationScreen} {...props} />}
+        component={ConversationScreenWrapped}
         options={{
           title: "Puhuminen",
           drawerItemStyle: { display: "none" }, // Hidden from default drawer, shown in custom content
