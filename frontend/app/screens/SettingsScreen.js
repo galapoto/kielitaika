@@ -63,10 +63,10 @@ export default function SettingsScreen({ navigation }) {
             await logout();
             // Navigation will be handled by App.js auth state
           },
-      },
-    ]
-  );
-};
+        },
+      ]
+    );
+  };
 
   const handleProfileModalClose = () => {
     setProfileModalVisible(false);

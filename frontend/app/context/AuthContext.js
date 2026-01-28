@@ -146,23 +146,29 @@ export function AuthProvider({ children }) {
   };
 
   const saveAuthState = async (authData) => {
+    const rawUser = authData?.user || authData;
     const userData = {
-      id: authData.user_id,
-      email: authData.email,
-      subscriptionTier: authData.subscription_tier,
+      id: rawUser?.id ?? rawUser?.user_id ?? authData?.user_id ?? null,
+      email: rawUser?.email ?? authData?.email ?? null,
+      subscriptionTier:
+        rawUser?.subscription_tier ??
+        rawUser?.subscriptionTier ??
+        authData?.subscription_tier ??
+        authData?.subscriptionTier ??
+        null,
     };
 
     console.log('AuthContext: Saving auth state', { userId: userData.id, email: userData.email });
     
     await Promise.all([
       AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: userData })),
-      AsyncStorage.setItem(TOKEN_STORAGE_KEY, authData.access_token),
-      AsyncStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, authData.refresh_token),
+      AsyncStorage.setItem(TOKEN_STORAGE_KEY, authData.access_token ?? authData.token ?? ''),
+      AsyncStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, authData.refresh_token ?? authData.refreshToken ?? ''),
     ]);
 
     setUser(userData);
-    setToken(authData.access_token);
-    setRefreshTokenValue(authData.refresh_token);
+    setToken(authData.access_token ?? authData.token ?? null);
+    setRefreshTokenValue(authData.refresh_token ?? authData.refreshToken ?? null);
     setIsAuthenticated(true);
     
     console.log('AuthContext: Auth state updated, isAuthenticated = true');

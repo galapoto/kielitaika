@@ -11,7 +11,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { PreferencesProvider } from './context/PreferencesContext';
 
-import RootNavigator from './navigation/RootNavigator';
+import AppNavigator from './navigation/AppNavigator';
 
 function NavigationRoot() {
   const { colors, isDark } = useTheme();
@@ -38,7 +38,7 @@ function NavigationRoot() {
           },
         }}
       >
-        <RootNavigator />
+        <AppNavigator />
       </NavigationContainer>
     </PathProvider>
   );

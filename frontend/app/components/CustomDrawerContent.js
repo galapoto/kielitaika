@@ -23,8 +23,8 @@ export default function CustomDrawerContent(props) {
   const { theme, toggleTheme, isDark } = useTheme();
   const { navigation, state } = props;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigation.closeDrawer();
   };
 
