@@ -81,24 +81,24 @@ export default function YKIScreen({ navigation }) {
   const [todaySession, setTodaySession] = useState(null);
   const [loadingSession, setLoadingSession] = useState(false);
 
-  if (!user) {
-    return (
-      <View style={styles.authGuard}>
-        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
-      </View>
-    );
-  }
-
   useEffect(() => {
+    if (!user) return;
     loadExam();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [examType, level]);
+  }, [examType, level, user]);
 
   useEffect(() => {
     // Fetch today's session for the Daily Session Contract CTA.
     // This is intentionally independent of exam generation.
     let cancelled = false;
     (async () => {
+      if (!user) {
+        if (!cancelled) {
+          setTodaySession(null);
+          setLoadingSession(false);
+        }
+        return;
+      }
       setLoadingSession(true);
       try {
         const res = await getYkiTodaySession('training');
@@ -110,7 +110,7 @@ export default function YKIScreen({ navigation }) {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [user]);
 
   const speakingTasks = useMemo(
     () => (exam?.tasks || []).filter((t) => (t.id || '').startsWith('speaking')),
@@ -195,6 +195,14 @@ export default function YKIScreen({ navigation }) {
   };
 
   const wordCount = (text) => (text ? text.trim().split(/\s+/).filter(Boolean).length : 0);
+
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
 
   return (
     <Background module="yki_read" variant="blue">
