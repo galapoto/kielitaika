@@ -150,10 +150,11 @@ function WorkLockedScreen() {
 }
 
 export default function RootNavigator() {
-  const { accessState } = useAuth();
+  const { accessState, user } = useAuth();
   const devBypass = __DEV__ && process.env.EXPO_PUBLIC_DEV_BYPASS === 'true';
-  const canAccessYki = devBypass || accessState?.yki === true;
-  const canAccessWork = devBypass || accessState?.work === true;
+  const isTestUser = __DEV__ && user?.email === 'ruka@ruka.com';
+  const canAccessYki = devBypass || isTestUser || accessState?.yki === true;
+  const canAccessWork = devBypass || isTestUser || accessState?.work === true;
 
   return (
     <Drawer.Navigator

@@ -55,6 +55,7 @@ export function AuthProvider({ children }) {
   const [refreshTokenValue, setRefreshTokenValue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const isTestUser = __DEV__ && user?.email === 'ruka@ruka.com';
 
   // Load auth state from storage on mount
   useEffect(() => {
@@ -200,7 +201,7 @@ export function AuthProvider({ children }) {
     token,
     isAuthenticated,
     loading,
-    accessState: deriveAccessState(user?.subscriptionTier),
+    accessState: deriveAccessState(isTestUser ? 'professional_premium' : user?.subscriptionTier),
     login: handleLogin,
     register: handleRegister,
     logout,

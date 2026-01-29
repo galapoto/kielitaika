@@ -8,6 +8,7 @@ import { fetchSubscriptionStatus } from '../utils/api';
 
 export function useSubscriptionStatus() {
   const { user } = useAuth();
+  const isTestUser = __DEV__ && user?.email === 'ruka@ruka.com';
   const [tier, setTier] = useState('free');
   const [loading, setLoading] = useState(true);
   const [features, setFeatures] = useState({
@@ -20,6 +21,33 @@ export function useSubscriptionStatus() {
     let mounted = true;
     
     const loadSubscriptionStatus = async () => {
+      const featureMap = {
+        free: {
+          general_finnish: { available: true, limit: 10, message: 'Limited to 10 conversations/week' },
+          workplace: { available: true, limit: 3, message: 'Limited to 3 lessons total' },
+          yki: { available: true, limit: 1, message: 'Limited to 1 attempt/month' },
+        },
+        general_premium: {
+          general_finnish: { available: true, limit: -1, message: 'Unlimited' },
+          workplace: { available: false, limit: 0, message: 'Requires Professional Premium' },
+          yki: { available: false, limit: 0, message: 'Requires Professional Premium' },
+        },
+        professional_premium: {
+          general_finnish: { available: true, limit: -1, message: 'Unlimited' },
+          workplace: { available: true, limit: -1, message: 'Unlimited' },
+          yki: { available: true, limit: -1, message: 'Unlimited' },
+        },
+      };
+
+      if (isTestUser) {
+        if (mounted) {
+          setTier('professional_premium');
+          setFeatures(featureMap.professional_premium);
+          setLoading(false);
+        }
+        return;
+      }
+
       if (!user?.id && !user?.email) {
         if (mounted) {
           setTier('free');
@@ -40,24 +68,6 @@ export function useSubscriptionStatus() {
           // Note: FREE tier has limited access to all features
           // GENERAL_PREMIUM has unlimited general_finnish but no workplace/yki
           // PROFESSIONAL_PREMIUM has unlimited everything
-          const featureMap = {
-            free: {
-              general_finnish: { available: true, limit: 10, message: 'Limited to 10 conversations/week' },
-              workplace: { available: true, limit: 3, message: 'Limited to 3 lessons total' },
-              yki: { available: true, limit: 1, message: 'Limited to 1 attempt/month' },
-            },
-            general_premium: {
-              general_finnish: { available: true, limit: -1, message: 'Unlimited' },
-              workplace: { available: false, limit: 0, message: 'Requires Professional Premium' },
-              yki: { available: false, limit: 0, message: 'Requires Professional Premium' },
-            },
-            professional_premium: {
-              general_finnish: { available: true, limit: -1, message: 'Unlimited' },
-              workplace: { available: true, limit: -1, message: 'Unlimited' },
-              yki: { available: true, limit: -1, message: 'Unlimited' },
-            },
-          };
-          
           setFeatures(featureMap[userTier] || featureMap.free);
         }
       } catch (error) {
@@ -119,7 +129,6 @@ export function useSubscriptionStatus() {
     isProfessionalPremium: tier === 'professional_premium',
   };
 }
-
 
 
 
