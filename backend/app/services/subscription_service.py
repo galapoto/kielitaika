@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Dict, Optional
 from datetime import datetime, timedelta
 from enum import Enum
+import os
 
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,10 @@ class SubscriptionTier(str, Enum):
     GENERAL_PREMIUM = "general_premium"
     PROFESSIONAL_PREMIUM = "professional_premium"
 
+
+DEV_TEST_USER_IDS = set(
+    filter(None, os.getenv("DEV_TEST_USER_IDS", "2731b648-0764-4aab-a406-7a0138ce1618").split(","))
+)
 
 TIER_FEATURES = {
     SubscriptionTier.FREE: {
@@ -66,6 +71,9 @@ def get_user_tier(user_id: str | None) -> SubscriptionTier:
     """Get user's subscription tier."""
     if not user_id:
         return SubscriptionTier.FREE
+
+    if user_id in DEV_TEST_USER_IDS:
+        return SubscriptionTier.PROFESSIONAL_PREMIUM
     
     subscription = _user_subscriptions.get(user_id, {})
     tier_str = subscription.get("tier", SubscriptionTier.FREE.value)
