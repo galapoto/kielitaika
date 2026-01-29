@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, useColorScheme, ImageBackground, Platform } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme, ImageBackground, Platform, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Animated, { 
@@ -133,7 +133,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#0f172a',
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  lockedCard: {
+    width: '100%',
+    maxWidth: 520,
+    padding: 20,
+    borderRadius: 16,
+    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    borderColor: 'rgba(148, 163, 184, 0.2)',
+    borderWidth: 1,
   },
   lockedTitle: {
     color: '#f8fafc',
@@ -520,9 +530,11 @@ export function LockedFeature({
   message?: string;
 }) {
   return (
-    <View style={styles.lockedContainer}>
-      <Text style={styles.lockedTitle}>{title}</Text>
-      <Text style={styles.lockedMessage}>{message}</Text>
-    </View>
+    <SafeAreaView style={styles.lockedContainer}>
+      <View style={styles.lockedCard}>
+        <Text style={styles.lockedTitle}>{title}</Text>
+        <Text style={styles.lockedMessage}>{message}</Text>
+      </View>
+    </SafeAreaView>
   );
 }
