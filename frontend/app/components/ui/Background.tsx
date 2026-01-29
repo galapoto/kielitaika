@@ -144,17 +144,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.9)',
     borderColor: 'rgba(148, 163, 184, 0.2)',
     borderWidth: 1,
+    gap: 10,
+  },
+  lockedTextPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(2, 6, 23, 0.75)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   lockedTitle: {
     color: '#f8fafc',
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontWeight: '800',
     textAlign: 'center',
   },
   lockedMessage: {
     color: '#cbd5f5',
     fontSize: 14,
+    fontWeight: '700',
     textAlign: 'center',
   },
   imageBackground: {
@@ -532,8 +540,12 @@ export function LockedFeature({
   return (
     <SafeAreaView style={styles.lockedContainer}>
       <View style={styles.lockedCard}>
-        <Text style={styles.lockedTitle}>{title}</Text>
-        <Text style={styles.lockedMessage}>{message}</Text>
+        <View style={styles.lockedTextPill}>
+          <Text style={styles.lockedTitle}>{title}</Text>
+        </View>
+        <View style={styles.lockedTextPill}>
+          <Text style={styles.lockedMessage}>{message}</Text>
+        </View>
       </View>
     </SafeAreaView>
   );
