@@ -19,7 +19,7 @@ from app.core.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     timedelta,
 )
-from app.services.subscription_service import get_subscription_status
+from app.services.subscription_service import get_subscription_status, register_dev_test_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
@@ -103,7 +103,8 @@ async def register(
     access_token = create_access_token(data={"sub": new_user.id})
     refresh_token = create_refresh_token(data={"sub": new_user.id})
     
-    # Get subscription status
+    # Register dev test user before subscription lookup
+    register_dev_test_user(new_user.id, new_user.email)
     subscription = get_subscription_status(new_user.id)
     
     return TokenResponse(
@@ -142,7 +143,8 @@ async def login(
     access_token = create_access_token(data={"sub": user.id})
     refresh_token = create_refresh_token(data={"sub": user.id})
     
-    # Get subscription status
+    # Register dev test user before subscription lookup
+    register_dev_test_user(user.id, user.email)
     subscription = get_subscription_status(user.id)
     
     return TokenResponse(
@@ -193,7 +195,8 @@ async def refresh_token(
     new_access_token = create_access_token(data={"sub": user.id})
     new_refresh_token = create_refresh_token(data={"sub": user.id})
     
-    # Get subscription status
+    # Register dev test user before subscription lookup
+    register_dev_test_user(user.id, user.email)
     subscription = get_subscription_status(user.id)
     
     return TokenResponse(
@@ -211,6 +214,7 @@ async def get_current_user_info(
     session: AsyncSession = Depends(get_session),
 ):
     """Get current user information."""
+    register_dev_test_user(current_user.id, current_user.email)
     subscription = get_subscription_status(current_user.id)
     
     return {

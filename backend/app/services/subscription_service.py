@@ -24,6 +24,19 @@ class SubscriptionTier(str, Enum):
 DEV_TEST_USER_IDS = set(
     filter(None, os.getenv("DEV_TEST_USER_IDS", "2731b648-0764-4aab-a406-7a0138ce1618").split(","))
 )
+DEV_TEST_USER_EMAILS = set(
+    filter(None, os.getenv("DEV_TEST_USER_EMAILS", "ruka@ruka.com").lower().split(","))
+)
+
+
+def register_dev_test_user(user_id: str | None, email: str | None) -> bool:
+    """Register a dev test user ID when the email matches configured dev emails."""
+    if not user_id or not email:
+        return False
+    if email.lower() in DEV_TEST_USER_EMAILS:
+        DEV_TEST_USER_IDS.add(user_id)
+        return True
+    return False
 
 TIER_FEATURES = {
     SubscriptionTier.FREE: {

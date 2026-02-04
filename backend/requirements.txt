@@ -6,6 +6,7 @@ sqlalchemy
 aiosqlite
 pydantic
 pydantic-settings
+email-validator
 openai
 python-multipart
 reportlab
