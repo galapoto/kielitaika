@@ -21,7 +21,9 @@ const inferDevHost = () => {
 
 const defaultHost = () => (Platform.OS === 'android' ? '10.0.2.2' : 'localhost');
 
-const API_BASE = ENV_API_BASE || `http://${inferDevHost() || defaultHost()}:8000`;
+// Backend default port must match backend run.sh / app.core.config (8000)
+const DEFAULT_PORT = 8000;
+const API_BASE = ENV_API_BASE || `http://${inferDevHost() || defaultHost()}:${DEFAULT_PORT}`;
 
 if (!ENV_API_BASE) {
   console.warn(

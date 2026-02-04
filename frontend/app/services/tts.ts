@@ -164,8 +164,28 @@ async function fetchTTSAudioBase64(text: string): Promise<string> {
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     const chunks: Uint8Array[] = [];
 
+    if (__DEV__) {
+      console.log('[TTS] WebSocket URL:', wsUrl);
+    }
     const ws = new WebSocket(wsUrl);
     ws.binaryType = 'arraybuffer';
+
+    ws.onopen = () => {
+      if (__DEV__) console.log('[TTS] WebSocket onOpen');
+      ws.send(JSON.stringify({ text }));
+    };
+
+    ws.onerror = (e) => {
+      if (__DEV__) console.warn('[TTS] WebSocket onError', e);
+      if (settled) return;
+      settled = true;
+      reject(handleNetworkError(new Error('TTS WebSocket error'), 'TTS playback'));
+    };
+
+    ws.onclose = (ev) => {
+      if (__DEV__) console.log('[TTS] WebSocket onClose', ev.code, ev.reason);
+      finalize();
+    };
 
     const finalize = () => {
       if (settled) return;
@@ -191,16 +211,6 @@ async function fetchTTSAudioBase64(text: string): Promise<string> {
       }
     };
 
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ text }));
-    };
-
-    ws.onerror = () => {
-      if (settled) return;
-      settled = true;
-      reject(handleNetworkError(new Error('TTS WebSocket error'), 'TTS playback'));
-    };
-
     ws.onmessage = (event) => {
       if (typeof event.data === 'string') {
         if (event.data.startsWith('error')) {
@@ -223,9 +233,6 @@ async function fetchTTSAudioBase64(text: string): Promise<string> {
       }
     };
 
-    ws.onclose = () => {
-      finalize();
-    };
   });
 }
 

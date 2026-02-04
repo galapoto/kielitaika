@@ -25,6 +25,10 @@
 
 ## Optional Variables
 
+### `PORT` (OPTIONAL)
+- **Default:** `8000` (must match frontend `config/backend.js` so TTS/STT work)
+- **Example:** `PORT=8000`
+
 ### `DATABASE_URL` (OPTIONAL)
 - **What:** Database connection string
 - **PostgreSQL:** `postgresql://user:password@localhost:5432/puhis`

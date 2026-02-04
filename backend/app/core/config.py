@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int | None = None
     auth_mode: str | None = None
 
-    port: int = 5000
+    port: int = 8000
     host: str = "0.0.0.0"
     public_base_url: str | None = None
 

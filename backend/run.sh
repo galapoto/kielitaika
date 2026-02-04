@@ -9,8 +9,8 @@ if [ -f .env ]; then
     export $(cat .env | grep -v '^#' | xargs)
 fi
 
-# Use PORT from .env or default to 5000
-PORT=${PORT:-5000}
+# Use PORT from .env or default to 8000 (must match frontend config/backend.js)
+PORT=${PORT:-8000}
 HOST=${HOST:-0.0.0.0}
 
 echo "Starting PUHIS backend on http://${HOST}:${PORT}"
