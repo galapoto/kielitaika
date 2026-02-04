@@ -301,17 +301,6 @@ export default function RoleplayScreen({ navigation, route } = {}) {
           </View>
         ) : null}
 
-        <View style={styles.micRow}>
-          <MicButton
-            onPress={handleMicPress}
-            disabled={isProcessing || sessionStatus === 'completed'}
-            isActive={isRecording}
-          />
-          <Text style={styles.micStatus}>
-            {isRecording ? 'Kuunnellaan…' : isProcessing ? 'Käsitellään…' : 'Paina mikrofonia puhuaksesi'}
-          </Text>
-        </View>
-
         {transcript ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Vastauksesi</Text>
@@ -336,6 +325,17 @@ export default function RoleplayScreen({ navigation, route } = {}) {
             ) : null}
           </View>
         ) : null}
+
+        <View style={styles.micDock}>
+          <MicButton
+            onPress={handleMicPress}
+            disabled={isProcessing || sessionStatus === 'completed'}
+            isActive={isRecording}
+          />
+          <Text style={styles.micStatus}>
+            {isRecording ? 'Kuunnellaan…' : isProcessing ? 'Käsitellään…' : 'Paina mikrofonia puhuaksesi'}
+          </Text>
+        </View>
       </View>
     </Background>
   );
@@ -394,14 +394,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
   },
-  micRow: {
-    flexDirection: 'row',
+  micDock: {
+    marginTop: 'auto',
     alignItems: 'center',
-    marginTop: 20,
+    justifyContent: 'center',
+    paddingBottom: 18,
   },
   micStatus: {
     color: '#e2e8f0',
-    marginLeft: 16,
+    marginTop: 10,
     fontSize: 14,
   },
   promptButton: {

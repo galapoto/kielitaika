@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, Text, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { useScaleOnPress } from '../animations/useScaleOnPress';
 import { useHaptic } from '../hooks/useHaptic';
 
@@ -46,9 +47,12 @@ function MicButton({ onPress, onPressIn, onPressOut, disabled = false, isActive 
           accessibilityState={{ disabled, selected: isActive }}
           testID="mic-button"
         >
-          {/* Emboss highlight */}
-          <View pointerEvents="none" style={styles.embossHighlight} />
-          <Text style={styles.label}>🎤</Text>
+          <View pointerEvents="none" style={styles.innerGlow} />
+          <Ionicons
+            name={isActive ? "mic" : "mic-outline"}
+            size={24}
+            color={isActive ? '#0b1b3a' : '#102044'}
+          />
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -62,49 +66,53 @@ const styles = StyleSheet.create({
   },
   ring: {
     position: 'absolute',
-    width: 76, // Increased to match larger button
-    height: 76,
-    borderRadius: 38,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
     borderWidth: 2,
-    borderColor: 'rgba(27, 78, 218, 0.50)', // Blue accent
+    borderColor: 'rgba(99, 140, 255, 0.45)',
+    shadowColor: '#4f83ff',
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 10,
   },
   button: {
-    width: 56, // Increased for better touch target (minimum 44pt)
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#3A2A1E', // Brown matching theme
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(27, 78, 218, 0.30)', // Blue edge accent
+    borderWidth: 1.5,
+    borderColor: 'rgba(99, 140, 255, 0.35)',
     overflow: 'hidden',
     position: 'relative',
-    shadowColor: '#000',
-    shadowOpacity: 0.90, // Even more obvious shadow
-    shadowRadius: 24, // Larger shadow radius
-    shadowOffset: { width: 0, height: 18 }, // Deeper shadow
-    elevation: 16, // Higher elevation
-  },
-  label: {
-    fontSize: 24,
-    color: 'rgba(255,255,255,0.95)',
+    shadowColor: '#0b1b3a',
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
   },
   disabled: {
     opacity: 0.5,
   },
   active: {
-    borderColor: 'rgba(27, 78, 218, 0.70)', // Blue accent when active
-    backgroundColor: '#1B4EDA', // Blue when active
+    backgroundColor: '#c7d6ff',
+    borderColor: 'rgba(99, 140, 255, 0.8)',
   },
-  embossHighlight: {
+  innerGlow: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '50%',
-    backgroundColor: 'rgba(255,255,255,0.20)', // Much stronger highlight
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    top: 6,
+    left: 6,
+    right: 6,
+    bottom: 6,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    shadowColor: '#9bb6ff',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
   },
 });
 
