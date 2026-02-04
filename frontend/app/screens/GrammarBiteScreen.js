@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import GrammarBiteCard from '../components/GrammarBiteCard';
 import { fetchRecharge } from '../utils/api';
 import HomeButton from '../components/HomeButton';
@@ -27,7 +26,7 @@ export default function GrammarBiteScreen({ navigation }) {
   // Combine all designs: Quiz design (4th), Flight booking (6th), Vocabulary practice (7th)
   if (loading) {
     return (
-      <Background module="practice" variant="brown">
+      <Background module="practice" variant="blue" solidContentZone>
         <View style={styles.container}>
           <ActivityIndicator size="large" color="#FF6B35" style={styles.loader} />
           <Text style={styles.hint}>Loading grammar...</Text>
@@ -38,7 +37,7 @@ export default function GrammarBiteScreen({ navigation }) {
 
   if (error || !grammar) {
     return (
-      <Background module="practice" variant="brown">
+      <Background module="practice" variant="blue" solidContentZone>
         <View style={styles.container}>
           <Text style={styles.error}>{error || 'No grammar bite'}</Text>
         </View>
@@ -47,15 +46,8 @@ export default function GrammarBiteScreen({ navigation }) {
   }
 
   return (
-    <Background module="practice" variant="brown">
+    <Background module="practice" variant="blue" solidContentZone>
       <View style={styles.container}>
-        <LinearGradient
-          colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th picture
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}
-        />
-
         {/* Header - From 4th picture (Quiz design) */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>

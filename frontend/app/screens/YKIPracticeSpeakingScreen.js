@@ -378,7 +378,7 @@ export default function YKIPracticeSpeakingScreen({ navigation, route } = {}) {
   };
 
   return (
-    <Background module="yki_speak" variant="blue">
+    <Background module="yki_speak" variant="blue" solidContentZone>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>

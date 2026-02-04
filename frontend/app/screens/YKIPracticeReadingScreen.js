@@ -127,7 +127,7 @@ export default function YKIPracticeReadingScreen({ navigation, route } = {}) {
   };
 
   return (
-    <Background module="yki_read" variant="blue">
+    <Background module="yki_read" variant="blue" solidContentZone>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>

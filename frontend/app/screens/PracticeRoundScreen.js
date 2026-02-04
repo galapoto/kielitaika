@@ -250,7 +250,7 @@ export default function PracticeRoundScreen({ route, navigation } = {}) {
 
   if (isLoading) {
     return (
-      <Background module="workplace" variant="brown">
+      <Background module="workplace" variant="blue" solidContentZone>
         <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -270,7 +270,7 @@ export default function PracticeRoundScreen({ route, navigation } = {}) {
 
   if (error) {
     return (
-      <Background module="workplace" variant="brown">
+      <Background module="workplace" variant="blue" solidContentZone>
         <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -293,7 +293,7 @@ export default function PracticeRoundScreen({ route, navigation } = {}) {
   const progress = calculatePracticeProgress(round?.tasks || [], completedTasks);
 
   return (
-    <Background module="workplace" variant="brown">
+    <Background module="workplace" variant="blue" solidContentZone>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>

@@ -166,7 +166,7 @@ export default function YKIWritingExamScreen({ route, navigation } = {}) {
   const totalSteps = totalTasks;
 
   return (
-    <Background module="yki_write" variant="blue">
+    <Background module="yki_write" variant="blue" solidContentZone>
       <View style={styles.container}>
       {/* Purple Header - From 7th picture */}
       <View style={styles.header}>

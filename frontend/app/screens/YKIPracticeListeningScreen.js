@@ -127,7 +127,7 @@ export default function YKIPracticeListeningScreen({ navigation, route } = {}) {
   };
 
   return (
-    <Background module="yki_listen" variant="blue">
+    <Background module="yki_listen" variant="blue" solidContentZone>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity

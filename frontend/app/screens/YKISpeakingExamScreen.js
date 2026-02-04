@@ -95,7 +95,7 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
 
   if (loading) {
     return (
-      <Background module="yki_speak" variant="blue">
+      <Background module="yki_speak" variant="blue" solidContentZone>
         <View style={styles.container}>
           <ActivityIndicator size="large" color="#FFFFFF" style={styles.loader} />
         </View>
@@ -105,7 +105,7 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
 
   if (error || tasks.length === 0) {
     return (
-      <Background module="yki_speak" variant="blue">
+      <Background module="yki_speak" variant="blue" solidContentZone>
         <View style={styles.container}>
           <Text style={styles.errorText}>{error || 'No tasks available'}</Text>
         </View>
@@ -114,7 +114,7 @@ export default function YKISpeakingExamScreen({ route, navigation } = {}) {
   }
 
   return (
-    <Background module="yki_speak" variant="blue">
+    <Background module="yki_speak" variant="blue" solidContentZone>
       <View style={styles.container}>
         <LinearGradient
           colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th picture

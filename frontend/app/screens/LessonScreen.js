@@ -127,7 +127,7 @@ export default function LessonScreen() {
   ];
 
   return (
-    <Background module="home" variant="brown">
+    <Background module="home" variant="blue" solidContentZone>
       <View style={styles.container}>
       {/* Header - Dark Blue from 3rd picture */}
       <View style={styles.header}>

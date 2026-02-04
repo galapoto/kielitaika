@@ -114,6 +114,9 @@ type ModuleKey =
 type AnimationType = "snow" | "aurora" | "particles" | "convo_float" | null;
 type ImageVariant = "home" | "workplace" | "lesson";
 
+/** Solid deep blue for lesson/exam content zones - no images, no gradients, no distractions */
+export const LESSON_EXAM_BG = "#0A0E27";
+
 interface BackgroundProps {
   module: ModuleKey;
   variant?: SectionVariant; // blue | brown | black
@@ -122,6 +125,8 @@ interface BackgroundProps {
   children?: React.ReactNode;
   disableAutoAnimations?: boolean; // Set to true to disable automatic animation layers
   modalBlur?: boolean; // If true, fade in a blur overlay (for modal transitions)
+  /** Lesson/exam content zone: solid deep blue only, no background images or decorative motion */
+  solidContentZone?: boolean;
 }
 
 // Background images loaded from canonical source: app/assets/images/backgrounds
@@ -185,6 +190,7 @@ export default function Background({
   children,
   disableAutoAnimations = false,
   modalBlur = false,
+  solidContentZone = false,
 }: BackgroundProps) {
   const systemColorScheme = useColorScheme() || "dark";
   let userTheme = systemColorScheme;
@@ -285,8 +291,8 @@ export default function Background({
             "rgba(7,9,14,0.12)",
           ] as const);
 
-  // Get background image from canonical source
-  const selectedImage = getBackgroundImage(module, colorScheme as "dark" | "light");
+  // Get background image from canonical source (never used in lesson/exam content zones)
+  const selectedImage = solidContentZone ? null : getBackgroundImage(module, colorScheme as "dark" | "light");
   // When an image is present, make the tone-setting gradient semi-transparent
   // so the image remains visibly readable underneath.
   const gradientOpacity = selectedImage ? (colorScheme === "light" ? 0.28 : 0.38) : 1;
@@ -391,8 +397,15 @@ export default function Background({
 
   return (
     <View style={StyleSheet.absoluteFill}>
-      {/* Background Gradient - No images, only gradients */}
-      {backgroundsEnabled ? (
+      {/* Lesson/exam content zone: solid deep blue only, no images or motion */}
+      {solidContentZone ? (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: colorScheme === "dark" ? LESSON_EXAM_BG : "#F0F4F8" },
+          ]}
+        />
+      ) : backgroundsEnabled ? (
         <Animated.View style={[StyleSheet.absoluteFill, animatedStyle]}>
           {selectedImage ? (
             <ImageBackground
@@ -407,7 +420,6 @@ export default function Background({
           )}
         </Animated.View>
       ) : (
-        // Blank mode - Solid color
         <View
           style={[
             StyleSheet.absoluteFill,
@@ -418,8 +430,8 @@ export default function Background({
         />
       )}
 
-      {/* Automatic Animation Layers - Only show if animations are enabled */}
-      {animationsEnabled && !disableAutoAnimations && getAnimationLayers(module).map((layer, index) => (
+      {/* Automatic Animation Layers - Only show if animations are enabled (never in lesson/exam zone) */}
+      {!solidContentZone && animationsEnabled && !disableAutoAnimations && getAnimationLayers(module).map((layer, index) => (
         <React.Fragment key={`auto-anim-${index}`}>
           {layer}
         </React.Fragment>
@@ -427,8 +439,8 @@ export default function Background({
 
       {/* NO OVERLAY LAYERS - Text goes directly on images for all screens */}
 
-      {/* Optional Blur for text-heavy screens */}
-      {needsBlur && (
+      {/* Optional Blur for text-heavy screens (not in lesson/exam zone - no glassmorphism) */}
+      {!solidContentZone && needsBlur && (
         Platform.OS === 'web' ? (
           <View
             style={[

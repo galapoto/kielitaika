@@ -419,7 +419,7 @@ export default function LessonDetailScreen({ route, navigation } = {}) {
 
   // Combine all designs: Quiz header (4th), Conversation gradient (5th), Flight cards (6th), Schedule (3rd), Card grid (2nd)
   return (
-    <Background module="workplace" variant="brown" imageVariant="lesson">
+    <Background module="workplace" variant="blue" solidContentZone>
       <View style={styles.container}>
       {/* Header Bar - From 4th picture (Quiz design) */}
       <View style={styles.headerBar}>

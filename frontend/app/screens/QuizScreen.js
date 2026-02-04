@@ -243,7 +243,7 @@ export default function QuizScreen({ route, navigation } = {}) {
   );
 
   return (
-    <Background module="practice" variant="brown">
+    <Background module="practice" variant="blue" solidContentZone>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backButton}>

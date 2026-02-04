@@ -265,7 +265,7 @@ export default function YKIPracticeWritingScreen({ navigation, route } = {}) {
   };
 
   return (
-    <Background module="yki_write" variant="blue">
+    <Background module="yki_write" variant="blue" solidContentZone>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
