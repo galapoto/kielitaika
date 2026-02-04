@@ -17,6 +17,7 @@ import {
   completeSpeakingSession,
   setSpeakingTurnAiTranscript,
   setSpeakingTurnUserTranscript,
+  advanceSpeakingTurn,
 } from '../utils/speakingAttempts';
 import { useSpeakingSessionContext } from '../context/SpeakingSessionContext';
 
@@ -28,8 +29,15 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   } = route?.params || {};
 
   // Get session from context (provided by SpeakingScreenWrapper)
-  const { sessionId, session, status: sessionStatus, currentTurn: turn0 } = useSpeakingSessionContext();
-  const transcript = turn0?.userSpeech?.transcript || '';
+  const {
+    sessionId,
+    session,
+    status: sessionStatus,
+    currentTurn: activeTurn,
+    currentTurnIndex,
+    maxTurns,
+  } = useSpeakingSessionContext();
+  const transcript = activeTurn?.userSpeech?.transcript || '';
 
   const [scenario, setScenario] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -86,26 +94,62 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     };
   }, [field, scenarioTitle, level, speak, sessionId]);
 
+  const buildFollowupPrompt = useCallback(
+    (turnIndex) => {
+      const prompts = [
+        scenario?.roleplay_prompt || 'Kerro tilanteesta omin sanoin.',
+        'Hyvä. Voitko tarkentaa yhden yksityiskohdan?',
+        'Selvä. Miten toimisit seuraavaksi?',
+        'Kiitos. Kerro vielä lyhyesti lopuksi tärkein asia.',
+        'Kiitos vastauksesta. Tämä oli viimeinen vuoro.',
+      ];
+      return prompts[Math.min(prompts.length - 1, Math.max(0, turnIndex))];
+    },
+    [scenario?.roleplay_prompt]
+  );
+
   const handleTranscriptComplete = useCallback(
     async (text) => {
       if (sessionStatus === 'completed') return;
       const normalized = (text || '').trim();
       if (!normalized) return;
-      setSpeakingTurnUserTranscript(sessionId, 0, normalized);
+
+      const turnIndex = typeof currentTurnIndex === 'number' ? currentTurnIndex : 0;
+      setSpeakingTurnUserTranscript(sessionId, turnIndex, normalized);
+
+      const isFinalTurn = turnIndex >= (maxTurns || 5) - 1;
       setIsEvaluating(true);
       setError(null);
       try {
-        const result = await evaluateRoleplay(field, normalized);
-        setEvaluation(result);
-        // Roleplay is a finite single-turn interaction; enter review mode after evaluation.
-        completeSpeakingSession(sessionId);
-      } catch (err) {
-        setError(err?.message || 'Vastauksen arviointi epäonnistui.');
+        if (isFinalTurn) {
+          try {
+            const result = await evaluateRoleplay(field, normalized);
+            setEvaluation(result);
+          } catch (err) {
+            console.warn('[Roleplay] Evaluation failed:', err);
+          } finally {
+            completeSpeakingSession(sessionId);
+          }
+          return;
+        }
+
+        const nextIndex = turnIndex + 1;
+        const followup = buildFollowupPrompt(nextIndex);
+        setSpeakingTurnAiTranscript(sessionId, nextIndex, followup, {
+          isConclusive: nextIndex === (maxTurns || 5) - 1,
+        });
+        advanceSpeakingTurn(sessionId);
+
+        try {
+          await speak(followup, 'professional');
+        } catch (err) {
+          console.warn('[Roleplay] Follow-up TTS failed:', err);
+        }
       } finally {
         setIsEvaluating(false);
       }
     },
-    [field, sessionId, sessionStatus]
+    [buildFollowupPrompt, currentTurnIndex, field, maxTurns, sessionId, sessionStatus, speak]
   );
 
   const handleVoiceState = useCallback((state) => {
@@ -156,8 +200,8 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   const keyPhrases = useMemo(() => scenario?.key_phrases || [], [scenario?.key_phrases]);
 
   if (sessionStatus === 'completed') {
-    const aiText = turn0?.aiSpeech?.transcript || scenario?.roleplay_prompt || '';
-    const userText = turn0?.userSpeech?.transcript || '';
+    const aiText = activeTurn?.aiSpeech?.transcript || scenario?.roleplay_prompt || '';
+    const userText = activeTurn?.userSpeech?.transcript || '';
     return (
       <Background module="workplace" variant="brown" imageVariant="workplace">
         <View style={styles.container}>
@@ -199,7 +243,9 @@ export default function RoleplayScreen({ navigation, route } = {}) {
       <View style={styles.container}>
         <Text style={styles.title}>{scenario?.title || 'Roolipeli'}</Text>
         <Text style={styles.subtitle}>Ammattiharjoitus • {level}</Text>
-        <Text style={styles.prompt}>{scenario?.roleplay_prompt}</Text>
+        <Text style={styles.prompt}>
+          {activeTurn?.aiSpeech?.transcript || scenario?.roleplay_prompt}
+        </Text>
 
         {!!keyPhrases.length && (
           <View style={styles.section}>
