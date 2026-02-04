@@ -122,6 +122,15 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     onTranscriptComplete: handleTranscriptComplete,
   });
 
+  const handleMicPress = useCallback(() => {
+    if (sessionStatus === 'completed' || isProcessing) return;
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording({ userInitiated: true, userGesture: true });
+    }
+  }, [isRecording, isProcessing, sessionStatus, startRecording, stopRecording]);
+
   useEffect(() => {
     const handleBack = () => {
       if (sessionLockRef.current) {
@@ -214,19 +223,12 @@ export default function RoleplayScreen({ navigation, route } = {}) {
 
         <View style={styles.micRow}>
           <MicButton
-            onPressIn={() => {
-              if (sessionStatus === 'completed') return;
-              startRecording({ userInitiated: true, userGesture: true });
-            }}
-            onPressOut={() => {
-              if (sessionStatus === 'completed') return;
-              stopRecording();
-            }}
+            onPress={handleMicPress}
             disabled={isProcessing || sessionStatus === 'completed'}
             isActive={isRecording}
           />
           <Text style={styles.micStatus}>
-            {isRecording ? 'Kuunnellaan…' : isProcessing ? 'Käsitellään…' : 'Pidä pohjassa vastataksesi'}
+            {isRecording ? 'Kuunnellaan…' : isProcessing ? 'Käsitellään…' : 'Paina mikrofonia puhuaksesi'}
           </Text>
         </View>
 

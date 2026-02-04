@@ -4,7 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } fr
 import { useScaleOnPress } from '../animations/useScaleOnPress';
 import { useHaptic } from '../hooks/useHaptic';
 
-function MicButton({ onPressIn, onPressOut, disabled = false, isActive = false }) {
+function MicButton({ onPress, onPressIn, onPressOut, disabled = false, isActive = false }) {
   const { animatedStyle, onPressIn: animIn, onPressOut: animOut } = useScaleOnPress();
   const pulse = useSharedValue(1);
   const { medium } = useHaptic();
@@ -24,6 +24,10 @@ function MicButton({ onPressIn, onPressOut, disabled = false, isActive = false }
       <Animated.View style={animatedStyle}>
         <TouchableOpacity
           style={[styles.button, disabled && styles.disabled, isActive && styles.active]}
+          onPress={(e) => {
+            if (disabled) return;
+            onPress?.(e);
+          }}
           onPressIn={(e) => {
             if (!disabled) {
               medium();
@@ -38,7 +42,7 @@ function MicButton({ onPressIn, onPressOut, disabled = false, isActive = false }
           disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={isActive ? "Stop recording" : "Start recording"}
-          accessibilityHint={isActive ? "Release to stop recording your Finnish" : "Press and hold to record your Finnish pronunciation"}
+          accessibilityHint={isActive ? "Press to stop recording your Finnish" : "Press to start recording your Finnish"}
           accessibilityState={{ disabled, selected: isActive }}
           testID="mic-button"
         >
