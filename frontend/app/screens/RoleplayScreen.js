@@ -46,6 +46,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [audioUnavailable, setAudioUnavailable] = useState(false);
   const [sttError, setSttError] = useState(null);
+  const [liveTranscript, setLiveTranscript] = useState('');
   const sessionLockRef = useRef(false);
 
   const { speak } = useVoice();
@@ -124,6 +125,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         setSttError(reason);
         return;
       }
+      setLiveTranscript('');
       setSttError(null);
 
       const turnIndex = typeof currentTurnIndex === 'number' ? currentTurnIndex : 0;
@@ -181,6 +183,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     stopRecording,
   } = useVoiceStreaming({
     onStateChange: handleVoiceState,
+    onTranscript: (text) => setLiveTranscript(text || ''),
     onTranscriptComplete: handleTranscriptComplete,
   });
 
@@ -190,6 +193,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
       stopRecording();
     } else {
       setSttError(null);
+      setLiveTranscript('');
       startRecording({ userInitiated: true, userGesture: true });
     }
   }, [isRecording, isProcessing, sessionStatus, startRecording, stopRecording]);
@@ -310,6 +314,13 @@ export default function RoleplayScreen({ navigation, route } = {}) {
 
         {isEvaluating ? (
           <Text style={styles.sectionItem}>Arvioidaan…</Text>
+        ) : null}
+
+        {(isRecording || isProcessing) && liveTranscript ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Live-tekstitys</Text>
+            <Text style={styles.sectionItem}>{liveTranscript}</Text>
+          </View>
         ) : null}
 
         {evaluation ? (
