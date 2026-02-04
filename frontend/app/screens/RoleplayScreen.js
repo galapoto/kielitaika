@@ -45,6 +45,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   const [evaluation, setEvaluation] = useState(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [audioUnavailable, setAudioUnavailable] = useState(false);
+  const [sttError, setSttError] = useState(null);
   const sessionLockRef = useRef(false);
 
   const { speak } = useVoice();
@@ -114,10 +115,16 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   );
 
   const handleTranscriptComplete = useCallback(
-    async (text) => {
+    async (text, meta) => {
       if (sessionStatus === 'completed') return;
       const normalized = (text || '').trim();
-      if (!normalized) return;
+      if (!normalized) {
+        const reason = meta?.error
+          || 'Puhetta ei tunnistettu. Yritä uudelleen.';
+        setSttError(reason);
+        return;
+      }
+      setSttError(null);
 
       const turnIndex = typeof currentTurnIndex === 'number' ? currentTurnIndex : 0;
       setSpeakingTurnUserTranscript(sessionId, turnIndex, normalized);
@@ -182,6 +189,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     if (isRecording) {
       stopRecording();
     } else {
+      setSttError(null);
       startRecording({ userInitiated: true, userGesture: true });
     }
   }, [isRecording, isProcessing, sessionStatus, startRecording, stopRecording]);
@@ -282,6 +290,15 @@ export default function RoleplayScreen({ navigation, route } = {}) {
           <Text style={styles.audioNotice}>
             Ääni ei ole käytettävissä juuri nyt. Voit jatkaa ilman ääntä.
           </Text>
+        ) : null}
+
+        {sttError ? (
+          <View style={styles.sttNotice}>
+            <Text style={styles.sttNoticeText}>{sttError}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleMicPress}>
+              <Text style={styles.retryButtonText}>Yritä uudelleen</Text>
+            </TouchableOpacity>
+          </View>
         ) : null}
 
         <View style={styles.micRow}>
@@ -402,6 +419,25 @@ const styles = StyleSheet.create({
     color: '#fef08a',
     fontSize: 13,
     marginTop: 10,
+  },
+  sttNotice: {
+    marginTop: 14,
+  },
+  sttNoticeText: {
+    color: '#fca5a5',
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  retryButton: {
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  retryButtonText: {
+    color: '#f8fafc',
+    fontSize: 13,
   },
   errorText: {
     color: '#fca5a5',
