@@ -331,7 +331,7 @@ export default function ShadowingScreen() {
     const idx = Math.max(0, Math.min(turns.length - 1, reviewTurnIndex));
     const turn = turns[idx] || null;
     return (
-      <Background module="practice" variant="brown">
+      <Background module="practice" variant="brown" solidContentZone>
         <View style={styles.reviewContainer}>
           <View style={styles.reviewCard}>
             <Text style={styles.reviewCardLabel}>Tekoäly</Text>
@@ -459,7 +459,7 @@ export default function ShadowingScreen() {
   );
 
   return (
-    <Background module="practice">
+    <Background module="practice" solidContentZone>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.title}>Shadowing Practice</Text>

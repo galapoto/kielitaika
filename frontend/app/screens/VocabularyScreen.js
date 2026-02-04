@@ -169,7 +169,7 @@ export default function VocabularyScreen({ route, navigation } = {}) {
 
   if (isLoading && vocabItems.length === 0) {
     return (
-      <Background module="practice">
+      <Background module="practice" solidContentZone>
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
           <SkeletonCard style={{ marginBottom: 16 }} />
           <SkeletonCard style={{ marginBottom: 16 }} />
@@ -181,7 +181,7 @@ export default function VocabularyScreen({ route, navigation } = {}) {
   
   if (error && vocabItems.length === 0) {
     return (
-      <Background module="practice">
+      <Background module="practice" solidContentZone>
         <EmptyError 
           errorMessage={error}
           onRetry={loadVocab}
@@ -192,7 +192,7 @@ export default function VocabularyScreen({ route, navigation } = {}) {
   
   if (!isLoading && filteredItems.length === 0 && search) {
     return (
-      <Background module="practice">
+      <Background module="practice" solidContentZone>
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
           <EmptyVocabulary onBrowseVocabulary={() => setSearch('')} />
         </ScrollView>
@@ -201,7 +201,7 @@ export default function VocabularyScreen({ route, navigation } = {}) {
   }
 
   return (
-    <Background module="practice" variant="brown">
+    <Background module="practice" variant="brown" solidContentZone>
       <View style={styles.vocabContainer}>
       {/* Purple Header */}
       <View style={styles.vocabHeader}>

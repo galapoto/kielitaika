@@ -27,7 +27,7 @@ export default function MiniChallengeScreen({ navigation }) {
   // Combine all designs: Quiz design (4th) for challenge interface
   if (loading) {
     return (
-      <Background module="practice" variant="brown">
+      <Background module="practice" variant="brown" solidContentZone>
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#FF6B35" />
           <Text style={styles.hint}>Loading challenge...</Text>
@@ -38,7 +38,7 @@ export default function MiniChallengeScreen({ navigation }) {
 
   if (error || !challenge) {
     return (
-      <Background module="practice" variant="brown">
+      <Background module="practice" variant="brown" solidContentZone>
         <View style={styles.center}>
           <Text style={styles.error}>{error || 'No challenge available'}</Text>
         </View>
@@ -47,7 +47,7 @@ export default function MiniChallengeScreen({ navigation }) {
   }
 
   return (
-    <Background module="practice" variant="brown">
+    <Background module="practice" variant="brown" solidContentZone>
       <View style={styles.container}>
         <LinearGradient
           colors={['#4A148C', '#1A237E', '#0D47A1']} // Dark purple gradient from 4th picture

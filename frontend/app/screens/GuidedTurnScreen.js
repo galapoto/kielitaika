@@ -298,7 +298,7 @@ export default function GuidedTurnScreen({ route } = {}) {
     const idx = Math.max(0, Math.min(turns.length - 1, reviewTurnIndex));
     const turn = turns[idx] || null;
     return (
-      <Background module="conversation" variant="blue">
+      <Background module="conversation" variant="blue" solidContentZone>
         <View style={styles.reviewContainer}>
           <View style={styles.reviewCard}>
             <Text style={styles.reviewCardLabel}>Tekoäly</Text>
@@ -432,7 +432,7 @@ export default function GuidedTurnScreen({ route } = {}) {
   );
 
   return (
-    <Background module="conversation" variant="blue">
+    <Background module="conversation" variant="blue" solidContentZone>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Guided Turn-Taking</Text>

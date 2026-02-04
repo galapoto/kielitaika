@@ -120,7 +120,7 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
 
   if (loading) {
     return (
-      <Background module="yki_read" variant="blue">
+      <Background module="yki_read" variant="blue" solidContentZone>
         <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
@@ -140,7 +140,7 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
 
   if (isComplete && results) {
     return (
-      <Background module="yki_read" variant="blue">
+      <Background module="yki_read" variant="blue" solidContentZone>
         <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
@@ -200,7 +200,7 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
 
   if (!placement) {
     return (
-      <Background module="yki_read" variant="blue">
+      <Background module="yki_read" variant="blue" solidContentZone>
         <View style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
@@ -225,7 +225,7 @@ export default function YKIPlacementScreen({ navigation, route } = {}) {
   }
 
   return (
-    <Background module="yki_read" variant="blue">
+    <Background module="yki_read" variant="blue" solidContentZone>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backButton}>
@@ -530,4 +530,3 @@ const styles = StyleSheet.create({
   recommendationItem: { color: 'rgba(255,255,255,0.85)', lineHeight: 22, marginBottom: 8 },
   continueButton: { width: '100%' },
 });
-

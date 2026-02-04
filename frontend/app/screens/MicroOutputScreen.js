@@ -10,7 +10,7 @@ import {
 import { useSpeakingSessionContext } from '../context/SpeakingSessionContext';
 import MicButton from '../components/MicButton';
 import WaveformVisualizer from '../components/features/ConversationUI/WaveformVisualizer';
-import SceneBackground from '../components/SceneBackground';
+import Background from '../components/ui/Background';
 import { colors } from '../styles/colors';
 import { spacing } from '../styles/spacing';
 import { typography } from '../styles/typography';
@@ -136,8 +136,8 @@ export default function MicroOutputScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <SceneBackground sceneKey="aurora" orbEmotion="calm" />
+    <Background module="practice" variant="blue" solidContentZone>
+      <View style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>10s Output Task</Text>
@@ -263,7 +263,8 @@ export default function MicroOutputScreen() {
           )}
         </ScrollView>
       )}
-    </View>
+      </View>
+    </Background>
   );
 }
 

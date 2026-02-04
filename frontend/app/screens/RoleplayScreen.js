@@ -203,7 +203,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     const aiText = activeTurn?.aiSpeech?.transcript || scenario?.roleplay_prompt || '';
     const userText = activeTurn?.userSpeech?.transcript || '';
     return (
-      <Background module="workplace" variant="brown" imageVariant="workplace">
+      <Background module="workplace" variant="brown" solidContentZone>
         <View style={styles.container}>
           <View style={styles.reviewCard}>
             <Text style={styles.reviewCardLabel}>Tekoäly</Text>
@@ -220,7 +220,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
 
   if (loading) {
     return (
-      <Background module="workplace" variant="brown" imageVariant="workplace">
+      <Background module="workplace" variant="brown" solidContentZone>
         <View style={styles.container}>
           <ActivityIndicator size="large" color="#FFFFFF" />
         </View>
@@ -230,7 +230,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
 
   if (error) {
     return (
-      <Background module="workplace" variant="brown" imageVariant="workplace">
+      <Background module="workplace" variant="brown" solidContentZone>
         <View style={styles.container}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
@@ -239,7 +239,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   }
 
   return (
-    <Background module="workplace" variant="brown" imageVariant="workplace">
+    <Background module="workplace" variant="brown" solidContentZone>
       <View style={styles.container}>
         <Text style={styles.title}>{scenario?.title || 'Roolipeli'}</Text>
         <Text style={styles.subtitle}>Ammattiharjoitus • {level}</Text>

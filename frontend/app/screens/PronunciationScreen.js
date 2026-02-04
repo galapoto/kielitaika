@@ -69,7 +69,7 @@ export default function PronunciationScreen() {
   };
 
   return (
-    <Background module="practice" variant="brown">
+    <Background module="practice" variant="brown" solidContentZone>
       <ScrollView style={styles.container}>
         <View style={styles.content}>
           <Text style={styles.title}>Ääntämisharjoitus</Text>

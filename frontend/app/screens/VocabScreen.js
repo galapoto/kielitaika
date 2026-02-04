@@ -26,7 +26,7 @@ export default function VocabScreen({ navigation }) {
   // Combine all designs: Purple header (7th), Card grid (2nd), Flight cards (6th)
   if (loading) {
     return (
-      <Background module="practice" variant="brown">
+      <Background module="practice" variant="brown" solidContentZone>
         <View style={styles.center}> 
           <ActivityIndicator size="large" color="#6F42C1" />
           <Text style={styles.hint}>Loading vocab...</Text>
@@ -37,7 +37,7 @@ export default function VocabScreen({ navigation }) {
 
   if (error) {
     return (
-      <Background module="practice" variant="brown">
+      <Background module="practice" variant="brown" solidContentZone>
         <View style={styles.center}> 
           <Text style={styles.error}>{error}</Text>
         </View>
@@ -46,7 +46,7 @@ export default function VocabScreen({ navigation }) {
   }
 
   return (
-    <Background module="practice" variant="brown">
+    <Background module="practice" variant="brown" solidContentZone>
       <View style={styles.container}>
         {/* Purple Header - From 7th picture */}
         <View style={styles.header}>

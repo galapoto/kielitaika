@@ -100,7 +100,7 @@ export default function GrammarLabScreen({ navigation }) {
 
   if (loading && errorClusters.length === 0) {
     return (
-      <Background module="home" variant="brown">
+      <Background module="home" variant="brown" solidContentZone>
         <View style={styles.container}>
           <View style={styles.center}>
             <ActivityIndicator color="#FFFFFF" />
@@ -113,7 +113,7 @@ export default function GrammarLabScreen({ navigation }) {
 
   if (selectedCluster) {
     return (
-      <Background module="home" variant="brown">
+      <Background module="home" variant="brown" solidContentZone>
         <View style={styles.container}>
         <WindGlyphs mood={grammarMode} active />
         <View style={styles.header}>
@@ -196,7 +196,7 @@ export default function GrammarLabScreen({ navigation }) {
   }
 
   return (
-    <Background module="home" variant="brown">
+    <Background module="home" variant="brown" solidContentZone>
       <View style={styles.container}>
         <View style={styles.header}>
         <Text style={styles.title}>Grammar Lab</Text>

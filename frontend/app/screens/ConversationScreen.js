@@ -136,7 +136,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
     const idx = Math.max(0, Math.min(turns.length - 1, reviewTurnIndex));
     const t = turns[idx] || null;
     return (
-      <Background module="conversation" variant="blue">
+      <Background module="conversation" variant="blue" solidContentZone>
         <View style={styles.container}>
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Tekoäly</Text>
@@ -171,7 +171,7 @@ export default function ConversationScreen({ navigation, route } = {}) {
   const canAdvance = Boolean(aiText && userText) && turnIndex < 4;
 
   return (
-    <Background module="conversation" variant="blue">
+    <Background module="conversation" variant="blue" solidContentZone>
       <View style={styles.container}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Keskustelu</Text>

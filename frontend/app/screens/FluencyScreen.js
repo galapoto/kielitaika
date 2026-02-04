@@ -440,7 +440,7 @@ export default function FluencyScreen() {
     const idx = Math.max(0, Math.min(turns.length - 1, reviewTurnIndex));
     const turn = turns[idx] || null;
     return (
-      <Background module="practice" variant="brown">
+      <Background module="practice" variant="brown" solidContentZone>
         <View style={styles.reviewContainer}>
           <View style={styles.reviewCard}>
             <Text style={styles.reviewCardLabel}>Tekoäly</Text>
@@ -480,7 +480,7 @@ export default function FluencyScreen() {
   };
 
   return (
-    <Background module="practice" variant="brown">
+    <Background module="practice" variant="brown" solidContentZone>
       <View style={styles.container}>
         <Text style={styles.title}>Fluency Builder</Text>
         <Text style={styles.topic}>{topic}</Text>
