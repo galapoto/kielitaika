@@ -359,33 +359,37 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#f8fafc',
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   subtitle: {
     color: '#cbd5f5',
-    fontSize: 14,
-    marginBottom: 16,
+    fontSize: 17,
+    marginBottom: 18,
   },
   prompt: {
     color: '#e2e8f0',
-    fontSize: 16,
-    marginBottom: 16,
+    fontSize: 19,
+    lineHeight: 28,
+    marginBottom: 20,
+    fontWeight: '500',
   },
   section: {
-    marginTop: 16,
+    marginTop: 20,
   },
   sectionTitle: {
     color: '#f8fafc',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   sectionItem: {
     color: '#cbd5f5',
-    fontSize: 14,
-    marginBottom: 4,
+    fontSize: 17,
+    lineHeight: 24,
+    marginBottom: 6,
+    fontWeight: '500',
   },
   reviewCard: {
     backgroundColor: '#0f1117',
@@ -395,15 +399,16 @@ const styles = StyleSheet.create({
   },
   reviewCardLabel: {
     color: '#7dd3fc',
-    fontSize: 12,
+    fontSize: 13,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 6,
   },
   reviewCardText: {
     color: '#e2e8f0',
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 18,
+    lineHeight: 26,
+    fontWeight: '500',
   },
   micDock: {
     marginTop: 'auto',
@@ -414,7 +419,8 @@ const styles = StyleSheet.create({
   micStatus: {
     color: '#e2e8f0',
     marginTop: 10,
-    fontSize: 14,
+    fontSize: 17,
+    fontWeight: '500',
   },
   promptButton: {
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
@@ -425,11 +431,12 @@ const styles = StyleSheet.create({
   },
   promptButtonText: {
     color: '#e2e8f0',
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '500',
   },
   audioNotice: {
     color: '#fef08a',
-    fontSize: 13,
+    fontSize: 15,
     marginTop: 10,
   },
   sttNotice: {
@@ -437,7 +444,7 @@ const styles = StyleSheet.create({
   },
   sttNoticeText: {
     color: '#fca5a5',
-    fontSize: 13,
+    fontSize: 15,
     marginBottom: 8,
   },
   retryButton: {
@@ -449,10 +456,10 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#f8fafc',
-    fontSize: 13,
+    fontSize: 15,
   },
   errorText: {
     color: '#fca5a5',
-    fontSize: 16,
+    fontSize: 17,
   },
 });

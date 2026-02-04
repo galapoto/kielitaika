@@ -91,7 +91,7 @@ export default function ShadowingScreen() {
   const transcript = currentTurn?.userSpeech?.transcript || '';
   const aiReply = currentTurn?.aiSpeech?.transcript || '';
   const [reviewTurnIndex, setReviewTurnIndex] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('Hold to talk');
+  const [statusMessage, setStatusMessage] = useState('Tap mic to talk');
   const [feedback, setFeedback] = useState(null);
   const [shadowingDiff, setShadowingDiff] = useState(null);
   const [error, setError] = useState(null);
@@ -194,7 +194,7 @@ export default function ShadowingScreen() {
         setStatusMessage('Playing AI voice…');
       } else {
         updateDebug({ recordingState: 'idle', playbackState: 'idle' });
-        setStatusMessage('Hold to talk');
+        setStatusMessage('Tap mic to talk');
       }
     },
     [aiPlaying, updateDebug]
@@ -376,22 +376,23 @@ export default function ShadowingScreen() {
     [speak, updateDebug]
   );
 
-  const handleRecordStart = () => {
-    recordingStartRef.current = Date.now();
-    recordingTimerRef.current = setInterval(() => {
-      if (recordingStartRef.current) {
-        setRecordingDuration(Date.now() - recordingStartRef.current);
+  const handleMicPress = () => {
+    if (isProcessingAttempt) return;
+    if (isRecording) {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
       }
-    }, 400);
-    startRecording?.({ userInitiated: true, userGesture: true });
-  };
-
-  const handleRecordEnd = () => {
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
+      stopRecording?.();
+    } else {
+      recordingStartRef.current = Date.now();
+      recordingTimerRef.current = setInterval(() => {
+        if (recordingStartRef.current) {
+          setRecordingDuration(Date.now() - recordingStartRef.current);
+        }
+      }, 400);
+      startRecording?.({ userInitiated: true, userGesture: true });
     }
-    stopRecording?.();
   };
 
   useEffect(() => {
@@ -413,7 +414,7 @@ export default function ShadowingScreen() {
       }
     } finally {
       setAiPlaying(false);
-      setStatusMessage('Hold to talk');
+      setStatusMessage('Tap mic to talk');
     }
   }, [targetChunks, speakWithDebug, sessionStatus]);
 
@@ -481,9 +482,8 @@ export default function ShadowingScreen() {
           <Text style={styles.duration}>{formatDuration(recordingDuration)} recording</Text>
           <MicButton
             disabled={isProcessingAttempt}
-            onPressIn={handleRecordStart}
-            onPressOut={handleRecordEnd}
-            recording={isRecording}
+            onPress={handleMicPress}
+            isActive={isRecording}
           />
         </View>
         <View style={styles.stateRow}>

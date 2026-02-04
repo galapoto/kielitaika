@@ -192,8 +192,11 @@ export default function ConversationScreen({ navigation, route } = {}) {
 
         <View style={styles.inputRow}>
           <MicButton
-            onPressIn={() => startRecording?.({ userInitiated: true, userGesture: true })}
-            onPressOut={() => stopRecording?.()}
+            onPress={() => {
+              if (sessionStatus === 'completed' || isProcessing) return;
+              if (isRecording) stopRecording?.();
+              else startRecording?.({ userInitiated: true, userGesture: true });
+            }}
             disabled={sessionStatus === 'completed' || isProcessing}
             isActive={isRecording}
           />

@@ -349,7 +349,7 @@ export default function FluencyScreen() {
         setStatus('Playing AI voice…');
         setDebugInfo((prev) => ({ ...prev, recordingState: 'playing' }));
       } else {
-        setStatus('Hold to talk');
+        setStatus('Tap mic to talk');
         setDebugInfo((prev) => ({ ...prev, recordingState: 'idle' }));
       }
     },
@@ -494,7 +494,15 @@ export default function FluencyScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.recorder}>
-          <MicButton onPressIn={() => startRecording({ userInitiated: true, userGesture: true })} onPressOut={stopRecording} isActive={isRecording} />
+          <MicButton
+            onPress={() => {
+              if (sessionStatus === 'completed' || isProcessing) return;
+              if (isRecording) stopRecording?.();
+              else startRecording?.({ userInitiated: true, userGesture: true });
+            }}
+            disabled={sessionStatus === 'completed' || isProcessing}
+            isActive={isRecording}
+          />
           <Text style={styles.status}>{status}</Text>
           <Text style={styles.timer}>{timer > 0 ? formatMs(timer) : 'Ready'}</Text>
         </View>

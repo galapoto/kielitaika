@@ -329,15 +329,16 @@ export default function GuidedTurnScreen({ route } = {}) {
     );
   }
 
-  const handleRecordStart = () => {
-    recordingStartRef.current = Date.now();
-    startRecording?.({ userInitiated: true, userGesture: true });
-    setDebugInfo((prev) => ({ ...prev, recordingState: 'recording' }));
-  };
-
-  const handleRecordEnd = () => {
-    stopRecording?.();
-    setDebugInfo((prev) => ({ ...prev, recordingState: 'processing' }));
+  const handleMicPress = () => {
+    if (isProcessing || isSpeaking) return;
+    if (isRecording) {
+      stopRecording?.();
+      setDebugInfo((prev) => ({ ...prev, recordingState: 'processing' }));
+    } else {
+      recordingStartRef.current = Date.now();
+      startRecording?.({ userInitiated: true, userGesture: true });
+      setDebugInfo((prev) => ({ ...prev, recordingState: 'recording' }));
+    }
   };
 
   useEffect(() => {
@@ -413,7 +414,7 @@ export default function GuidedTurnScreen({ route } = {}) {
     if (isSpeaking) return 'Playing AI voice…';
     if (isProcessing) return 'Processing…';
     if (isListening) return 'Listening…';
-    return 'Hold to talk';
+    return 'Tap mic to talk';
   };
 
   const statusColor = () => {
@@ -468,10 +469,9 @@ export default function GuidedTurnScreen({ route } = {}) {
         </View>
 
         <View style={styles.recorder}>
-          <Text style={styles.hintText}>Hold to talk · release to stop</Text>
+          <Text style={styles.hintText}>Tap to start · Tap again to stop</Text>
           <MicButton
-            onPressIn={handleRecordStart}
-            onPressOut={handleRecordEnd}
+            onPress={handleMicPress}
             isActive={isRecording}
             disabled={isProcessing || isSpeaking}
           />

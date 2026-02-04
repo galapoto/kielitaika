@@ -5,7 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useScaleOnPress } from '../animations/useScaleOnPress';
 import { useHaptic } from '../hooks/useHaptic';
 
-function MicButton({ onPress, onPressIn, onPressOut, disabled = false, isActive = false }) {
+/**
+ * MicButton — tap-to-toggle only. No press-and-hold.
+ * Single onPress: tap to start recording, tap again to stop.
+ * Recording lifecycle is owned by the parent (e.g. RoleplayScreen).
+ */
+function MicButton({ onPress, disabled = false, isActive = false }) {
   const { animatedStyle, onPressIn: animIn, onPressOut: animOut } = useScaleOnPress();
   const pulse = useSharedValue(1);
   const { medium } = useHaptic();
@@ -19,27 +24,21 @@ function MicButton({ onPress, onPressIn, onPressOut, disabled = false, isActive 
     opacity: disabled ? 0.3 : 0.5,
   }));
 
+  const handlePress = (e) => {
+    if (disabled) return;
+    medium();
+    animIn();
+    setTimeout(() => animOut(), 80);
+    onPress?.(e);
+  };
+
   return (
     <View style={styles.wrapper}>
       <Animated.View style={[styles.ring, ringStyle]} />
       <Animated.View style={animatedStyle}>
         <TouchableOpacity
           style={[styles.button, disabled && styles.disabled, isActive && styles.active]}
-          onPress={(e) => {
-            if (disabled) return;
-            onPress?.(e);
-          }}
-          onPressIn={(e) => {
-            if (!disabled) {
-              medium();
-            }
-            animIn();
-            onPressIn?.(e);
-          }}
-          onPressOut={(e) => {
-            animOut();
-            onPressOut?.(e);
-          }}
+          onPress={handlePress}
           disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={isActive ? "Stop recording" : "Start recording"}

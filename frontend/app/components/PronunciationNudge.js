@@ -228,8 +228,7 @@ export default function PronunciationNudge({
                       Repeat the word you just heard...
                     </Text>
                     <MicButton
-                      onPressIn={() => {}}
-                      onPressOut={stopRecording}
+                      onPress={stopRecording}
                       isActive={isRecording}
                     />
                   </View>

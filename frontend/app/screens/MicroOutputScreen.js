@@ -197,9 +197,11 @@ export default function MicroOutputScreen() {
 
             <View style={styles.micContainer}>
               <MicButton
-                onPressIn={handleStartSpeaking}
-                onPressOut={handleStopSpeaking}
-                isRecording={isRecording}
+                onPress={() => {
+                  if (isRecording) handleStopSpeaking();
+                  else handleStartSpeaking();
+                }}
+                isActive={isRecording}
                 audioLevels={[]}
               />
               <Text style={styles.micHint}>
