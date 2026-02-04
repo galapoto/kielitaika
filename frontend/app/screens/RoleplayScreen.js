@@ -44,6 +44,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   const [error, setError] = useState(null);
   const [evaluation, setEvaluation] = useState(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [audioUnavailable, setAudioUnavailable] = useState(false);
   const sessionLockRef = useRef(false);
 
   const { speak } = useVoice();
@@ -53,9 +54,11 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     const prompt = scenario?.roleplay_prompt;
     if (!prompt) return;
     try {
+      setAudioUnavailable(false);
       await speak(prompt, 'professional');
     } catch (err) {
       // TTS failure should not block roleplay progression
+      setAudioUnavailable(true);
       console.warn('[Roleplay] TTS playback failed:', err);
     }
   }, [scenario?.roleplay_prompt, speak, sessionStatus]);
@@ -76,8 +79,10 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         }
         if (data?.roleplay_prompt) {
           try {
+            setAudioUnavailable(false);
             await speak(data.roleplay_prompt, 'professional');
           } catch (err) {
+            setAudioUnavailable(true);
             console.warn('[Roleplay] Initial TTS playback failed:', err);
           }
         }
@@ -145,8 +150,10 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         advanceSpeakingTurn(sessionId);
 
         try {
+          setAudioUnavailable(false);
           await speak(followup, 'professional');
         } catch (err) {
+          setAudioUnavailable(true);
           console.warn('[Roleplay] Follow-up TTS failed:', err);
         }
       } finally {
@@ -271,6 +278,12 @@ export default function RoleplayScreen({ navigation, route } = {}) {
           <Text style={styles.promptButtonText}>Toista ohje</Text>
         </TouchableOpacity>
 
+        {audioUnavailable ? (
+          <Text style={styles.audioNotice}>
+            Ääni ei ole käytettävissä juuri nyt. Voit jatkaa ilman ääntä.
+          </Text>
+        ) : null}
+
         <View style={styles.micRow}>
           <MicButton
             onPress={handleMicPress}
@@ -384,6 +397,11 @@ const styles = StyleSheet.create({
   promptButtonText: {
     color: '#e2e8f0',
     fontSize: 14,
+  },
+  audioNotice: {
+    color: '#fef08a',
+    fontSize: 13,
+    marginTop: 10,
   },
   errorText: {
     color: '#fca5a5',
