@@ -8,12 +8,14 @@
  * - Logout button at bottom
  */
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { usePath } from '../context/PathContext';
+import { listWorkplaceFields } from '../utils/api';
 import ProfileImage from './ProfileImage';
 import { spacing } from '../styles/spacing';
 import { typography } from '../styles/typography';
@@ -21,7 +23,9 @@ import { typography } from '../styles/typography';
 export default function CustomDrawerContent(props) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
+  const { profession, setPath, setProfession } = usePath();
   const { navigation, state } = props;
+  const [professions, setProfessions] = useState([]);
 
   const handleLogout = async () => {
     await logout();
@@ -83,6 +87,51 @@ export default function CustomDrawerContent(props) {
     navigation.closeDrawer();
   };
 
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await listWorkplaceFields();
+        if (!active) return;
+        setProfessions(res?.fields || []);
+      } catch (_) {
+        if (active) setProfessions([]);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const professionIcon = (id) => {
+    const map = {
+      sairaanhoitaja: 'medkit-outline',
+      laakari: 'medical-outline',
+      ict: 'laptop-outline',
+      sahkoinsinoori: 'flash-outline',
+      rakennusmestari: 'hammer-outline',
+      kokki: 'restaurant-outline',
+      myyja: 'storefront-outline',
+      opettaja: 'school-outline',
+      logistiikka: 'cube-outline',
+      asiakaspalvelu: 'chatbubble-ellipses-outline',
+      siivooja: 'sparkles-outline',
+      hoiva: 'heart-outline',
+    };
+    return map[id] || 'briefcase-outline';
+  };
+
+  const professionItems = useMemo(() => professions.map((p) => ({
+    id: p.id,
+    label: p.label,
+    icon: professionIcon(p.id),
+  })), [professions]);
+
+  const handleProfessionSelect = (item) => {
+    setPath('workplace');
+    setProfession(item.id);
+    navigation.navigate('Workplace');
+    navigation.closeDrawer();
+  };
+
   return (
     <View style={styles.container}>
       <DrawerContentScrollView {...props} contentContainerStyle={styles.scrollContent}>
@@ -118,6 +167,36 @@ export default function CustomDrawerContent(props) {
             </TouchableOpacity>
           ))}
         </View>
+
+        {professionItems.length > 0 && (
+          <>
+            <View style={styles.divider} />
+            <View style={styles.navigationSection}>
+              <Text style={styles.sectionTitle}>Ammatit</Text>
+              {professionItems.map((item) => {
+                const active = profession === item.id;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.navItem, active && styles.navItemActive]}
+                    onPress={() => handleProfessionSelect(item)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={22}
+                      color={active ? '#7dd3fc' : '#94a3b8'}
+                      style={styles.navIcon}
+                    />
+                    <Text style={[styles.navLabel, active && styles.navLabelActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
       </DrawerContentScrollView>
 
       {/* Bottom Section - Theme Toggle and Logout */}
@@ -191,6 +270,14 @@ const styles = StyleSheet.create({
   navigationSection: {
     paddingHorizontal: spacing.m,
     gap: spacing.xs,
+  },
+  sectionTitle: {
+    ...typography.bodySm,
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: spacing.s,
+    marginTop: spacing.s,
   },
   navItem: {
     flexDirection: 'row',

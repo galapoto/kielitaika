@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,18 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Background from '../components/ui/Background';
-import { listWorkplaceFields, listWorkplaceFieldsV2 } from '../utils/api';
+import { listWorkplaceFields } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { usePath } from '../context/PathContext';
 import HomeButton from '../components/HomeButton';
 import ProfileImage from '../components/ProfileImage';
+import RukaCard from '../components/ui/RukaCard';
+import { Ionicons } from '@expo/vector-icons';
+import { colors as palette } from '../styles/colors';
 
 export default function WorkplaceScreen({ navigation }) {
   const { user } = useAuth();
+  const { profession, setProfession } = usePath();
   const [fields, setFields] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -34,25 +39,8 @@ export default function WorkplaceScreen({ navigation }) {
   const loadFields = async () => {
     try {
       setIsLoading(true);
-      // Try v2 first, fallback to v1
-      let response;
-      try {
-        response = await listWorkplaceFieldsV2();
-        // Transform v2 format to match expected format
-        const transformedFields = (response.fields || []).map(field => ({
-          id: field.id,
-          label: field.label || field.id.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          category: field.category || 'general',
-          pack: field.pack || 'core',
-          situations: field.situations || {},
-          terminologyPacks: field.terminology_packs || []
-        }));
-        setFields(transformedFields);
-      } catch (v2Err) {
-        console.log('V2 endpoint failed, trying v1:', v2Err);
-        response = await listWorkplaceFields();
-        setFields(response.fields || []);
-      }
+      const response = await listWorkplaceFields();
+      setFields(response.fields || []);
     } catch (err) {
       console.error('Error loading workplace fields:', err);
       setError(err.message || 'Failed to load professions');
@@ -61,11 +49,66 @@ export default function WorkplaceScreen({ navigation }) {
     }
   };
 
-  const handleFieldSelect = (field) => {
-    navigation.navigate('ProfessionDetail', { field: field.id, fieldName: field.label });
+  const selectedField = useMemo(() => {
+    if (!fields.length) return null;
+    return fields.find((f) => f.id === profession) || fields[0];
+  }, [fields, profession]);
+
+  useEffect(() => {
+    if (!profession && fields.length) {
+      setProfession(fields[0].id);
+    }
+  }, [profession, fields, setProfession]);
+
+  const MODULES = [
+    { id: 'Vocabulary', labelFi: 'Sanasto', type: 'vocabulary', descriptionFi: 'Harjoittele keskeistä sanastoa', icon: 'book-outline' },
+    { id: 'Listening', labelFi: 'Kuuntelu', type: 'listening', descriptionFi: 'Virittäydy kuuntelemaan', icon: 'headset' },
+    { id: 'Roleplay', labelFi: 'Roolipeli', screen: 'Roleplay', descriptionFi: 'Harjoittele työtilanteen dialogia', icon: 'chatbubble-ellipses' },
+    { id: 'Grammar', labelFi: 'Kielioppi', type: 'grammar', descriptionFi: 'Hallitse rakenteet', icon: 'text' },
+    { id: 'Review', labelFi: 'Kertaus', type: 'review', descriptionFi: 'Kertaa ammattialan sisältöä', icon: 'refresh-circle' },
+    { id: 'Quiz', labelFi: 'Koe', type: 'reading', descriptionFi: 'Testaa ymmärtäminen', icon: 'help-circle' },
+    { id: 'Resources', labelFi: 'Materiaalit', type: 'grammar', descriptionFi: 'Lisämateriaalit', icon: 'library-outline' },
+  ];
+
+  const handleModulePress = (module) => {
+    if (!selectedField) return;
+    const field = selectedField.id;
+    const fieldName = selectedField.label;
+
+    if (module.screen === 'Roleplay') {
+      navigation?.navigate('Roleplay', { field, fieldName });
+      return;
+    }
+
+    if (module.id === 'Vocabulary') {
+      navigation?.navigate('Vocabulary', { path: 'workplace', field });
+      return;
+    }
+
+    if (module.id === 'Quiz') {
+      navigation?.navigate('Quiz', {
+        path: 'workplace',
+        field,
+        sourceType: module.type || 'reading',
+        level: module.level || 'B1',
+        type: module.type || 'reading',
+      });
+      return;
+    }
+
+    navigation?.navigate('LessonDetail', {
+      type: module.type || 'grammar',
+      level: module.level || 'B1',
+      path: 'workplace',
+      field,
+      professionLabel: fieldName,
+      title: module.id,
+    });
   };
 
-  // Combine designs: Header from 2nd picture, Card grid from 2nd picture, Schedule from 3rd picture, Flight cards from 6th picture
+  const headerTitle = selectedField?.label || 'Työelämän suomi';
+  const headerSubtitle = 'Ammattikohtainen suomi ja moduulit';
+
   return (
     <Background module="workplace" variant="brown">
       <View style={styles.container}>
@@ -77,50 +120,50 @@ export default function WorkplaceScreen({ navigation }) {
           </TouchableOpacity>
           <View style={styles.profileSection}>
             <ProfileImage size={40} />
-            <Text style={styles.userName}>Työelämän suomi</Text>
-            <Text style={styles.membershipDate}>Valitse ammatti</Text>
+            <Text style={styles.userName}>{headerTitle}</Text>
+            <Text style={styles.membershipDate}>{headerSubtitle}</Text>
           </View>
         </View>
         <HomeButton navigation={navigation} style={styles.homeButtonHeader} />
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Profession Cards Grid - From 2nd picture (3x2 grid) */}
-        <View style={styles.cardGrid}>
-          {fields.map((field) => (
-            <TouchableOpacity
-              key={field.id}
-              style={styles.professionCard}
-              onPress={() => handleFieldSelect(field)}
-            >
-              <Text style={styles.cardIcon}>{field.icon || '💼'}</Text>
-              <Text style={styles.cardLabel}>{field.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Profession List - Flight Booking Style from 6th picture */}
-        {fields.length > 0 && (
-          <View style={styles.professionsList}>
-            <View style={styles.listHeader}>
-              <Text style={styles.listTitle}>Saatavilla olevat ammatit</Text>
+        {selectedField && (
+          <View style={styles.professionContent}>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>{selectedField.label}</Text>
+              <Text style={styles.infoDescription}>
+                Harjoittele ammattikohtaista suomea ja etene moduuli kerrallaan.
+              </Text>
             </View>
 
-            {fields.map((field) => (
-              <TouchableOpacity
-                key={field.id}
-                style={styles.professionListItem}
-                onPress={() => handleFieldSelect(field)}
-              >
-                <View style={styles.professionListLeft}>
-                  <Text style={styles.professionListTitle}>{field.label}</Text>
-                  <Text style={styles.professionListDescription}>Työelämän suomi</Text>
-                </View>
-                <View style={styles.professionListRight}>
-                  <Text style={styles.professionListArrow}>→</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            <View style={styles.modulesSection}>
+              <Text style={styles.sectionTitle}>Oppimismoduulit</Text>
+              {MODULES.map((module) => (
+                <TouchableOpacity
+                  key={module.id}
+                  style={styles.moduleCard}
+                  onPress={() => handleModulePress(module)}
+                  activeOpacity={0.85}
+                >
+                  <RukaCard style={styles.moduleInnerCard}>
+                    <View style={styles.moduleIconWrapper}>
+                      <Ionicons
+                        name={module.icon || 'sparkles'}
+                        size={26}
+                        color={palette.accentPrimary}
+                      />
+                    </View>
+                    <View style={styles.moduleText}>
+                      <Text style={styles.moduleLabel}>{module.labelFi || module.id}</Text>
+                      {(module.descriptionFi || module.description) && (
+                        <Text style={styles.moduleDescription}>{module.descriptionFi || module.description}</Text>
+                      )}
+                    </View>
+                  </RukaCard>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
 
@@ -220,141 +263,63 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 100,
   },
-  cardGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 24,
+  professionContent: {
+    gap: 16,
   },
-  professionCard: {
-    width: '48%',
-    aspectRatio: 1,
-    backgroundColor: '#2A2A2A',
+  infoCard: {
+    backgroundColor: '#1E1E1E',
     borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  infoTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
+  infoDescription: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  modulesSection: {
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  moduleCard: {
+    marginBottom: 8,
+  },
+  moduleInnerCard: {
+    minHeight: 84,
+    justifyContent: 'center',
+  },
+  moduleIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(27, 78, 218, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    padding: 16,
+    marginBottom: 8,
   },
-  cardIcon: {
-    fontSize: 32,
-    marginBottom: 12,
+  moduleText: {
+    gap: 4,
   },
-  cardLabel: {
+  moduleLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  scheduleSection: {
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  scheduleHeader: {
-    marginBottom: 16,
-  },
-  scheduleTitle: {
-    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  activityCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    minHeight: 200,
-    flexDirection: 'row',
-  },
-  timeAxis: {
-    width: 60,
-    marginRight: 16,
-  },
-  timeMarker: {
-    marginBottom: 40,
-  },
-  timeText: {
-    fontSize: 12,
-    color: 'rgba(0, 0, 0, 0.5)',
-  },
-  activityList: {
-    flex: 1,
-  },
-  activityItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  activitySubtitle: {
-    fontSize: 14,
-    color: 'rgba(0, 0, 0, 0.6)',
-  },
-  statusIcon: {
-    fontSize: 18,
-    color: '#22C55E',
-  },
-  professionsList: {
-    marginBottom: 24,
-  },
-  listHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  listTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  professionListItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  professionListLeft: {
-    flex: 1,
-  },
-  professionListTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  professionListDescription: {
-    fontSize: 14,
-    color: 'rgba(0, 0, 0, 0.6)',
-  },
-  professionListRight: {
-    alignItems: 'flex-end',
-  },
-  professionListArrow: {
-    fontSize: 20,
-    color: '#1E3A8A',
+  moduleDescription: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    lineHeight: 18,
   },
   loader: {
     alignItems: 'center',
@@ -383,45 +348,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    backgroundColor: '#2A2A2A',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    justifyContent: 'space-around',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  navItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-  },
-  navItemActive: {
-    backgroundColor: '#9C27B0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-  },
-  navIcon: {
-    fontSize: 20,
-    color: 'rgba(255, 255, 255, 0.6)',
-    marginBottom: 4,
-  },
-  navIconActive: {
-    color: '#FFFFFF',
-  },
-  navLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
-  },
-  navLabelActive: {
     color: '#FFFFFF',
     fontWeight: '600',
   },
