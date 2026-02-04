@@ -128,7 +128,7 @@ export default function CustomDrawerContent(props) {
   const handleProfessionSelect = (item) => {
     setPath('workplace');
     setProfession(item.id);
-    navigation.navigate('Workplace');
+    navigation.navigate('WorkPlan', { screen: 'Workplace' });
     navigation.closeDrawer();
   };
 
