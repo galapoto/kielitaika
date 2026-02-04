@@ -122,6 +122,10 @@ export default function RoleplayScreen({ navigation, route } = {}) {
       setError(null);
       try {
         if (isFinalTurn) {
+          const closingText = buildFollowupPrompt(turnIndex);
+          if (closingText) {
+            setSpeakingTurnAiTranscript(sessionId, turnIndex, closingText, { isConclusive: true });
+          }
           try {
             const result = await evaluateRoleplay(field, normalized);
             setEvaluation(result);
