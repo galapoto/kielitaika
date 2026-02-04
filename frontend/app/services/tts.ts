@@ -9,9 +9,9 @@
 import { Audio } from 'expo-av';
 import { Platform } from 'react-native';
 import { handleTTSFailure, handleNetworkError, YKIError, YKIErrorType } from './ykiErrorService';
-import { HTTP_API_BASE } from '../config/backend';
+import { WS_API_BASE } from '../config/backend';
 
-const API_BASE = HTTP_API_BASE;
+const WS_BASE = WS_API_BASE;
 
 // Get auth token for authenticated requests
 async function getAuthToken(): Promise<string | null> {
@@ -31,11 +31,6 @@ async function getAuthToken(): Promise<string | null> {
 
 export type TTSMode = 'conversation' | 'system' | 'yki' | 'toihin' | 'professional' | 'vocab' | 'grammar';
 
-export interface TTSResponse {
-  audio_base64: string;
-  provider: 'elevenlabs' | 'azure';
-}
-
 export interface TTSOptions {
   /**
    * Playback speed multiplier (client-side). 1.0 = normal.
@@ -49,6 +44,8 @@ export interface TTSOptions {
   speed?: number;
 }
 
+type TTSProvider = 'elevenlabs' | 'azure';
+
 /**
  * Play TTS audio from backend
  * 
@@ -60,7 +57,7 @@ export async function playTTS(
   text: string,
   mode: TTSMode = 'system',
   options: TTSOptions = {}
-): Promise<'elevenlabs' | 'azure'> {
+): Promise<TTSProvider> {
   if (!text || !text.trim()) {
     throw new YKIError(
       YKIErrorType.VALIDATION_ERROR,
@@ -71,45 +68,16 @@ export async function playTTS(
   }
 
   try {
-    const token = await getAuthToken();
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const provider = getProviderForMode(mode);
+    const audioBase64 = await fetchTTSAudioBase64(text);
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE}/tts`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ text, mode, speed: options.speed }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('TTS API error:', response.status, errorText);
-      
-      // Check if it's a network error
-      if (response.status === 0 || !response.status) {
-        throw handleNetworkError(new Error('Network error during TTS request'), 'TTS playback');
-      }
-      
-      throw handleTTSFailure(new Error(`TTS API error: ${response.status} ${errorText}`));
-    }
-
-    const data: TTSResponse = await response.json();
-    const { audio_base64, provider } = data;
-
-    if (!audio_base64) {
+    if (!audioBase64) {
       throw handleTTSFailure(new Error('No audio data in TTS response'));
     }
 
-    // Play audio using Expo AV
     try {
-      await playAudioFromBase64(audio_base64, options.playbackRate);
+      await playAudioFromBase64(audioBase64, options.playbackRate, 'audio/ogg;codecs=opus');
     } catch (playbackError) {
-      // Audio playback error (not network/API error)
       throw handleTTSFailure(playbackError as Error);
     }
 
@@ -135,10 +103,14 @@ export async function playTTS(
 /**
  * Play audio from base64 encoded audio data
  */
-async function playAudioFromBase64(base64Audio: string, playbackRate: number = 1.0): Promise<void> {
+async function playAudioFromBase64(
+  base64Audio: string,
+  playbackRate: number = 1.0,
+  mimeType: string = 'audio/ogg;codecs=opus'
+): Promise<void> {
   try {
     // Create data URI for audio
-    const audioUri = `data:audio/mp3;base64,${base64Audio}`;
+    const audioUri = `data:${mimeType};base64,${base64Audio}`;
 
     // Load and play audio
     const { sound } = await Audio.Sound.createAsync(
@@ -183,4 +155,101 @@ export function getProviderForMode(mode: TTSMode): 'elevenlabs' | 'azure' {
     return 'elevenlabs';
   }
   return 'azure';
+}
+
+async function fetchTTSAudioBase64(text: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const wsUrl = `${WS_BASE}/voice/tts-stream`;
+    let settled = false;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const chunks: Uint8Array[] = [];
+
+    const ws = new WebSocket(wsUrl);
+    ws.binaryType = 'arraybuffer';
+
+    const finalize = () => {
+      if (settled) return;
+      settled = true;
+      if (idleTimer) clearTimeout(idleTimer);
+      try {
+        ws.close();
+      } catch (_) {
+        // ignore close errors
+      }
+
+      if (!chunks.length) {
+        reject(handleTTSFailure(new Error('TTS stream returned no audio')));
+        return;
+      }
+
+      try {
+        const merged = concatChunks(chunks);
+        const base64 = toBase64(merged);
+        resolve(base64);
+      } catch (err) {
+        reject(handleTTSFailure(err as Error));
+      }
+    };
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ text }));
+    };
+
+    ws.onerror = () => {
+      if (settled) return;
+      settled = true;
+      reject(handleNetworkError(new Error('TTS WebSocket error'), 'TTS playback'));
+    };
+
+    ws.onmessage = (event) => {
+      if (typeof event.data === 'string') {
+        if (event.data.startsWith('error')) {
+          if (!settled) {
+            settled = true;
+            reject(handleTTSFailure(new Error(event.data)));
+          }
+        }
+        return;
+      }
+
+      const chunk = event.data instanceof ArrayBuffer
+        ? new Uint8Array(event.data)
+        : null;
+
+      if (chunk && chunk.length) {
+        chunks.push(chunk);
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(finalize, 200);
+      }
+    };
+
+    ws.onclose = () => {
+      finalize();
+    };
+  });
+}
+
+function concatChunks(chunks: Uint8Array[]): Uint8Array {
+  const total = chunks.reduce((sum, c) => sum + c.length, 0);
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    merged.set(c, offset);
+    offset += c.length;
+  }
+  return merged;
+}
+
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  if (typeof btoa === 'function') {
+    return btoa(binary);
+  }
+  // Fallback for environments without btoa
+  return global?.Buffer ? global.Buffer.from(bytes).toString('base64') : '';
 }

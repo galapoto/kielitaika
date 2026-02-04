@@ -47,7 +47,8 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     try {
       await speak(prompt, 'professional');
     } catch (err) {
-      setError(err?.message || 'Ohjeen äänen toisto epäonnistui.');
+      // TTS failure should not block roleplay progression
+      console.warn('[Roleplay] TTS playback failed:', err);
     }
   }, [scenario?.roleplay_prompt, speak, sessionStatus]);
 
@@ -66,7 +67,11 @@ export default function RoleplayScreen({ navigation, route } = {}) {
           setSpeakingTurnAiTranscript(sessionId, 0, data.roleplay_prompt);
         }
         if (data?.roleplay_prompt) {
-          await speak(data.roleplay_prompt, 'professional');
+          try {
+            await speak(data.roleplay_prompt, 'professional');
+          } catch (err) {
+            console.warn('[Roleplay] Initial TTS playback failed:', err);
+          }
         }
       } catch (err) {
         if (!mounted) return;
