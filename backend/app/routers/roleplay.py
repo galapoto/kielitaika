@@ -14,6 +14,7 @@ from app.db.database import get_session
 from app.db.models import RoleplayAttempt, RoleplayTurn, RoleplayScore
 from app.routers.auth import get_current_user
 from app.services.roleplay_scoring import score_roleplay
+from app.services.workplace_engine import generate_field_dialogue
 
 router = APIRouter(prefix="/roleplay", tags=["roleplay"])
 log = logging.getLogger("puhis.roleplay")
@@ -71,6 +72,19 @@ class RoleplayAttemptDetail(BaseModel):
 
 class RoleplayScoreRequest(BaseModel):
     attempt_id: str = Field(..., min_length=6)
+
+
+class RoleplaySessionStartRequest(BaseModel):
+    role_or_field: str
+    scenario_identifier: Optional[str] = None
+    difficulty_optional: Optional[str] = None
+    user_id: Optional[str] = None
+
+
+class RoleplaySessionStartResponse(BaseModel):
+    sessionId: str
+    turnIndex: int
+    aiText: str
 
 
 @router.post("/complete", response_model=RoleplayAttemptResponse)
@@ -140,6 +154,32 @@ async def complete_roleplay(
 
     log.info("roleplay.complete stored attempt_id=%s", attempt.id)
     return RoleplayAttemptResponse(attempt_id=attempt.id, status="created")
+
+
+@router.post("/session/start", response_model=RoleplaySessionStartResponse)
+async def start_roleplay_session(
+    payload: RoleplaySessionStartRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user=Depends(get_current_user),
+):
+    if payload.user_id and payload.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    level = payload.difficulty_optional or "B1"
+    scenario = generate_field_dialogue(
+        payload.role_or_field,
+        scenario_title=payload.scenario_identifier,
+        level=level,
+    )
+    if scenario.get("error"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown field")
+
+    session_id = str(uuid.uuid4())
+    return RoleplaySessionStartResponse(
+        sessionId=session_id,
+        turnIndex=1,
+        aiText=scenario["roleplay_prompt"],
+    )
 
 
 @router.post("/score", response_model=RoleplayScoreResponse)

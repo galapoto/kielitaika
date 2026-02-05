@@ -193,6 +193,21 @@ export async function evaluateRoleplay(field, transcript) {
   return handleResponse(res);
 }
 
+export async function startRoleplaySession({ field, scenarioTitle = null, level = null, userId = null }) {
+  const resolvedUserId = userId || await getUserId();
+  const res = await fetchWithAuth('/roleplay/session/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      role_or_field: field,
+      scenario_identifier: scenarioTitle,
+      difficulty_optional: level,
+      user_id: resolvedUserId,
+    }),
+  });
+  return handleResponse(res);
+}
+
 export async function fetchSrsQueue(errors = [], field = null, limit = 10) {
   const res = await fetchWithAuth('/vocab/srs', {
     method: 'POST',

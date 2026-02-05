@@ -6,11 +6,11 @@ import useVoiceStreaming from "../hooks/useVoiceStreaming";
 import TranscriptionViewer from "../components/TranscriptionViewer";
 import MicButton from "../components/MicButton";
 import { speak } from "../services/tts";
+import { startRoleplaySession } from "../utils/api";
 
 const MAX_TURNS = 5;
 
 export default function RoleplayScreen({ route }) {
-  console.log("ROLEPLAY_SCREEN_MOUNTED", route?.params);
   const {
     activeTurnIndex,
     setActiveTurnIndex,
@@ -19,7 +19,6 @@ export default function RoleplayScreen({ route }) {
     completeSession,
     status,
   } = useSpeakingSession();
-  console.log("ROLEPLAY_SESSION_INIT_CALLED");
 
   const { start, stop } = useVoiceStreaming({
     onPartialTranscript: (text) => {
@@ -49,12 +48,22 @@ export default function RoleplayScreen({ route }) {
   });
 
   useEffect(() => {
-    console.log("ROLEPLAY_EFFECT_ENTERED");
-    const aiText = route.params?.prompt;
-    if (aiText) {
-      setAiTranscript(0, aiText);
-      speak(aiText);
+    const field = route?.params?.field || route?.params?.role_or_field;
+    const scenarioTitle = route?.params?.scenario_identifier || route?.params?.scenarioTitle;
+    const level = route?.params?.difficulty_optional || route?.params?.level;
+    if (!field) {
+      console.error("ROLEPLAY: missing field param");
+      return;
     }
+    (async () => {
+      const res = await startRoleplaySession({ field, scenarioTitle, level });
+      const turnIndex = typeof res?.turnIndex === "number" ? res.turnIndex - 1 : 0;
+      const aiText = res?.aiText;
+      if (aiText) {
+        setAiTranscript(turnIndex, aiText);
+        speak(aiText);
+      }
+    })();
   }, []);
 
   const handleMicPress = async () => {
