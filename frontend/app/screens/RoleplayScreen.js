@@ -10,6 +10,7 @@ import { speak } from "../services/tts";
 const MAX_TURNS = 5;
 
 export default function RoleplayScreen({ route }) {
+  console.log("ROLEPLAY_SCREEN_MOUNTED", route?.params);
   const {
     activeTurnIndex,
     setActiveTurnIndex,
@@ -18,6 +19,7 @@ export default function RoleplayScreen({ route }) {
     completeSession,
     status,
   } = useSpeakingSession();
+  console.log("ROLEPLAY_SESSION_INIT_CALLED");
 
   const { start, stop } = useVoiceStreaming({
     onPartialTranscript: (text) => {
@@ -47,6 +49,7 @@ export default function RoleplayScreen({ route }) {
   });
 
   useEffect(() => {
+    console.log("ROLEPLAY_EFFECT_ENTERED");
     const aiText = route.params?.prompt;
     if (aiText) {
       setAiTranscript(0, aiText);
@@ -69,4 +72,3 @@ export default function RoleplayScreen({ route }) {
     </View>
   );
 }
-
