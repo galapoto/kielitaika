@@ -223,11 +223,13 @@ export default function RoleplayScreen({ navigation, route } = {}) {
       setSttError(null);
       setLiveTranscript('');
       setRoleplayPhase('USER_RECORDING');
+      console.log('[STT] Recording started');
       startRecording({ userInitiated: true, userGesture: true });
       return;
     }
     if (roleplayPhase === 'USER_RECORDING') {
       setRoleplayPhase('USER_PROCESSING');
+      console.log('[STT] Recording stopped');
       stopRecording();
     }
   }, [roleplayPhase, sessionStatus, startRecording, stopRecording]);
