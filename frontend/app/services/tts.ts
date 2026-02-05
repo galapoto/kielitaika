@@ -69,14 +69,18 @@ export async function playTTS(
 
   try {
     const provider = getProviderForMode(mode);
-    const audioBase64 = await fetchTTSAudioBase64(text);
+    const { audioBase64, format } = await fetchTTSAudioBase64(text);
 
     if (!audioBase64) {
       throw handleTTSFailure(new Error('No audio data in TTS response'));
     }
 
     try {
-      await playAudioFromBase64(audioBase64, options.playbackRate, 'audio/ogg;codecs=opus');
+      await playAudioFromBase64(
+        audioBase64,
+        options.playbackRate,
+        resolveMimeType(format)
+      );
     } catch (playbackError) {
       throw handleTTSFailure(playbackError as Error);
     }
@@ -129,7 +133,12 @@ async function playAudioFromBase64(
 
     // Wait for playback to complete
     return new Promise((resolve, reject) => {
+      let hasStarted = false;
       sound.setOnPlaybackStatusUpdate((status) => {
+        if (!hasStarted && status.isLoaded && status.isPlaying) {
+          hasStarted = true;
+          if (__DEV__) console.log('[TTS] Playback started');
+        }
         if (status.isLoaded && status.didJustFinish) {
           sound.unloadAsync().then(() => resolve()).catch(reject);
         }
@@ -157,12 +166,14 @@ export function getProviderForMode(mode: TTSMode): 'elevenlabs' | 'azure' {
   return 'azure';
 }
 
-async function fetchTTSAudioBase64(text: string): Promise<string> {
+async function fetchTTSAudioBase64(text: string): Promise<{ audioBase64: string; format: string | null }> {
   return new Promise((resolve, reject) => {
     const wsUrl = `${WS_BASE}/voice/tts-stream`;
     let settled = false;
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     const chunks: Uint8Array[] = [];
+    let ttsFormat: string | null = null;
+    let ttsEndReceived = false;
 
     if (__DEV__) {
       console.log('[TTS] WebSocket URL:', wsUrl);
@@ -184,6 +195,11 @@ async function fetchTTSAudioBase64(text: string): Promise<string> {
 
     ws.onclose = (ev) => {
       if (__DEV__) console.log('[TTS] WebSocket onClose', ev.code, ev.reason);
+      if (!settled && ev.code !== 1000 && ev.reason) {
+        settled = true;
+        reject(handleTTSFailure(new Error(`TTS closed: ${ev.reason}`)));
+        return;
+      }
       finalize();
     };
 
@@ -205,7 +221,7 @@ async function fetchTTSAudioBase64(text: string): Promise<string> {
       try {
         const merged = concatChunks(chunks);
         const base64 = toBase64(merged);
-        resolve(base64);
+        resolve({ audioBase64: base64, format: ttsFormat });
       } catch (err) {
         reject(handleTTSFailure(err as Error));
       }
@@ -213,6 +229,36 @@ async function fetchTTSAudioBase64(text: string): Promise<string> {
 
     ws.onmessage = (event) => {
       if (typeof event.data === 'string') {
+        try {
+          const parsed = JSON.parse(event.data) as {
+            type?: string;
+            reason?: string;
+            message?: string;
+            format?: string;
+            sampleRate?: number;
+          };
+          if (parsed?.type === 'tts_start') {
+            ttsFormat = typeof parsed.format === 'string' ? parsed.format : null;
+            if (__DEV__) console.log('[TTS] tts_start', parsed);
+            return;
+          }
+          if (parsed?.type === 'tts_end') {
+            ttsEndReceived = true;
+            if (__DEV__) console.log('[TTS] tts_end');
+            finalize();
+            return;
+          }
+          if (parsed?.type === 'error' && parsed?.message) {
+            if (!settled) {
+              settled = true;
+              if (__DEV__) console.warn('[TTS] error:', parsed.reason, parsed.message);
+              reject(handleTTSFailure(new Error(parsed.message)));
+            }
+            return;
+          }
+        } catch {
+          // not JSON
+        }
         if (event.data.startsWith('error')) {
           if (!settled) {
             settled = true;
@@ -228,12 +274,27 @@ async function fetchTTSAudioBase64(text: string): Promise<string> {
 
       if (chunk && chunk.length) {
         chunks.push(chunk);
+        if (__DEV__) console.log('[TTS] chunk bytes', chunk.length);
         if (idleTimer) clearTimeout(idleTimer);
-        idleTimer = setTimeout(finalize, 200);
+        idleTimer = setTimeout(() => {
+          if (!ttsEndReceived) finalize();
+        }, 200);
       }
     };
 
   });
+}
+
+function resolveMimeType(format: string | null): string {
+  switch ((format || '').toLowerCase()) {
+    case 'mp3':
+      return 'audio/mpeg';
+    case 'wav':
+      return 'audio/wav';
+    case 'opus':
+    default:
+      return 'audio/ogg;codecs=opus';
+  }
 }
 
 function concatChunks(chunks: Uint8Array[]): Uint8Array {
