@@ -37,6 +37,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     currentTurnIndex,
     maxTurns,
   } = useSpeakingSessionContext();
+  const totalTurns = maxTurns || 5;
   const transcript = activeTurn?.userSpeech?.transcript || '';
 
   const [scenario, setScenario] = useState(null);
@@ -265,7 +266,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     <Background module="workplace" variant="brown" solidContentZone>
       <View style={styles.container}>
         <Text style={styles.title}>{scenario?.title || 'Roolipeli'}</Text>
-        <Text style={styles.subtitle}>Ammattiharjoitus • {level}</Text>
+        <Text style={styles.subtitle}>Ammattiharjoitus • {level} • Vuoro {currentTurnIndex + 1}/{totalTurns}</Text>
         <Text style={styles.prompt}>
           {activeTurn?.aiSpeech?.transcript || scenario?.roleplay_prompt}
         </Text>
