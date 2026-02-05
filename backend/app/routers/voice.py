@@ -83,13 +83,31 @@ async def tts_stream(ws: WebSocket):
             await ws.close(code=1003, reason=msg)
             return
 
-        _tts_log.info("TTS requested, text length=%d", len(text))
+        response_format = "opus"
+        sample_rate_hz = 24000
+        _tts_log.info(
+            "TTS requested, text length=%d, format=%s, sample_rate=%s",
+            len(text),
+            response_format,
+            sample_rate_hz,
+        )
+
+        await ws.send_text(json.dumps({
+            "type": "tts_start",
+            "format": response_format,
+            "sampleRate": sample_rate_hz,
+        }))
 
         # ---- STREAM AUDIO ----
         chunk_count = 0
+        total_bytes = 0
+        first_chunk_size = None
         async for chunk in tts_service.stream_tts(text):
             if chunk:
                 chunk_count += 1
+                total_bytes += len(chunk)
+                if first_chunk_size is None:
+                    first_chunk_size = len(chunk)
                 await ws.send_bytes(chunk)
 
         # ---- FORENSIC CHECK 3: NO AUDIO ----
@@ -100,7 +118,13 @@ async def tts_stream(ws: WebSocket):
             await ws.close(code=1011, reason="no_audio_chunks")
             return
 
-        _tts_log.info("TTS completed successfully, chunks=%d", chunk_count)
+        _tts_log.info(
+            "TTS completed successfully, chunks=%d, total_bytes=%d, first_chunk_bytes=%s",
+            chunk_count,
+            total_bytes,
+            first_chunk_size,
+        )
+        await ws.send_text(json.dumps({ "type": "tts_end" }))
         await ws.close(code=1000, reason="tts_complete")
 
     except WebSocketDisconnect:
