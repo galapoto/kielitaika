@@ -162,20 +162,26 @@ export function useVoiceStreaming(options = {}) {
   // Start recording with WebSocket streaming
   const startRecording = useCallback(async (recordingOptions = {}) => {
     try {
+      if (isRecording) {
+        console.log('[STT] Start ignored: already recording');
+        return;
+      }
       if (recordingOptions?.userInitiated !== true || recordingOptions?.userGesture !== true) {
         throw new Error('Speaking invariant: microphone must be started by explicit user gesture.');
       }
       assertSpeakingSessionActive();
+      console.log('[STT] Start requested');
       setError(null);
       setTranscript('');
       transcriptBufferRef.current = '';
       setIsRecording(true);
       setIsListening(true);
-      setIsProcessing(true);
+      setIsProcessing(false);
 
       if (isNativePlatform) {
         await startNativeRecording();
         lastVoiceActivityRef.current = Date.now();
+        setIsProcessing(false);
         return;
       }
 
@@ -244,6 +250,7 @@ export function useVoiceStreaming(options = {}) {
       // Start recording (send chunks every 100ms)
       mediaRecorder.start(100);
       lastVoiceActivityRef.current = Date.now();
+      setIsProcessing(false);
     } catch (err) {
       setError(err.message || 'Failed to start recording');
       setIsRecording(false);
@@ -256,6 +263,7 @@ export function useVoiceStreaming(options = {}) {
   // Stop recording
   const stopRecording = useCallback(async () => {
     if (!isRecording) return;
+    console.log('[STT] Stop requested');
     if (isNativePlatform) {
       try {
         setIsProcessing(true);
@@ -264,6 +272,7 @@ export function useVoiceStreaming(options = {}) {
         setIsRecording(false);
         setIsListening(false);
         if (uri) {
+          console.log('[STT] Uploading recorded file', uri);
           await sendNativeAudio(uri, { callTranscriptComplete: true });
         }
       } catch (err) {
@@ -289,6 +298,7 @@ export function useVoiceStreaming(options = {}) {
     async (audioBlob, { callTranscriptComplete = false, audioFormat = 'webm' } = {}) => {
     try {
       setIsProcessing(true);
+      console.log('[STT] Uploading audio blob', audioFormat);
       const normalizedFormat = audioFormat?.startsWith('audio/')
         ? audioFormat.split('/')[1]
         : audioFormat;
@@ -304,15 +314,18 @@ export function useVoiceStreaming(options = {}) {
           onTranscript(normalized);
         }
         if (callTranscriptComplete && onTranscriptComplete) {
+          console.log('[STT] Transcript received');
           onTranscriptComplete(normalized, meta);
         }
       } else if (callTranscriptComplete && onTranscriptComplete) {
         // Even if transcript is empty, call complete to signal recording finished
+        console.log('[STT] Transcript empty');
         onTranscriptComplete('', meta);
       }
       return normalized;
     } catch (err) {
       const errorMessage = err.message || 'STT transcription failed';
+      console.log('[STT] Upload failed', errorMessage);
       setError(errorMessage);
       if (callTranscriptComplete && onTranscriptComplete) {
         // Signal completion even on error so UI can update
@@ -328,6 +341,7 @@ export function useVoiceStreaming(options = {}) {
     async (fileUri, options) => {
       try {
         setIsProcessing(true);
+        console.log('[STT] Sending native audio', fileUri);
         const uriExtMatch = fileUri?.split(".").pop()?.split("?")[0];
         const finalFormat = uriExtMatch || options?.audioFormat;
         const { text, meta } = await transcribeAudio({
@@ -341,14 +355,17 @@ export function useVoiceStreaming(options = {}) {
             onTranscript(normalized);
           }
           if (options?.callTranscriptComplete && onTranscriptComplete) {
+            console.log('[STT] Transcript received');
             onTranscriptComplete(normalized, meta);
           }
         } else if (options?.callTranscriptComplete && onTranscriptComplete) {
           // Even if transcript is empty, call complete to signal recording finished
+          console.log('[STT] Transcript empty');
           onTranscriptComplete('', meta);
         }
         return normalized;
       } catch (err) {
+        console.log('[STT] Transcription failed', err?.message || err);
         setError(err.message || 'STT transcription failed');
         if (options?.callTranscriptComplete && onTranscriptComplete) {
           // Signal completion even on error so UI can update

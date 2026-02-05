@@ -57,6 +57,7 @@ export async function transcribeAudio({
     if (!blob) {
       throw new Error('STT requires `fileUri` or `audioBlob`');
     }
+    console.log('[STT] Backend upload start', `${API_BASE}/voice/stt`, audioFormat);
     const res = await fetch(`${API_BASE}/voice/stt`, {
       method: 'POST',
       headers: {
@@ -69,6 +70,7 @@ export async function transcribeAudio({
       throw new Error(`Backend STT failed: ${res.status} ${res.statusText}`);
     }
     const data = await res.json();
+    console.log('[STT] Backend upload complete', data?.transcript ? 'ok' : 'empty');
     return {
       text: safeString(data?.transcript).trim(),
       meta: {
@@ -98,6 +100,7 @@ export async function transcribeAudio({
     form.append('file', filePartFromUri(fileUri, audioFormat));
   }
 
+  console.log('[STT] OpenAI upload start', model, audioFormat);
   const res = await fetch(OPENAI_TRANSCRIBE_URL, {
     method: 'POST',
     headers: {
@@ -112,6 +115,7 @@ export async function transcribeAudio({
   }
 
   const raw = await res.json();
+  console.log('[STT] OpenAI upload complete', raw?.text ? 'ok' : 'empty');
   const text = safeString(raw?.text).trim();
   const confidence = responseFormat === 'verbose_json' ? computeConfidenceFromVerboseJson(raw) : null;
 
