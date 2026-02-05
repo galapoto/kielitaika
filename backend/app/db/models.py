@@ -114,3 +114,50 @@ class RechargeHistory(Base):
     
     # Relationship
     user = relationship("User", backref="recharge_history")
+
+
+class RoleplayAttempt(Base):
+    __tablename__ = "roleplay_attempts"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    client_session_id = Column(String, nullable=False, unique=True, index=True)
+    profession_field = Column(String, nullable=False, index=True)
+    cefr_level = Column(String, nullable=False)
+    scenario_id = Column(String, nullable=True, index=True)
+    scenario_title = Column(String, nullable=True)
+    session_start_time = Column(DateTime, nullable=False)
+    session_end_time = Column(DateTime, nullable=False)
+    session_duration = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    user = relationship("User", backref="roleplay_attempts")
+    turns = relationship("RoleplayTurn", backref="attempt", cascade="all, delete-orphan")
+    score = relationship("RoleplayScore", backref="attempt", uselist=False, cascade="all, delete-orphan")
+
+
+class RoleplayTurn(Base):
+    __tablename__ = "roleplay_turns"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    attempt_id = Column(String, ForeignKey("roleplay_attempts.id"), nullable=False, index=True)
+    turn_index = Column(Integer, nullable=False)
+    ai_transcript = Column(Text, nullable=False)
+    user_transcript = Column(Text, nullable=False)
+    ai_timestamp = Column(DateTime, nullable=True)
+    user_timestamp = Column(DateTime, nullable=True)
+
+
+class RoleplayScore(Base):
+    __tablename__ = "roleplay_scores"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    attempt_id = Column(String, ForeignKey("roleplay_attempts.id"), nullable=False, unique=True, index=True)
+    overall_score = Column(Float, nullable=False)
+    fluency_score = Column(Float, nullable=False)
+    grammar_score = Column(Float, nullable=False)
+    vocabulary_score = Column(Float, nullable=False)
+    relevance_score = Column(Float, nullable=False)
+    cefr_estimate = Column(String, nullable=True)
+    feedback_fi = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)

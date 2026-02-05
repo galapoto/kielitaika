@@ -18,6 +18,7 @@ from app.routers import (
     workplace,
     yki,
     conversation_socket,
+    roleplay,
 )
 from app.db.models import Base
 from app.db.database import engine
@@ -42,6 +43,7 @@ app.include_router(shadowing.router, prefix="/shadowing", tags=["shadowing"])
 app.include_router(engagement.router, prefix="/engagement", tags=["engagement"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(conversation_socket.router, tags=["conversation-socket"])
+app.include_router(roleplay.router, tags=["roleplay"])
 
 
 @app.get("/")
