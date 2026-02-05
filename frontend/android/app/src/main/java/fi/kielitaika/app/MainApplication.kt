@@ -23,14 +23,8 @@ class MainApplication : Application(), ReactApplication {
       object : DefaultReactNativeHost(this) {
         override fun getPackages(): List<ReactPackage> =
             PackageList(this).packages.apply {
-                // Register gesture handler via reflection to avoid compile-time linkage issues.
-                try {
-                    val clazz = Class.forName("com.swmansion.gesturehandler.RNGestureHandlerPackage")
-                    val pkg = clazz.getDeclaredConstructor().newInstance() as ReactPackage
-                    add(pkg)
-                } catch (e: Exception) {
-                    android.util.Log.e("MainApplication", "✗ RNGestureHandlerPackage class not found", e)
-                }
+              // Packages that cannot be autolinked yet can be added manually here, for example:
+              // add(MyReactNativePackage())
             }
 
           override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
@@ -46,13 +40,6 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
-    try {
-      val clazz = Class.forName("expo.modules.devlauncher.DevLauncherController")
-      val method = clazz.getMethod("initialize", Application::class.java)
-      method.invoke(null, this)
-    } catch (e: Exception) {
-      android.util.Log.w("MainApplication", "DevLauncherController init skipped", e)
-    }
     DefaultNewArchitectureEntryPoint.releaseLevel = try {
       ReleaseLevel.valueOf(BuildConfig.REACT_NATIVE_RELEASE_LEVEL.uppercase())
     } catch (e: IllegalArgumentException) {
