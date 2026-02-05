@@ -1,118 +1,66 @@
-import React, { useEffect } from 'react';
-import { TouchableOpacity, StyleSheet, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
-import { useScaleOnPress } from '../animations/useScaleOnPress';
-import { useHaptic } from '../hooks/useHaptic';
+// frontend/app/components/MicButton.js
 
-/**
- * MicButton — tap-to-toggle only. No press-and-hold.
- * Single onPress: tap to start recording, tap again to stop.
- * Recording lifecycle is owned by the parent (e.g. RoleplayScreen).
- */
-function MicButton({ onPress, disabled = false, isActive = false }) {
-  const { animatedStyle, onPressIn: animIn, onPressOut: animOut } = useScaleOnPress();
-  const pulse = useSharedValue(1);
-  const { medium } = useHaptic();
+import React from "react";
+import { Pressable, View, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-  useEffect(() => {
-    pulse.value = withRepeat(withTiming(1.08, { duration: 1500 }), -1, true);
-  }, [pulse]);
-
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: disabled ? 0.3 : 0.5,
-  }));
-
-  const handlePress = (e) => {
-    if (disabled) return;
-    medium();
-    animIn();
-    setTimeout(() => animOut(), 80);
-    onPress?.(e);
-  };
-
+export default function MicButton({
+  onPress,
+  isRecording = false,
+  isDisabled = false,
+}) {
   return (
-    <View style={styles.wrapper}>
-      <Animated.View style={[styles.ring, ringStyle]} />
-      <Animated.View style={animatedStyle}>
-        <TouchableOpacity
-          style={[styles.button, disabled && styles.disabled, isActive && styles.active]}
-          onPress={handlePress}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel={isActive ? "Stop recording" : "Start recording"}
-          accessibilityHint={isActive ? "Press to stop recording your Finnish" : "Press to start recording your Finnish"}
-          accessibilityState={{ disabled, selected: isActive }}
-          testID="mic-button"
-        >
-          <View pointerEvents="none" style={styles.innerGlow} />
-          <Ionicons
-            name={isActive ? "mic" : "mic-outline"}
-            size={24}
-            color={isActive ? '#0b1b3a' : '#102044'}
-          />
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
+    <Pressable
+      onPress={onPress}
+      disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={
+        isRecording ? "Stop recording" : "Start recording"
+      }
+      style={({ pressed }) => [
+        styles.wrapper,
+        isDisabled && styles.disabled,
+        pressed && !isDisabled && styles.pressed,
+      ]}
+    >
+      <View
+        style={[
+          styles.button,
+          isRecording && styles.recording,
+        ]}
+      >
+        <Ionicons
+          name={isRecording ? "mic" : "mic-outline"}
+          size={32}
+          color="white"
+        />
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ring: {
-    position: 'absolute',
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    borderWidth: 2,
-    borderColor: 'rgba(99, 140, 255, 0.45)',
-    shadowColor: '#4f83ff',
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 10,
+    alignItems: "center",
+    marginBottom: 32,
   },
   button: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#f8fafc',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(99, 140, 255, 0.35)',
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: '#0b1b3a',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#2563eb",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  recording: {
+    backgroundColor: "#dc2626",
+  },
+  pressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
   },
   disabled: {
-    opacity: 0.5,
-  },
-  active: {
-    backgroundColor: '#c7d6ff',
-    borderColor: 'rgba(99, 140, 255, 0.8)',
-  },
-  innerGlow: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    right: 6,
-    bottom: 6,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.75)',
-    shadowColor: '#9bb6ff',
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
+    opacity: 0.4,
   },
 });
 
-export default React.memo(MicButton);
