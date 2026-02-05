@@ -277,6 +277,17 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     );
   }
 
+  if (roleplayPhase === 'COMPLETED') {
+    return (
+      <Background module="workplace" variant="brown" solidContentZone>
+        <View style={styles.container}>
+          <Text style={styles.sectionTitle}>Harjoitus valmis</Text>
+          <Text style={styles.sectionItem}>Kiitos! Harjoitus on päättynyt.</Text>
+        </View>
+      </Background>
+    );
+  }
+
   if (loading) {
     return (
       <Background module="workplace" variant="brown" solidContentZone>
