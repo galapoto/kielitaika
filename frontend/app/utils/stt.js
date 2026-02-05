@@ -1,133 +1,46 @@
-import { Platform } from 'react-native';
-import { HTTP_API_BASE } from '../config/backend';
+// frontend/app/services/stt.js
 
-const OPENAI_TRANSCRIBE_URL = 'https://api.openai.com/v1/audio/transcriptions';
-const API_BASE = HTTP_API_BASE;
+import * as Audio from 'expo-av';
+import { updateUserLiveTranscript, finalizeUserTranscript } from '../utils/speakingAttempts';
 
-const safeString = (value) => (typeof value === 'string' ? value : '');
+let recording = null;
 
-function computeConfidenceFromVerboseJson(verboseJson) {
-  const segments = Array.isArray(verboseJson?.segments) ? verboseJson.segments : null;
-  if (!segments || segments.length === 0) return null;
-  const logprobs = segments
-    .map((s) => (typeof s?.avg_logprob === 'number' ? s.avg_logprob : null))
-    .filter((n) => typeof n === 'number');
-  if (!logprobs.length) return null;
-  const avg = logprobs.reduce((sum, v) => sum + v, 0) / logprobs.length;
-  // avg_logprob is negative; map to a loose 0..1 score.
-  // This is a heuristic indicator only (not a real confidence score).
-  const normalized = 1 / (1 + Math.exp(-(avg + 1.5)));
-  return Math.max(0, Math.min(1, normalized));
+export async function startRecording({ sessionId, turnIndex }) {
+  await Audio.Audio.requestPermissionsAsync();
+
+  recording = new Audio.Audio.Recording();
+  await recording.prepareToRecordAsync(
+    Audio.Audio.RecordingOptionsPresets.HIGH_QUALITY
+  );
+  await recording.startAsync();
 }
 
-async function toBlobFromUri(fileUri) {
-  const resp = await fetch(fileUri);
-  return resp.blob();
+export async function stopRecording({ sessionId, turnIndex }) {
+  if (!recording) return;
+
+  await recording.stopAndUnloadAsync();
+  const uri = recording.getURI();
+  recording = null;
+
+  const text = await sendToBackendSTT(uri);
+
+  finalizeUserTranscript(sessionId, turnIndex, text);
 }
 
-function filePartFromUri(fileUri, audioFormat) {
-  const ext = safeString(audioFormat).trim() || safeString(fileUri?.split('.').pop()).trim() || 'wav';
-  const name = `audio.${ext}`;
-  // RN FormData file part
-  return { uri: fileUri, name, type: `audio/${ext}` };
-}
-
-/**
- * Transcribe audio using OpenAI Audio API (preferred) with backend fallback.
- *
- * Returns:
- * {
- *   text: string,
- *   meta: { provider, model, response_format, confidence?, raw? }
- * }
- */
-export async function transcribeAudio({
-  fileUri,
-  audioBlob,
-  audioFormat = 'webm',
-  language = 'fi',
-  model = process.env.EXPO_PUBLIC_OPENAI_STT_MODEL || 'whisper-1',
-  responseFormat = 'verbose_json',
-} = {}) {
-  const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
-
-  // If no OpenAI key is configured, fall back to the existing backend STT route.
-  if (!apiKey) {
-    const blob = audioBlob || (fileUri ? await toBlobFromUri(fileUri) : null);
-    if (!blob) {
-      throw new Error('STT requires `fileUri` or `audioBlob`');
-    }
-    console.log('[STT] Backend upload start', `${API_BASE}/voice/stt`, audioFormat);
-    const res = await fetch(`${API_BASE}/voice/stt`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': `audio/${audioFormat}`,
-        'X-Audio-Format': audioFormat,
-      },
-      body: blob,
-    });
-    if (!res.ok) {
-      throw new Error(`Backend STT failed: ${res.status} ${res.statusText}`);
-    }
-    const data = await res.json();
-    console.log('[STT] Backend upload complete', data?.transcript ? 'ok' : 'empty');
-    return {
-      text: safeString(data?.transcript).trim(),
-      meta: {
-        provider: 'backend',
-        model: 'backend-openai',
-        response_format: 'json',
-      },
-    };
-  }
-
-  const form = new FormData();
-  form.append('model', model);
-  form.append('language', language);
-  form.append('response_format', responseFormat);
-
-  if (Platform.OS === 'web') {
-    const blob = audioBlob || (fileUri ? await toBlobFromUri(fileUri) : null);
-    if (!blob) {
-      throw new Error('STT requires `fileUri` or `audioBlob`');
-    }
-    const file = new File([blob], `audio.${audioFormat}`, { type: `audio/${audioFormat}` });
-    form.append('file', file);
-  } else {
-    if (!fileUri) {
-      throw new Error('STT on native requires `fileUri`');
-    }
-    form.append('file', filePartFromUri(fileUri, audioFormat));
-  }
-
-  console.log('[STT] OpenAI upload start', model, audioFormat);
-  const res = await fetch(OPENAI_TRANSCRIBE_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: form,
+async function sendToBackendSTT(uri) {
+  const data = new FormData();
+  data.append('file', {
+    uri,
+    type: 'audio/m4a',
+    name: 'speech.m4a'
   });
 
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => '');
-    throw new Error(`OpenAI STT failed: ${res.status} ${errorText || res.statusText}`);
-  }
+  const res = await fetch('/voice/stt', {
+    method: 'POST',
+    body: data
+  });
 
-  const raw = await res.json();
-  console.log('[STT] OpenAI upload complete', raw?.text ? 'ok' : 'empty');
-  const text = safeString(raw?.text).trim();
-  const confidence = responseFormat === 'verbose_json' ? computeConfidenceFromVerboseJson(raw) : null;
-
-  return {
-    text,
-    meta: {
-      provider: 'openai',
-      model,
-      response_format: responseFormat,
-      language,
-      confidence,
-      raw,
-    },
-  };
+  const json = await res.json();
+  return json.text || '';
 }
+

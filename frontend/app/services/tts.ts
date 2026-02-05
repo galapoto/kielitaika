@@ -1,149 +1,74 @@
 // frontend/app/services/tts.ts
 
-import { WS_API_BASE } from "../config/backend";
-import { playAudioBuffer, stopPlaybackImmediately } from "../components/AudioPlayer";
+import * as FileSystem from 'expo-file-system';
+import { playAudioFromUri } from '../audio/AudioPlayer';
+import { updateAiLiveTranscript, finalizeAiTranscript } from '../utils/speakingAttempts';
 
-let activeSocket: WebSocket | null = null;
-let isSpeaking = false;
+const WS_BASE = process.env.EXPO_PUBLIC_API_BASE
+  ? process.env.EXPO_PUBLIC_API_BASE.replace(/^http/, 'ws')
+  : 'ws://localhost:8000';
 
-/**
- * HARD GUARANTEES
- * - One TTS stream at a time
- * - Playback lifecycle strictly bounded
- * - Socket always closed
- */
+export async function speakText({
+  sessionId,
+  turnIndex,
+  text,
+  onPlaybackEnd
+}) {
+  if (!text) return;
 
-export async function speak(
-  text: string,
-  voice: "professional" | "friendly" = "professional",
-  {
-    onStart,
-    onEnd,
-    onError,
-  }: {
-    onStart?: () => void;
-    onEnd?: () => void;
-    onError?: (err: any) => void;
-  } = {}
-) {
-  if (!text || !text.trim()) return;
+  updateAiLiveTranscript(sessionId, turnIndex, text);
 
-  if (isSpeaking) {
-    await forceStopSpeaking();
-  }
+  const ws = new WebSocket(`${WS_BASE}/voice/tts-stream`);
+  const chunks: Uint8Array[] = [];
 
-  isSpeaking = true;
+  ws.binaryType = 'arraybuffer';
 
-  const wsUrl = `${WS_API_BASE}/voice/tts-stream`;
-  let audioChunks: Uint8Array[] = [];
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ text }));
+  };
 
-  if (__DEV__) {
-    console.log("[TTS] WebSocket URL:", wsUrl);
-  }
-
-  try {
-    const ws = new WebSocket(wsUrl);
-    activeSocket = ws;
-    ws.binaryType = "arraybuffer";
-
-    ws.onopen = () => {
-      if (__DEV__) console.log("[TTS] WebSocket onOpen");
-      ws.send(JSON.stringify({ text, voice }));
-    };
-
-    ws.onmessage = async (event) => {
-      if (typeof event.data === "string") {
-        const msg = JSON.parse(event.data);
-
-        if (msg.type === "tts_start") {
-          if (__DEV__) console.log("[TTS] tts_start", msg);
-          onStart?.();
-        }
-
-        if (msg.type === "tts_error") {
-          throw new Error(msg.message || "TTS backend error");
-        }
-
-        if (msg.type === "tts_end") {
-          if (__DEV__) console.log("[TTS] tts_end");
-          await flushAndPlay();
-          return;
-        }
-      }
-
-      if (event.data instanceof ArrayBuffer) {
-        audioChunks.push(new Uint8Array(event.data));
-        if (__DEV__) console.log("[TTS] chunk bytes", event.data.byteLength);
-      }
-    };
-
-    ws.onerror = (err) => {
-      throw err;
-    };
-
-    ws.onclose = (e) => {
-      if (__DEV__) console.log("[TTS] WebSocket onClose", e.code, e.reason);
-    };
-
-    async function flushAndPlay() {
-      if (!audioChunks.length) {
-        cleanup();
-        onEnd?.();
-        return;
-      }
-
-      const merged = mergeChunks(audioChunks);
-      audioChunks = [];
-
-      await playAudioBuffer(merged, {
-        onStart: () => {
-          if (__DEV__) console.log("[TTS] Playback started");
-        },
-        onEnd: async () => {
-          cleanup();
-          onEnd?.();
-        },
-        onError: async (err) => {
-          cleanup();
-          onError?.(err);
-        },
-      });
+  ws.onmessage = evt => {
+    if (typeof evt.data !== 'string') {
+      chunks.push(new Uint8Array(evt.data));
     }
-  } catch (err) {
-    cleanup();
-    onError?.(err);
-  }
-}
+  };
 
-export async function forceStopSpeaking() {
-  cleanup();
-  await stopPlaybackImmediately();
-}
+  ws.onerror = () => {
+    finalizeAiTranscript(sessionId, turnIndex, text);
+    onPlaybackEnd?.();
+  };
 
-function cleanup() {
-  if (activeSocket) {
+  ws.onclose = async () => {
     try {
-      activeSocket.close();
-    } catch {}
-    activeSocket = null;
-  }
-  isSpeaking = false;
+      const buffer = concatChunks(chunks);
+      const fileUri = FileSystem.cacheDirectory + `tts-${Date.now()}.opus`;
+
+      await FileSystem.writeAsStringAsync(
+        fileUri,
+        Buffer.from(buffer).toString('base64'),
+        { encoding: FileSystem.EncodingType.Base64 }
+      );
+
+      await playAudioFromUri(fileUri, {
+        onEnd: onPlaybackEnd
+      });
+
+    } catch {
+      onPlaybackEnd?.();
+    }
+
+    finalizeAiTranscript(sessionId, turnIndex, text);
+  };
 }
 
-function mergeChunks(chunks: Uint8Array[]) {
-  const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
-  const merged = new Uint8Array(totalLength);
+function concatChunks(chunks: Uint8Array[]) {
+  const size = chunks.reduce((a, c) => a + c.length, 0);
+  const buffer = new Uint8Array(size);
   let offset = 0;
-
-  for (const chunk of chunks) {
-    merged.set(chunk, offset);
-    offset += chunk.length;
+  for (const c of chunks) {
+    buffer.set(c, offset);
+    offset += c.length;
   }
-
-  return merged;
-}
-
-export function isCurrentlySpeaking() {
-  return isSpeaking;
+  return buffer;
 }
 
