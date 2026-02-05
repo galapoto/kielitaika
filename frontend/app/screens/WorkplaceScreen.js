@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -24,19 +24,7 @@ export default function WorkplaceScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  if (!user) {
-    return (
-      <View style={styles.authGuard}>
-        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
-      </View>
-    );
-  }
-
-  useEffect(() => {
-    loadFields();
-  }, []);
-
-  const loadFields = async () => {
+  const loadFields = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await listWorkplaceFields();
@@ -47,7 +35,11 @@ export default function WorkplaceScreen({ navigation }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadFields();
+  }, [loadFields]);
 
   const selectedField = useMemo(() => {
     if (!fields.length) return null;
@@ -108,6 +100,14 @@ export default function WorkplaceScreen({ navigation }) {
 
   const headerTitle = selectedField?.label || 'Työelämän suomi';
   const headerSubtitle = 'Ammattikohtainen suomi ja moduulit';
+
+  if (!user) {
+    return (
+      <View style={styles.authGuard}>
+        <Text style={styles.authGuardText}>Kirjaudu sisään jatkaaksesi.</Text>
+      </View>
+    );
+  }
 
   return (
     <Background module="workplace" variant="brown">
