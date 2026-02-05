@@ -49,7 +49,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   const [liveTranscript, setLiveTranscript] = useState('');
   const sessionLockRef = useRef(false);
 
-  const { speak } = useVoice();
+  const { speak, isSpeaking } = useVoice();
 
   const handleSpeakPrompt = useCallback(async () => {
     if (sessionStatus === 'completed') return;
@@ -188,7 +188,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   });
 
   const handleMicPress = useCallback(() => {
-    if (sessionStatus === 'completed' || isProcessing) return;
+    if (sessionStatus === 'completed' || isProcessing || isSpeaking) return;
     if (isRecording) {
       stopRecording();
     } else {
@@ -196,7 +196,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
       setLiveTranscript('');
       startRecording({ userInitiated: true, userGesture: true });
     }
-  }, [isRecording, isProcessing, sessionStatus, startRecording, stopRecording]);
+  }, [isRecording, isProcessing, isSpeaking, sessionStatus, startRecording, stopRecording]);
 
   useEffect(() => {
     const handleBack = () => {
@@ -340,11 +340,17 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         <View style={styles.micDock}>
           <MicButton
             onPress={handleMicPress}
-            disabled={isProcessing || sessionStatus === 'completed'}
+            disabled={isProcessing || isSpeaking || sessionStatus === 'completed'}
             isActive={isRecording}
           />
           <Text style={styles.micStatus}>
-            {isRecording ? 'Kuunnellaan…' : isProcessing ? 'Käsitellään…' : 'Paina mikrofonia puhuaksesi'}
+            {isSpeaking
+              ? 'Tekoäly puhuu…'
+              : isRecording
+              ? 'Kuunnellaan…'
+              : isProcessing
+              ? 'Käsitellään…'
+              : 'Paina mikrofonia puhuaksesi'}
           </Text>
         </View>
       </View>

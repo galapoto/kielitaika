@@ -134,18 +134,27 @@ async function playAudioFromBase64(
     // Wait for playback to complete
     return new Promise((resolve, reject) => {
       let hasStarted = false;
+      const startTimeout = setTimeout(() => {
+        if (!hasStarted) {
+          sound.unloadAsync().catch(() => {});
+          reject(new Error('TTS playback did not start'));
+        }
+      }, 2000);
       sound.setOnPlaybackStatusUpdate((status) => {
         if (!hasStarted && status.isLoaded && status.isPlaying) {
           hasStarted = true;
+          clearTimeout(startTimeout);
           if (__DEV__) console.log('[TTS] Playback started');
         }
         if (status.isLoaded && status.didJustFinish) {
+          clearTimeout(startTimeout);
           sound.unloadAsync().then(() => resolve()).catch(reject);
         }
       });
 
       // Timeout after 30 seconds
       setTimeout(() => {
+        clearTimeout(startTimeout);
         sound.unloadAsync().then(() => resolve()).catch(reject);
       }, 30000);
     });
