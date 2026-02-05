@@ -347,7 +347,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
             {isSpeaking
               ? 'Tekoäly puhuu…'
               : isRecording
-              ? 'Kuunnellaan…'
+              ? '● Kuunnellaan…'
               : isProcessing
               ? 'Käsitellään…'
               : 'Paina mikrofonia puhuaksesi'}
