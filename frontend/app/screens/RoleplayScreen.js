@@ -48,21 +48,32 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   const [audioUnavailable, setAudioUnavailable] = useState(false);
   const [sttError, setSttError] = useState(null);
   const [liveTranscript, setLiveTranscript] = useState('');
+  const [aiTranscript, setAiTranscript] = useState('');
+  const [roleplayReady, setRoleplayReady] = useState(false);
+  const [roleplayPhase, setRoleplayPhase] = useState('INIT');
   const sessionLockRef = useRef(false);
+  const initialPromptStartedRef = useRef(false);
 
   const { speak, isSpeaking } = useVoice();
+
+  useEffect(() => {
+    setRoleplayReady(true);
+  }, []);
 
   const handleSpeakPrompt = useCallback(async () => {
     if (sessionStatus === 'completed') return;
     const prompt = scenario?.roleplay_prompt;
     if (!prompt) return;
     try {
+      setRoleplayPhase('AI_SPEAKING');
       setAudioUnavailable(false);
       await speak(prompt, 'professional');
     } catch (err) {
       // TTS failure should not block roleplay progression
       setAudioUnavailable(true);
       console.warn('[Roleplay] TTS playback failed:', err);
+    } finally {
+      setRoleplayPhase('USER_READY');
     }
   }, [scenario?.roleplay_prompt, speak, sessionStatus]);
 
@@ -79,15 +90,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         setScenario(data);
         if (data?.roleplay_prompt) {
           setSpeakingTurnAiTranscript(sessionId, 0, data.roleplay_prompt);
-        }
-        if (data?.roleplay_prompt) {
-          try {
-            setAudioUnavailable(false);
-            await speak(data.roleplay_prompt, 'professional');
-          } catch (err) {
-            setAudioUnavailable(true);
-            console.warn('[Roleplay] Initial TTS playback failed:', err);
-          }
+          setAiTranscript(data.roleplay_prompt);
         }
       } catch (err) {
         if (!mounted) return;
@@ -115,6 +118,28 @@ export default function RoleplayScreen({ navigation, route } = {}) {
     },
     [scenario?.roleplay_prompt]
   );
+
+  const startAiTurn = useCallback(async (prompt) => {
+    if (!prompt) return;
+    setAiTranscript(prompt);
+    setRoleplayPhase('AI_SPEAKING');
+    try {
+      setAudioUnavailable(false);
+      await speak(prompt, 'professional');
+    } catch (err) {
+      setAudioUnavailable(true);
+      console.warn('[Roleplay] AI TTS failed:', err);
+    } finally {
+      setRoleplayPhase('USER_READY');
+    }
+  }, [speak]);
+
+  useEffect(() => {
+    if (!roleplayReady || !scenario?.roleplay_prompt || loading) return;
+    if (initialPromptStartedRef.current) return;
+    initialPromptStartedRef.current = true;
+    startAiTurn(scenario.roleplay_prompt);
+  }, [roleplayReady, scenario?.roleplay_prompt, loading, startAiTurn]);
 
   const handleTranscriptComplete = useCallback(
     async (text, meta) => {
