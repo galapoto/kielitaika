@@ -149,6 +149,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         const reason = meta?.error
           || 'Puhetta ei tunnistettu. Yritä uudelleen.';
         setSttError(reason);
+        setRoleplayPhase('USER_READY');
         return;
       }
       setLiveTranscript('');
@@ -165,6 +166,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
           const closingText = buildFollowupPrompt(turnIndex);
           if (closingText) {
             setSpeakingTurnAiTranscript(sessionId, turnIndex, closingText, { isConclusive: true });
+            setAiTranscript(closingText);
           }
           try {
             const result = await evaluateRoleplay(field, normalized);
@@ -172,6 +174,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
           } catch (err) {
             console.warn('[Roleplay] Evaluation failed:', err);
           } finally {
+            setRoleplayPhase('COMPLETED');
             completeSpeakingSession(sessionId);
           }
           return;
@@ -184,23 +187,24 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         });
         advanceSpeakingTurn(sessionId);
 
-        try {
-          setAudioUnavailable(false);
-          await speak(followup, 'professional');
-        } catch (err) {
-          setAudioUnavailable(true);
-          console.warn('[Roleplay] Follow-up TTS failed:', err);
-        }
+        await startAiTurn(followup);
       } finally {
         setIsEvaluating(false);
       }
     },
-    [buildFollowupPrompt, currentTurnIndex, field, maxTurns, sessionId, sessionStatus, speak]
+    [buildFollowupPrompt, currentTurnIndex, field, maxTurns, sessionId, sessionStatus, startAiTurn]
   );
 
   const handleVoiceState = useCallback((state) => {
     sessionLockRef.current = state.isRecording || state.isProcessing;
-  }, []);
+    if (state.isRecording) {
+      setRoleplayPhase('USER_RECORDING');
+    } else if (state.isProcessing) {
+      setRoleplayPhase('USER_PROCESSING');
+    } else if (roleplayPhase === 'USER_RECORDING' || roleplayPhase === 'USER_PROCESSING') {
+      setRoleplayPhase('USER_READY');
+    }
+  }, [roleplayPhase]);
 
   const {
     isRecording,
@@ -214,15 +218,19 @@ export default function RoleplayScreen({ navigation, route } = {}) {
   });
 
   const handleMicPress = useCallback(() => {
-    if (sessionStatus === 'completed' || isProcessing || isSpeaking) return;
-    if (isRecording) {
-      stopRecording();
-    } else {
+    if (sessionStatus === 'completed' || roleplayPhase === 'COMPLETED') return;
+    if (roleplayPhase === 'USER_READY') {
       setSttError(null);
       setLiveTranscript('');
+      setRoleplayPhase('USER_RECORDING');
       startRecording({ userInitiated: true, userGesture: true });
+      return;
     }
-  }, [isRecording, isProcessing, isSpeaking, sessionStatus, startRecording, stopRecording]);
+    if (roleplayPhase === 'USER_RECORDING') {
+      setRoleplayPhase('USER_PROCESSING');
+      stopRecording();
+    }
+  }, [roleplayPhase, sessionStatus, startRecording, stopRecording]);
 
   useEffect(() => {
     const handleBack = () => {
@@ -366,15 +374,15 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         <View style={styles.micDock}>
           <MicButton
             onPress={handleMicPress}
-            disabled={isProcessing || isSpeaking || sessionStatus === 'completed'}
-            isActive={isRecording}
+            disabled={roleplayPhase !== 'USER_READY' && roleplayPhase !== 'USER_RECORDING'}
+            isActive={roleplayPhase === 'USER_RECORDING'}
           />
           <Text style={styles.micStatus}>
-            {isSpeaking
+            {roleplayPhase === 'AI_SPEAKING'
               ? 'Tekoäly puhuu…'
-              : isRecording
+              : roleplayPhase === 'USER_RECORDING'
               ? '● Kuunnellaan…'
-              : isProcessing
+              : roleplayPhase === 'USER_PROCESSING'
               ? 'Käsitellään…'
               : 'Paina mikrofonia puhuaksesi'}
           </Text>
