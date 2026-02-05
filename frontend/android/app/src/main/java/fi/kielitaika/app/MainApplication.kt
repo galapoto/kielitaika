@@ -46,6 +46,13 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    try {
+      val clazz = Class.forName("expo.modules.devlauncher.DevLauncherController")
+      val method = clazz.getMethod("initialize", Application::class.java)
+      method.invoke(null, this)
+    } catch (e: Exception) {
+      android.util.Log.w("MainApplication", "DevLauncherController init skipped", e)
+    }
     DefaultNewArchitectureEntryPoint.releaseLevel = try {
       ReleaseLevel.valueOf(BuildConfig.REACT_NATIVE_RELEASE_LEVEL.uppercase())
     } catch (e: IllegalArgumentException) {
