@@ -69,6 +69,10 @@ class RoleplayAttemptDetail(BaseModel):
     score: Optional[RoleplayScoreResponse] = None
 
 
+class RoleplayScoreRequest(BaseModel):
+    attempt_id: str = Field(..., min_length=6)
+
+
 @router.post("/complete", response_model=RoleplayAttemptResponse)
 async def complete_roleplay(
     payload: RoleplayCompletePayload,
@@ -140,10 +144,11 @@ async def complete_roleplay(
 
 @router.post("/score", response_model=RoleplayScoreResponse)
 async def score_roleplay_attempt(
-    attempt_id: str = Field(..., min_length=6),
+    payload: RoleplayScoreRequest,
     session: AsyncSession = Depends(get_session),
     current_user=Depends(get_current_user),
 ):
+    attempt_id = payload.attempt_id
     attempt_res = await session.execute(
         select(RoleplayAttempt).where(RoleplayAttempt.id == attempt_id)
     )
