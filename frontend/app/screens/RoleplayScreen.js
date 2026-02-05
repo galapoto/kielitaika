@@ -303,7 +303,7 @@ export default function RoleplayScreen({ navigation, route } = {}) {
         <Text style={styles.title}>{scenario?.title || 'Roolipeli'}</Text>
         <Text style={styles.subtitle}>Ammattiharjoitus • {level} • Vuoro {currentTurnIndex + 1}/{totalTurns}</Text>
         <Text style={styles.prompt}>
-          {activeTurn?.aiSpeech?.transcript || scenario?.roleplay_prompt}
+          {aiTranscript || activeTurn?.aiSpeech?.transcript || scenario?.roleplay_prompt}
         </Text>
 
         {!!keyPhrases.length && (
