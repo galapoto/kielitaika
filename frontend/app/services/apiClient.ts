@@ -1,0 +1,157 @@
+import { clearAuthSession, loadAuthSession, saveAuthSession } from "./storage";
+import { assertApiEnvelope, createClientErrorEnvelope } from "./contractGuard";
+import type { ApiEnvelope, PersistedAuthSession } from "../state/types";
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || "http://127.0.0.1:8000";
+
+function transportErrorEnvelope(message: string): ApiEnvelope<never> {
+  return createClientErrorEnvelope("TRANSPORT_ERROR", message, true);
+}
+
+type JsonBody = Record<string, unknown> | Array<unknown>;
+
+type RequestOptions = {
+  method: string;
+  path: string;
+  body?: JsonBody;
+  headers?: Record<string, string>;
+  auth?: boolean;
+  formData?: FormData;
+  retrying?: boolean;
+};
+
+function isAuthExpiredEnvelope(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+  const envelope = payload as ApiEnvelope<unknown>;
+  return envelope.ok === false && (envelope.error.code === "AUTH_SESSION_EXPIRED" || envelope.error.code === "AUTH_REQUIRED");
+}
+
+function toPersistedAuthSession(
+  existing: PersistedAuthSession | null,
+  payload: {
+    auth_user: PersistedAuthSession["auth_user"];
+    tokens: {
+      access_token: string;
+      refresh_token: string;
+      token_type: string;
+      access_expires_at: string;
+      refresh_expires_at: string;
+      auth_session_id: string;
+    };
+  },
+): PersistedAuthSession {
+  return {
+    schema_version: "1",
+    access_token: payload.tokens.access_token,
+    refresh_token: payload.tokens.refresh_token,
+    token_type: payload.tokens.token_type,
+    access_expires_at: payload.tokens.access_expires_at,
+    refresh_expires_at: payload.tokens.refresh_expires_at,
+    auth_session_id: payload.tokens.auth_session_id,
+    auth_user: payload.auth_user,
+    stored_at: new Date().toISOString(),
+  };
+}
+
+export async function refreshPersistedSession(): Promise<ApiEnvelope<{ auth_user: PersistedAuthSession["auth_user"]; tokens: PersistedAuthSession } | unknown>> {
+  const current = loadAuthSession();
+  if (!current) {
+    return {
+      ok: false,
+      data: null,
+      error: {
+        code: "AUTH_REQUIRED",
+        message: "Authentication is required.",
+        retryable: false,
+        details: null,
+      },
+      meta: {
+        request_id: "local-missing-auth",
+        timestamp: new Date().toISOString(),
+        api_version: "v1",
+      },
+    };
+  }
+  const response = await apiRequest<{
+    auth_user: PersistedAuthSession["auth_user"];
+    tokens: {
+      access_token: string;
+      refresh_token: string;
+      token_type: string;
+      access_expires_at: string;
+      refresh_expires_at: string;
+      auth_session_id: string;
+    };
+  }>({
+    method: "POST",
+    path: "/api/v1/auth/token/refresh",
+    body: { refresh_token: current.refresh_token },
+    auth: false,
+    retrying: true,
+  });
+  if (response.ok) {
+    saveAuthSession(toPersistedAuthSession(current, response.data));
+  } else {
+    clearAuthSession();
+  }
+  return response;
+}
+
+export async function apiRequest<T>(options: RequestOptions): Promise<ApiEnvelope<T>> {
+  const authSession = loadAuthSession();
+  const headers = new Headers(options.headers || {});
+
+  if (options.body) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (options.auth && authSession) {
+    headers.set("Authorization", `Bearer ${authSession.access_token}`);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${options.path}`, {
+      method: options.method,
+      headers,
+      body: options.formData ? options.formData : options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch {
+    return transportErrorEnvelope("Network request failed.") as ApiEnvelope<T>;
+  }
+
+  const rawPayload = await response.json().catch(() => null);
+  if (!rawPayload) {
+    return createClientErrorEnvelope("CONTRACT_VIOLATION", "Invalid API response.", false) as ApiEnvelope<T>;
+  }
+
+  let payload: ApiEnvelope<T>;
+  try {
+    payload = assertApiEnvelope<T>(rawPayload);
+  } catch (error) {
+    console.error("API contract violation", { path: options.path, error });
+    return createClientErrorEnvelope("CONTRACT_VIOLATION", "API response failed contract validation.", false, {
+      path: options.path,
+    }) as ApiEnvelope<T>;
+  }
+
+  if (
+    options.auth &&
+    !options.retrying &&
+    response.status === 401 &&
+    isAuthExpiredEnvelope(payload) &&
+    authSession &&
+    !options.path.startsWith("/api/v1/auth/")
+  ) {
+    const refreshed = await refreshPersistedSession();
+    if (refreshed.ok) {
+      return apiRequest<T>({ ...options, retrying: true });
+    }
+    return payload;
+  }
+
+  return payload;
+}
+
+export { toPersistedAuthSession };
