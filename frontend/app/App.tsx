@@ -31,7 +31,9 @@ export function App() {
   if (!app.bootComplete || app.auth.status === "booting" || app.auth.status === "restoring") {
     return (
       <div className="app-frame" style={getBackgroundStyle(backgroundScreen, colorScheme)}>
-        <LoadingScreen title="Hydrating runtime" message="Auth restore, entitlement resolution, and session recovery are hard-blocking." />
+        <div className="route-stage" key="boot">
+          <LoadingScreen title="Hydrating runtime" message="Auth restore, entitlement resolution, and session recovery are hard-blocking." />
+        </div>
       </div>
     );
   }
@@ -39,7 +41,9 @@ export function App() {
   if (app.auth.status !== "authenticated") {
     return (
       <div className="app-frame" style={getBackgroundStyle(backgroundScreen, colorScheme)}>
-        <AuthScreen onLogin={app.login} onRegister={app.register} />
+        <div className="route-stage" key="auth">
+          <AuthScreen onLogin={app.login} onRegister={app.register} />
+        </div>
       </div>
     );
   }
@@ -71,7 +75,9 @@ export function App() {
         subscription={app.subscription}
         colorScheme={colorScheme}
       >
-        {screen}
+        <div className="route-stage" key={app.route}>
+          {screen}
+        </div>
       </AppShell>
     </div>
   );

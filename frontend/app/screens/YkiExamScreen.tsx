@@ -21,6 +21,55 @@ import {
   submitYkiWriting,
 } from "../services/ykiService";
 
+function formatSectionLabel(value: string | null | undefined): string {
+  if (!value) {
+    return "unknown";
+  }
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function splitReadingText(value: string | null | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+  return value
+    .split(/\n\s*\n/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function extractConversationEntries(conversationState: any): Array<{ key: string; speaker: string; text: string }> {
+  const candidate =
+    (Array.isArray(conversationState?.responses) && conversationState.responses) ||
+    (Array.isArray(conversationState?.turns) && conversationState.turns) ||
+    (Array.isArray(conversationState?.conversation?.turns) && conversationState.conversation.turns) ||
+    [];
+
+  return candidate
+    .map((item: any, index: number) => ({
+      key: item.turn_id || item.response_id || `${index}`,
+      speaker: item.speaker || item.role || (index % 2 === 0 ? "SYSTEM" : "USER"),
+      text: item.reply_text || item.text || item.transcript_text || item.prompt_text || item.message || "",
+    }))
+    .filter((item: { text: string }) => Boolean(item.text));
+}
+
+function formatRecorderState(state: string): string {
+  if (state === "recording") {
+    return "Recording";
+  }
+  if (state === "stopped") {
+    return "Captured";
+  }
+  if (state === "error") {
+    return "Error";
+  }
+  return "Idle";
+}
+
 function readCurrentScreen(runtime: any, screenIndex: number) {
   if (screenIndex < 0) {
     return null;
@@ -124,6 +173,10 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
   const currentScreen = readCurrentScreen(runtime, screenIndex);
   const promptContext = readPromptContext(runtime, screenIndex);
   const submittedAnswers = useMemo(() => extractConfirmedAnswers(runtime), [runtime]);
+  const activeSectionLabel = formatSectionLabel(runtime?.metadata?.timing?.active_section || null);
+  const promptParagraphs = splitReadingText(promptContext?.payload?.materials?.text);
+  const currentParagraphs = splitReadingText(currentScreen?.payload?.materials?.text);
+  const conversationEntries = extractConversationEntries(conversationState);
 
   async function syncRuntime(sessionId: string): Promise<boolean> {
     const response = await fetchYkiSession(sessionId);
@@ -367,7 +420,7 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
             </div>
             <div className="meta-item">
               <span className="eyebrow">Active section</span>
-              <strong>{runtime.metadata?.timing?.active_section || "unknown"}</strong>
+              <strong>{activeSectionLabel}</strong>
             </div>
             <div className="meta-item">
               <span className="eyebrow">Runtime schema</span>
@@ -379,8 +432,17 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
 
       {promptContext ? (
         <Panel title={promptContext.payload?.title || promptContext.screen_type} subtitle={promptContext.payload?.instruction || "Backend-authored prompt context."}>
-          <div className="runtime-screen">
-            {promptContext.payload?.materials?.text ? <p>{promptContext.payload.materials.text}</p> : null}
+          <div className="runtime-screen reading-stage">
+            {promptParagraphs.length ? (
+              <div className="reading-passages">
+                <span className="eyebrow">Read first</span>
+                {promptParagraphs.map((paragraph, index) => (
+                  <p key={`${promptContext.payload?.id || promptContext.screen_type}-${index}`} className="reading-paragraph">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            ) : null}
             {promptContext.payload?.audio_url ? <audio className="audio-player" src={promptContext.payload.audio_url} controls /> : null}
           </div>
         </Panel>
@@ -389,11 +451,21 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
       {currentScreen ? (
         <Panel title={currentScreen.payload?.title || currentScreen.screen_type} subtitle={currentScreen.payload?.instruction || "Backend-authored runtime screen."}>
           <div className="runtime-screen">
-            {currentScreen.payload?.materials?.text ? <p>{currentScreen.payload.materials.text}</p> : null}
+            {currentParagraphs.length ? (
+              <div className="reading-passages">
+                <span className="eyebrow">Material</span>
+                {currentParagraphs.map((paragraph, index) => (
+                  <p key={`${currentScreen.payload?.id || currentScreen.screen_type}-${index}`} className="reading-paragraph">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            ) : null}
             {currentScreen.payload?.audio_url ? <audio className="audio-player" src={currentScreen.payload.audio_url} controls /> : null}
 
             {currentScreen.payload?.questions?.length ? (
               <div className="question-list">
+                <span className="eyebrow">Questions</span>
                 {currentScreen.payload.questions.map((question: any) => (
                   <div className="question-card" key={question.answer_id}>
                     <strong>{question.prompt}</strong>
@@ -435,10 +507,17 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
                   <button
                     type="button"
                     className={recorder.state === "recording" ? "mic-button recording" : "mic-button"}
+                    disabled={busy}
                     onClick={recorder.state === "recording" ? recorder.stopRecording : recorder.startRecording}
                   >
                     {recorder.state === "recording" ? "Stop" : "Record"}
                   </button>
+                </div>
+                <div className="recorder-status-row">
+                  <span className={`state-pill ${recorder.state}`}>{formatRecorderState(recorder.state)}</span>
+                  <span className="muted">
+                    {recorder.durationMs ? `${(recorder.durationMs / 1000).toFixed(1)}s captured` : "Press record, speak, then submit once."}
+                  </span>
                 </div>
                 {recorder.audioUrl ? <audio className="audio-player" src={recorder.audioUrl} controls /> : null}
                 <div className="actions-row">
@@ -446,6 +525,17 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
                     Submit speaking response
                   </Button>
                 </div>
+                {conversationEntries.length ? (
+                  <div className="transcript-stack">
+                    <span className="eyebrow">Conversation transcript</span>
+                    {conversationEntries.map((entry) => (
+                      <div key={entry.key} className={entry.speaker === "USER" ? "chat-bubble user" : "chat-bubble"}>
+                        <strong>{entry.speaker}</strong>
+                        <p>{entry.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 {conversationState ? <JsonPreview title="Conversation state" value={conversationState} /> : null}
               </>
             ) : null}

@@ -13,10 +13,17 @@ export function StatusBanner(props: { tone: "neutral" | "success" | "error"; tit
     }
   }, [props.message, props.title, props.tone]);
 
+  const marker = props.tone === "error" ? "!" : props.tone === "success" ? "OK" : "i";
+
   return (
     <div className={`status-banner status-${props.tone}`}>
-      <strong>{props.title}</strong>
-      <p>{props.message}</p>
+      <span className="status-marker" aria-hidden="true">
+        {marker}
+      </span>
+      <div className="status-copy">
+        <strong>{props.title}</strong>
+        <p>{props.message}</p>
+      </div>
     </div>
   );
 }

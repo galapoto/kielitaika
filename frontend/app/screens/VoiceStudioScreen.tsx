@@ -12,6 +12,19 @@ function createSpeakingSessionId(): string {
   return `spk_${crypto.randomUUID().replace(/-/g, "")}`;
 }
 
+function formatRecorderState(state: string): string {
+  if (state === "recording") {
+    return "Recording";
+  }
+  if (state === "stopped") {
+    return "Ready";
+  }
+  if (state === "error") {
+    return "Error";
+  }
+  return "Idle";
+}
+
 export function VoiceStudioScreen() {
   const recorder = useRecorder();
   const [speakingSessionId, setSpeakingSessionId] = useState("");
@@ -100,10 +113,15 @@ export function VoiceStudioScreen() {
             <button
               type="button"
               className={recorder.state === "recording" ? "mic-button recording" : "mic-button"}
+              disabled={busy}
               onClick={recorder.state === "recording" ? recorder.stopRecording : recorder.startRecording}
             >
               {recorder.state === "recording" ? "Stop" : "Record"}
             </button>
+          </div>
+          <div className="recorder-status-row">
+            <span className={`state-pill ${recorder.state}`}>{formatRecorderState(recorder.state)}</span>
+            <span className="muted">{recorder.durationMs ? `${(recorder.durationMs / 1000).toFixed(1)}s captured` : "Explicit user-controlled capture only."}</span>
           </div>
           {recorder.audioUrl ? <audio className="audio-player" src={recorder.audioUrl} controls /> : null}
           {recorder.error ? <StatusBanner tone="error" title="Microphone error" message={recorder.error} /> : null}
@@ -118,6 +136,15 @@ export function VoiceStudioScreen() {
           </div>
         </div>
       </Panel>
+
+      {transcription ? (
+        <Panel title="Transcript" subtitle="Backend-confirmed transcription only.">
+          <div className="transcript-card">
+            <span className="eyebrow">Recognized speech</span>
+            <p className="transcript-text">{transcription.transcript || "No transcript returned."}</p>
+          </div>
+        </Panel>
+      ) : null}
 
       <Panel title="Pronunciation" subtitle="Analysis only after confirmed backend STT response exists.">
         <div className="grid-two">
