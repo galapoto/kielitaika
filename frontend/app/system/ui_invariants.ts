@@ -4,7 +4,12 @@ export const UI_INVARIANTS = {
   SINGLE_ACTIVE_SCREEN: true,
   BACKGROUND_AUTHORITY_FILE: "frontend/app/theme/backgrounds.ts",
   CARD_AUTHORITY_FILE: "frontend/app/screens/CardsScreen.tsx",
-  ALLOWED_SPACING_STEPS: [8, 16, 24, 32] as const,
+  ALLOWED_SPACING_STEPS: [8, 16, 24, 32, 40] as const,
+  TYPOGRAPHY: {
+    primaryFont: "Inter",
+    titleFont: "Space Grotesk",
+  },
+  EXAM_SCROLL_CONTAINER_CLASS: "exam-content",
   DECORATIVE_BACKGROUND_RESTRICTED_SCREENS: ["practice", "yki_intro", "yki_runtime", "yki_result"] as const,
   CONTENT_WIDTH_CAPS: {
     shellMax: 1360,
@@ -56,4 +61,3 @@ export function assertKnownBackendContentType(value: string): asserts value is B
     throw new Error(`Unknown backend card content type: ${value}`);
   }
 }
-

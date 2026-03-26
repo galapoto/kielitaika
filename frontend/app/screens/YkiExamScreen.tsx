@@ -411,6 +411,7 @@ export function YkiExamScreen(props: {
   return (
     <ScreenScaffold
       className="yki-flow-screen"
+      contentClassName="exam-content-zone"
       header={
         <div className="flow-header">
           <div>
@@ -445,115 +446,115 @@ export function YkiExamScreen(props: {
         </div>
       }
     >
-      <Panel className="flow-panel primary-card">
+      <Panel className="flow-panel primary-card exam-shell-panel">
         {error ? <StatusBanner tone="error" title="Exam error" message={error} /> : null}
 
-        {promptContext ? (
-          <div className="runtime-screen reading-stage">
-            {promptParagraphs.length ? (
-              <div className="reading-passages">
-                <span className="eyebrow">Read first</span>
-                {promptParagraphs.map((paragraph, index) => (
-                  <p key={`${promptContext.payload?.id || promptContext.screen_type}-${index}`} className="reading-paragraph">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-            ) : null}
-            {promptContext.payload?.audio_url ? <audio className="audio-player" src={promptContext.payload.audio_url} controls /> : null}
-          </div>
-        ) : null}
+        <div className="exam-content">
+          {promptContext ? (
+            <div className="runtime-screen reading-stage">
+              {promptParagraphs.length ? (
+                <div className="reading-passages">
+                  <span className="eyebrow">Read first</span>
+                  {promptParagraphs.map((paragraph, index) => (
+                    <p key={`${promptContext.payload?.id || promptContext.screen_type}-${index}`} className="reading-paragraph">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+              {promptContext.payload?.audio_url ? <audio className="audio-player" src={promptContext.payload.audio_url} controls /> : null}
+            </div>
+          ) : null}
 
-        {currentScreen ? (
-          <div className="runtime-screen">
-            {currentParagraphs.length ? (
-              <div className="reading-passages">
-                <span className="eyebrow">Material</span>
-                {currentParagraphs.map((paragraph, index) => (
-                  <p key={`${currentScreen.payload?.id || currentScreen.screen_type}-${index}`} className="reading-paragraph">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-            ) : null}
-            {currentScreen.payload?.audio_url ? <audio className="audio-player" src={currentScreen.payload.audio_url} controls /> : null}
+          {currentScreen ? (
+            <div className="runtime-screen">
+              {currentParagraphs.length ? (
+                <div className="reading-passages">
+                  <span className="eyebrow">Material</span>
+                  {currentParagraphs.map((paragraph, index) => (
+                    <p key={`${currentScreen.payload?.id || currentScreen.screen_type}-${index}`} className="reading-paragraph">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+              {currentScreen.payload?.audio_url ? <audio className="audio-player" src={currentScreen.payload.audio_url} controls /> : null}
 
-            {currentScreen.payload?.questions?.length ? (
-              <div className="question-list">
-                {currentScreen.payload.questions.map((question: any) => (
-                  <div className="question-card" key={question.answer_id}>
-                    <strong>{question.prompt}</strong>
-                    <div className="option-grid">
-                      {question.options.map((option: string) => (
-                        <Button
-                          key={`${question.answer_id}-${option}`}
-                          tone={submittedAnswers[question.answer_id] === option ? "primary" : "secondary"}
-                          className="option-button"
-                          onClick={() => submitQuestion(question, option)}
-                          disabled={busy}
-                        >
-                          {option}
-                        </Button>
+              {currentScreen.payload?.questions?.length ? (
+                <div className="question-list">
+                  {currentScreen.payload.questions.map((question: any) => (
+                    <div className="question-card" key={question.answer_id}>
+                      <strong>{question.prompt}</strong>
+                      <div className="option-grid">
+                        {question.options.map((option: string) => (
+                          <Button
+                            key={`${question.answer_id}-${option}`}
+                            tone={submittedAnswers[question.answer_id] === option ? "primary" : "secondary"}
+                            className="option-button"
+                            onClick={() => submitQuestion(question, option)}
+                            disabled={busy}
+                          >
+                            {option}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {currentScreen.screen_type === "writing_response" ? (
+                <TextAreaField label="Your answer" value={writingDraft} onChange={(event) => setWritingDraft(event.target.value)} />
+              ) : null}
+
+              {currentScreen.screen_type === "speaking_task" ? (
+                <>
+                  <div className="screen-hero">
+                    <div>
+                      <span className="eyebrow">Speaking task</span>
+                      <h2>{formatSectionLabel(currentScreen.payload.speaking_mode)}</h2>
+                      <p className="muted">{currentScreen.payload.prompt_text}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className={recorder.state === "recording" ? "mic-button recording" : "mic-button"}
+                      disabled={busy}
+                      onClick={recorder.state === "recording" ? recorder.stopRecording : recorder.startRecording}
+                    >
+                      {recorder.state === "recording" ? "Stop" : "Record"}
+                    </button>
+                  </div>
+                  <div className="recorder-status-row">
+                    <span className={`state-pill ${recorder.state}`}>{formatRecorderState(recorder.state)}</span>
+                    <span className="muted">
+                      {recorder.durationMs ? `${(recorder.durationMs / 1000).toFixed(1)}s captured` : "Press record, speak, then submit once."}
+                    </span>
+                  </div>
+                  {recorder.audioUrl ? <audio className="audio-player" src={recorder.audioUrl} controls /> : null}
+                  {recorder.error ? <StatusBanner tone="error" title="Recording error" message={recorder.error} /> : null}
+                  {conversationEntries.length ? (
+                    <div className="transcript-stack">
+                      <span className="eyebrow">Conversation so far</span>
+                      {conversationEntries.map((entry) => (
+                        <div key={entry.key} className={entry.speaker === "USER" ? "chat-bubble user" : "chat-bubble"}>
+                          <strong>{formatConversationSpeaker(entry.speaker)}</strong>
+                          <p>{entry.text}</p>
+                        </div>
                       ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            {currentScreen.screen_type === "writing_response" ? (
-              <>
-                <TextAreaField label="Your answer" value={writingDraft} onChange={(event) => setWritingDraft(event.target.value)} />
-              </>
-            ) : null}
-
-            {currentScreen.screen_type === "speaking_task" ? (
-              <>
-                <div className="screen-hero">
-                  <div>
-                    <span className="eyebrow">Speaking task</span>
-                    <h2>{formatSectionLabel(currentScreen.payload.speaking_mode)}</h2>
-                    <p className="muted">{currentScreen.payload.prompt_text}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className={recorder.state === "recording" ? "mic-button recording" : "mic-button"}
-                    disabled={busy}
-                    onClick={recorder.state === "recording" ? recorder.stopRecording : recorder.startRecording}
-                  >
-                    {recorder.state === "recording" ? "Stop" : "Record"}
-                  </button>
-                </div>
-                <div className="recorder-status-row">
-                  <span className={`state-pill ${recorder.state}`}>{formatRecorderState(recorder.state)}</span>
-                  <span className="muted">
-                    {recorder.durationMs ? `${(recorder.durationMs / 1000).toFixed(1)}s captured` : "Press record, speak, then submit once."}
-                  </span>
-                </div>
-                {recorder.audioUrl ? <audio className="audio-player" src={recorder.audioUrl} controls /> : null}
-                {recorder.error ? <StatusBanner tone="error" title="Recording error" message={recorder.error} /> : null}
-                {conversationEntries.length ? (
-                  <div className="transcript-stack">
-                    <span className="eyebrow">Conversation so far</span>
-                    {conversationEntries.map((entry) => (
-                      <div key={entry.key} className={entry.speaker === "USER" ? "chat-bubble user" : "chat-bubble"}>
-                        <strong>{formatConversationSpeaker(entry.speaker)}</strong>
-                        <p>{entry.text}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-          </div>
-        ) : (
-          <div className="runtime-screen">
-            <div className="reading-passages">
-              <span className="eyebrow">Exam complete</span>
-              <p className="reading-paragraph">All tasks are complete. Continue to the results screen when you are ready.</p>
+                  ) : null}
+                </>
+              ) : null}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="runtime-screen">
+              <div className="reading-passages">
+                <span className="eyebrow">Exam complete</span>
+                <p className="reading-paragraph">All tasks are complete. Continue to the results screen when you are ready.</p>
+              </div>
+            </div>
+          )}
+        </div>
       </Panel>
     </ScreenScaffold>
   );

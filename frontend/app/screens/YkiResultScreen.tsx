@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Award, RefreshCw, RotateCcw } from "lucide-react";
+import { Award, CircleCheckBig, RefreshCw, RotateCcw } from "lucide-react";
 
 import { Button } from "../components/Button";
 import { Panel } from "../components/Panel";
@@ -96,17 +96,23 @@ export function YkiResultScreen(props: {
           <div className="meta-grid">
             <div className="meta-item">
               <span className="eyebrow">Exam status</span>
-              <strong>Complete</strong>
+              <strong>
+                <CircleCheckBig size={16} aria-hidden="true" /> Complete
+              </strong>
               <p className="muted">Your exam session has finished successfully.</p>
             </div>
             <div className="meta-item">
               <span className="eyebrow">Last section</span>
-              <strong>{activeSectionLabel(props.runtime)}</strong>
+              <strong>
+                <Award size={16} aria-hidden="true" /> {activeSectionLabel(props.runtime)}
+              </strong>
               <p className="muted">This was the final stage shown before your result summary.</p>
             </div>
             <div className="meta-item">
               <span className="eyebrow">Next step</span>
-              <strong>Review and restart</strong>
+              <strong>
+                <RefreshCw size={16} aria-hidden="true" /> Review and restart
+              </strong>
               <p className="muted">Load your result summary below or return to the exam home screen.</p>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Check, Play, RotateCcw, SendHorizontal, SkipForward, Sparkles, Volume2 } from "lucide-react";
 
 import { Field } from "../components/Field";
 import { ScreenScaffold } from "../components/ScreenScaffold";
@@ -257,6 +258,7 @@ export function CardsScreen(props: { section?: PracticeSection }) {
         !runtime ? (
           <div className="actions-row">
             <button type="button" className="practice-primary-action" onClick={start} disabled={busy}>
+              <Play size={16} aria-hidden="true" />
               {busy ? "Starting..." : "Start session"}
             </button>
           </div>
@@ -269,10 +271,12 @@ export function CardsScreen(props: { section?: PracticeSection }) {
                 onClick={submit}
                 disabled={busy || !answer}
               >
+                <SendHorizontal size={16} aria-hidden="true" />
                 {busy ? "Submitting..." : "Submit answer"}
               </button>
             ) : null}
             <button type="button" className="practice-skip-button" onClick={skip} disabled={busy}>
+              <SkipForward size={16} aria-hidden="true" />
               Skip
             </button>
           </div>
@@ -289,7 +293,10 @@ export function CardsScreen(props: { section?: PracticeSection }) {
           <div className="practice-session-grid">
             <Field label="Level" value={level} onChange={(event) => setLevel(event.target.value)} />
             <label className="field">
-              <span>Learning mode</span>
+              <span className="field-label">
+                <Sparkles size={16} aria-hidden="true" />
+                <span>Learning mode</span>
+              </span>
               <select value={adaptive ? "yes" : "no"} onChange={(event) => setAdaptive(event.target.value === "yes")}>
                 <option value="no">Standard</option>
                 <option value="yes">Adaptive</option>
@@ -310,11 +317,11 @@ export function CardsScreen(props: { section?: PracticeSection }) {
           <div className="practice-card-stage primary-card">
             <div className="practice-topbar">
               <button type="button" className="recall-pill" onClick={toggleFlip}>
-                <span aria-hidden="true">⟲</span>
+                <RotateCcw size={16} aria-hidden="true" />
                 <span>Recall</span>
               </button>
               <button type="button" className="recall-pill" onClick={toggleFlip}>
-                <span aria-hidden="true">⟲</span>
+                <Check size={16} aria-hidden="true" />
                 <span>{isFlipped ? "Prompt" : "Answer"}</span>
               </button>
             </div>
@@ -325,7 +332,7 @@ export function CardsScreen(props: { section?: PracticeSection }) {
                   <div className={`practice-card-inner ${isFlipped ? "is-flipped" : ""}`.trim()}>
                     <section className="practice-card-face">
                       <button type="button" className="practice-icon-button left" onClick={speakFrontText} aria-label="Play pronunciation">
-                        <span aria-hidden="true">🔊</span>
+                        <Volume2 size={18} aria-hidden="true" />
                       </button>
                       <button
                         type="button"
@@ -333,7 +340,7 @@ export function CardsScreen(props: { section?: PracticeSection }) {
                         onClick={toggleFlip}
                         aria-label={isFlipped ? "Show prompt side" : "Show answer side"}
                       >
-                        <span aria-hidden="true">{cardState.icon}</span>
+                        <RotateCcw size={18} aria-hidden="true" />
                       </button>
 
                       <div className="practice-card-core">

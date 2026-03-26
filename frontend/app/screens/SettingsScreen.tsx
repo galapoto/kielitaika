@@ -1,3 +1,5 @@
+import { BadgeCheck, Mail, Settings, UserRound } from "lucide-react";
+
 import { Panel } from "../components/Panel";
 import { ScreenScaffold } from "../components/ScreenScaffold";
 import type { AuthUser, SubscriptionStatus } from "../state/types";
@@ -15,7 +17,9 @@ export function SettingsScreen(props: { user: AuthUser; subscription: Subscripti
       }
       actions={
         <Panel className="secondary-card settings-action-card">
-          <span className="eyebrow">Navigation</span>
+          <span className="eyebrow">
+            <Settings size={16} aria-hidden="true" /> Navigation
+          </span>
           <p className="muted">Use the shell navigation to move between settings, practice, conversation, and YKI surfaces.</p>
         </Panel>
       }
@@ -24,15 +28,21 @@ export function SettingsScreen(props: { user: AuthUser; subscription: Subscripti
         <div className="meta-grid">
           <div className="meta-item">
             <span className="eyebrow">Name</span>
-            <strong>{props.user.name || "Not set"}</strong>
+            <strong>
+              <UserRound size={16} aria-hidden="true" /> {props.user.name || "Not set"}
+            </strong>
           </div>
           <div className="meta-item">
             <span className="eyebrow">Email</span>
-            <strong>{props.user.email}</strong>
+            <strong>
+              <Mail size={16} aria-hidden="true" /> {props.user.email}
+            </strong>
           </div>
           <div className="meta-item">
             <span className="eyebrow">Subscription</span>
-            <strong>{props.subscription?.tier || props.user.subscription_tier}</strong>
+            <strong>
+              <BadgeCheck size={16} aria-hidden="true" /> {props.subscription?.tier || props.user.subscription_tier}
+            </strong>
           </div>
         </div>
       </Panel>

@@ -1,3 +1,4 @@
+import { AlertCircle, CheckCircle2, Info } from "lucide-react";
 import { useEffect } from "react";
 
 import { playError, playSuccess } from "../services/audioService";
@@ -13,12 +14,12 @@ export function StatusBanner(props: { tone: "neutral" | "success" | "error"; tit
     }
   }, [props.message, props.title, props.tone]);
 
-  const marker = props.tone === "error" ? "!" : props.tone === "success" ? "OK" : "i";
+  const Marker = props.tone === "error" ? AlertCircle : props.tone === "success" ? CheckCircle2 : Info;
 
   return (
     <div className={`status-banner status-${props.tone}`}>
       <span className="status-marker" aria-hidden="true">
-        {marker}
+        <Marker size={16} aria-hidden="true" />
       </span>
       <div className="status-copy">
         <strong>{props.title}</strong>

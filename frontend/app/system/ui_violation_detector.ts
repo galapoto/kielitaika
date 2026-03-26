@@ -1,7 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { REQUIRED_APP_SCREEN_MARKERS, REQUIRED_CARD_RUNTIME_MARKERS, REQUIRED_GLOBAL_WIDTH_RULES, REQUIRED_MOBILE_RULES, SCREEN_BACKGROUND_SCENARIOS } from "./ui_regression_tests";
+import {
+  FORBIDDEN_GLOBAL_PATTERNS,
+  REQUIRED_APP_SCREEN_MARKERS,
+  REQUIRED_CARD_RUNTIME_MARKERS,
+  REQUIRED_GLOBAL_WIDTH_RULES,
+  REQUIRED_MOBILE_RULES,
+  REQUIRED_SCAFFOLD_RULES,
+  SCREEN_BACKGROUND_SCENARIOS,
+} from "./ui_regression_tests";
 import { UI_INVARIANTS } from "./ui_invariants";
 
 const FRONTEND_ROOT = path.resolve(__dirname, "../..");
@@ -185,8 +193,24 @@ function validateDimensionsAndSpacing(): Violation[] {
     }
   }
 
-  if (!css.includes("padding: 24px;") || !css.includes("gap: 24px;")) {
+  if ((!css.includes("padding: var(--space-3);") && !css.includes("padding: 24px;")) || (!css.includes("gap: var(--space-3);") && !css.includes("gap: 24px;"))) {
     violations.push({ file: relative(GLOBAL_CSS_FILE), reason: "Core shell spacing drifted from the locked spacing system." });
+  }
+
+  for (const rule of REQUIRED_SCAFFOLD_RULES) {
+    if (!css.includes(rule)) {
+      violations.push({ file: relative(GLOBAL_CSS_FILE), reason: `Missing required scaffold rule: ${rule}` });
+    }
+  }
+
+  for (const pattern of FORBIDDEN_GLOBAL_PATTERNS) {
+    if (css.includes(pattern)) {
+      violations.push({ file: relative(GLOBAL_CSS_FILE), reason: `Forbidden global layout pattern detected: ${pattern}` });
+    }
+  }
+
+  if (!/font-family:\s*"?Space Grotesk"?/.test(css)) {
+    violations.push({ file: relative(GLOBAL_CSS_FILE), reason: "Heading typography must use the enforced title font." });
   }
 
   return violations;
@@ -196,6 +220,9 @@ function validateRegressionScenarios(): Violation[] {
   const css = read(GLOBAL_CSS_FILE);
   const dashboard = read(path.join(APP_ROOT, "screens", "DashboardScreen.tsx"));
   const cards = read(CARDS_FILE);
+  const ykiExam = read(path.join(APP_ROOT, "screens", "YkiExamScreen.tsx"));
+  const field = read(path.join(APP_ROOT, "components", "Field.tsx"));
+  const statusBanner = read(path.join(APP_ROOT, "components", "StatusBanner.tsx"));
   const violations: Violation[] = [];
 
   if (!css.includes(".drawer-sidebar") || !css.includes(".drawer-sidebar.is-open")) {
@@ -210,8 +237,20 @@ function validateRegressionScenarios(): Violation[] {
     violations.push({ file: relative(path.join(APP_ROOT, "screens", "DashboardScreen.tsx")), reason: "Home screen must render through one bounded dashboard surface." });
   }
 
-  if (!css.includes(".practice-runtime-root") || !css.includes("aspect-ratio: 2 / 3;") || !css.includes(".dashboard-surface")) {
-    violations.push({ file: relative(GLOBAL_CSS_FILE), reason: "Locked practice-card and bounded-home layout rules are missing." });
+  if (!css.includes(".practice-runtime-root") || !css.includes(".practice-card-wrapper") || !css.includes("height: 680px;") || !css.includes(".dashboard-surface")) {
+    violations.push({ file: relative(GLOBAL_CSS_FILE), reason: "Locked practice-card dimensions and bounded-home layout rules are missing." });
+  }
+
+  if (!ykiExam.includes(`className="${UI_INVARIANTS.EXAM_SCROLL_CONTAINER_CLASS}"`) || !ykiExam.includes('contentClassName="exam-content-zone"')) {
+    violations.push({ file: relative(path.join(APP_ROOT, "screens", "YkiExamScreen.tsx")), reason: "YKI runtime must isolate scrolling inside the exam-content container." });
+  }
+
+  if (!field.includes("field-label") || !field.includes("lucide-react")) {
+    violations.push({ file: relative(path.join(APP_ROOT, "components", "Field.tsx")), reason: "Inputs must expose the enforced icon-bearing field label structure." });
+  }
+
+  if (!statusBanner.includes("AlertCircle") || !statusBanner.includes("CheckCircle2") || !statusBanner.includes("Info")) {
+    violations.push({ file: relative(path.join(APP_ROOT, "components", "StatusBanner.tsx")), reason: "Status banners must use the normalized icon system." });
   }
 
   return violations;

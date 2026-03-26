@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { KeyRound, LogIn, UserPlus } from "lucide-react";
 
 import { Button } from "../components/Button";
 import { Field } from "../components/Field";
@@ -181,6 +182,7 @@ export function AuthScreen(props: {
           <Field label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
 
           <Button onClick={submit} disabled={submitting || googleSubmitting || !email || !password || (mode === "register" && !name)}>
+            {mode === "login" ? <LogIn size={16} aria-hidden="true" /> : <UserPlus size={16} aria-hidden="true" />}
             {submitting ? "Submitting..." : mode === "login" ? "Sign In" : "Create Account"}
           </Button>
 
@@ -203,6 +205,7 @@ export function AuthScreen(props: {
                 })
               }
             >
+              <KeyRound size={16} aria-hidden="true" />
               Forgot password
             </button>
             <button
@@ -213,6 +216,7 @@ export function AuthScreen(props: {
                 setFeedback(null);
               }}
             >
+              {mode === "login" ? <UserPlus size={16} aria-hidden="true" /> : <LogIn size={16} aria-hidden="true" />}
               {mode === "login" ? "Sign up" : "Back to sign in"}
             </button>
           </div>

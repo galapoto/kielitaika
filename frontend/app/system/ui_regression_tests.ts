@@ -26,6 +26,22 @@ export const REQUIRED_MOBILE_RULES = [
   `width: min(84vw, ${UI_INVARIANTS.MOBILE_SHELL_RULES.drawerMaxWidth}px);`,
 ] as const;
 
+export const REQUIRED_SCAFFOLD_RULES = [
+  ".route-stage {",
+  "min-height: 0;",
+  ".screen-shell {",
+  "flex: 1 1 auto;",
+  ".screen-content-zone {",
+  ".exam-content {",
+  "overflow-y: auto;",
+] as const;
+
+export const FORBIDDEN_GLOBAL_PATTERNS = [
+  "font-family: Georgia",
+  "margin-top: auto;",
+  ".yki-flow-screen {\n  overflow-y: auto;",
+] as const;
+
 export const REQUIRED_APP_SCREEN_MARKERS = [
   "let screen = <DashboardScreen",
   'screen = <CardsScreen section={practiceSection} />',

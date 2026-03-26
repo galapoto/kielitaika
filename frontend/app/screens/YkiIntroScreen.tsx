@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Play, RotateCcw } from "lucide-react";
+import { Gauge, LockKeyhole, Play, RotateCcw } from "lucide-react";
 
 import { Button } from "../components/Button";
 import { Panel } from "../components/Panel";
@@ -75,17 +75,23 @@ export function YkiIntroScreen(props: {
         <div className="meta-grid">
           <div className="meta-item">
             <span className="eyebrow">Access</span>
-            <strong>{props.subscription?.features?.yki?.available ? "Enabled" : "Blocked"}</strong>
+            <strong>
+              <LockKeyhole size={16} aria-hidden="true" /> {props.subscription?.features?.yki?.available ? "Enabled" : "Blocked"}
+            </strong>
             <p className="muted">{props.subscription?.features?.yki?.message || "Subscription status not loaded yet."}</p>
           </div>
           <div className="meta-item">
             <span className="eyebrow">Selected level</span>
-            <strong>{currentLevel.label}</strong>
+            <strong>
+              <Gauge size={16} aria-hidden="true" /> {currentLevel.label}
+            </strong>
             <p className="muted">{currentLevel.description}</p>
           </div>
           <div className="meta-item">
             <span className="eyebrow">Resume</span>
-            <strong>{props.restoredRuntime ? "Available" : "None"}</strong>
+            <strong>
+              <RotateCcw size={16} aria-hidden="true" /> {props.restoredRuntime ? "Available" : "None"}
+            </strong>
             <p className="muted">{props.restoredRuntime ? "You can continue from your saved exam." : "No saved exam was found for this account."}</p>
           </div>
         </div>

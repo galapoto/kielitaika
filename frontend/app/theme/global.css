@@ -6,8 +6,9 @@ html,
 body,
 #root {
   height: 100%;
+  overflow: hidden;
   margin: 0;
-  font-family: Inter, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   color: var(--text);
 }
 
@@ -22,12 +23,14 @@ body {
 
 .app-frame {
   position: relative;
+  height: 100vh;
   min-height: 100vh;
+  overflow: hidden;
   isolation: isolate;
 }
 
 .app-logo-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
@@ -72,10 +75,12 @@ a {
 }
 
 .app-shell-frame {
+  height: 100vh;
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 32px;
+  padding: var(--space-4);
+  overflow: hidden;
 }
 
 .app-shell {
@@ -86,7 +91,7 @@ a {
   margin: 0 auto;
   height: 100%;
   min-height: min(900px, calc(100vh - 32px));
-  border-radius: 34px;
+  border-radius: 32px;
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.14);
   background: rgba(4, 8, 18, 0.22);
@@ -98,8 +103,8 @@ a {
   display: flex;
   min-height: 100%;
   flex-direction: column;
-  gap: 24px;
-  padding: 30px 20px;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-3);
   background: rgba(3, 8, 18, 0.58);
   border-right: 1px solid rgba(148, 163, 184, 0.08);
   backdrop-filter: blur(18px);
@@ -108,13 +113,13 @@ a {
 .brand-lockup {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-2);
 }
 
 .logo-lockup {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-2);
 }
 
 .logo-lockup img {
@@ -134,8 +139,8 @@ a {
 .panel-header h2,
 .loading-screen h1,
 .hero-title {
-  font-family: Georgia, "Times New Roman", serif;
-  letter-spacing: 0.02em;
+  font-family: "Space Grotesk", Inter, "Segoe UI", sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .brand-lockup span,
@@ -147,14 +152,16 @@ a {
 }
 
 .nav-stack {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .nav-button-copy {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-2);
 }
 
 .nav-group,
@@ -167,16 +174,16 @@ a {
 }
 
 .nav-substack {
-  gap: 8px;
-  padding-left: 12px;
+  gap: var(--space-1);
+  padding-left: var(--space-2);
 }
 
 .sidebar-user-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
-  padding: 14px;
+  gap: var(--space-2);
+  padding: var(--space-2);
   border-radius: 20px;
   background: rgba(15, 23, 42, 0.74);
   border: 1px solid rgba(148, 163, 184, 0.12);
@@ -203,7 +210,7 @@ a {
 }
 
 .nav-item {
-  padding: 14px 16px;
+  padding: var(--space-2);
   border: 1px solid transparent;
   border-radius: 16px;
   background: transparent;
@@ -221,7 +228,7 @@ a {
 }
 
 .nav-subitem {
-  padding: 10px 14px;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid transparent;
   border-radius: 14px;
   background: transparent;
@@ -238,28 +245,28 @@ a {
 }
 
 .sidebar-footer {
-  margin-top: auto;
   display: grid;
-  gap: 14px;
+  gap: var(--space-2);
 }
 
 .subscription-chip {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: var(--space-2);
+  padding: var(--space-2);
   border-radius: 16px;
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .main-content {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  display: grid;
-  align-content: start;
+  align-items: center;
   min-height: 0;
-  padding: 28px;
-  overflow: auto;
+  padding: var(--space-3);
+  overflow: hidden;
   background: linear-gradient(180deg, rgba(5, 9, 18, 0.12), rgba(5, 9, 18, 0.08));
 }
 
@@ -271,20 +278,23 @@ a {
 
 .route-stage {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   width: 100%;
-  height: 100%;
-  min-height: 100%;
+  min-height: 0;
+  overflow: hidden;
   animation: route-enter 240ms ease;
 }
 
 .screen-shell {
   width: min(100%, 1120px);
-  min-height: 100%;
-  margin: 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  align-items: flex-start;
+  gap: var(--space-3);
+  overflow: hidden;
 }
 
 .screen-shell.center-content {
@@ -298,35 +308,39 @@ a {
 }
 
 .screen-content-zone {
-  display: grid;
-  gap: 24px;
-  align-content: start;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--space-3);
 }
 
 .screen-shell.center-content .screen-content-zone {
-  flex: 1 1 auto;
-  align-content: center;
+  justify-content: center;
 }
 
 .screen-action-zone {
-  margin-top: auto;
   display: grid;
-  gap: 16px;
+  flex: 0 0 auto;
+  gap: var(--space-2);
 }
 
 .screen-action-zone .actions-row {
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .screen-action-zone > .panel {
   width: min(100%, 560px);
-  justify-self: end;
+  justify-self: start;
 }
 
 .screen-heading {
-  width: min(100%, 1120px);
+  width: 100%;
   display: grid;
-  gap: 8px;
+  gap: var(--space-1);
+  justify-items: start;
 }
 
 .screen-heading h1,
@@ -337,26 +351,23 @@ a {
 .screen-stack {
   display: grid;
   width: min(100%, 1120px);
-  margin: 0 auto;
-  gap: 24px;
+  gap: var(--space-3);
 }
 
 .dashboard-screen {
-  min-height: 100%;
-  place-content: center;
+  justify-content: flex-start;
 }
 
 .dashboard-surface {
   width: min(100%, 980px);
   display: grid;
-  gap: 24px;
-  margin: auto;
+  gap: var(--space-3);
 }
 
 .dashboard-hero-block {
   display: grid;
   grid-template-columns: 1.25fr 0.85fr;
-  gap: 24px;
+  gap: var(--space-3);
   align-items: start;
 }
 
@@ -380,18 +391,19 @@ a {
 
 .practice-screen {
   width: min(100%, 980px);
-  height: 100%;
-  margin: 0 auto;
-  display: grid;
-  gap: 24px;
-  align-content: start;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .practice-intro-card,
 .practice-complete-card {
   display: grid;
-  gap: 16px;
-  padding: 24px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border-radius: 28px;
   border: 1px solid rgba(148, 163, 184, 0.12);
   background: linear-gradient(180deg, rgba(18, 28, 48, 0.9), rgba(9, 14, 28, 0.96));
@@ -401,7 +413,7 @@ a {
 .practice-session-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  gap: var(--space-2);
 }
 
 .practice-chip-row {
@@ -424,10 +436,11 @@ a {
 
 .practice-runtime-root {
   display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100%;
   width: 100%;
 }
 
@@ -456,7 +469,7 @@ a {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: var(--space-3);
   width: 100%;
 }
 
@@ -466,14 +479,14 @@ a {
 
 .practice-card-wrapper {
   width: min(100%, 460px);
-  aspect-ratio: 2 / 3;
+  height: 680px;
   flex: 0 0 auto;
 }
 
 .practice-card-shell {
   width: 100%;
   height: 100%;
-  padding: 8px;
+  padding: var(--space-1);
   border-radius: 32px;
   background: rgba(245, 249, 255, 0.42);
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.16);
@@ -505,7 +518,7 @@ a {
   height: 100%;
   display: grid;
   grid-template-rows: 1fr auto;
-  padding: 16px;
+  padding: var(--space-2);
 }
 
 .practice-icon-button {
@@ -546,8 +559,8 @@ a {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 16px;
-  padding: 48px 16px 24px;
+  gap: var(--space-2);
+  padding: 48px var(--space-2) var(--space-3);
   text-align: center;
 }
 
@@ -581,7 +594,7 @@ a {
 .practice-answer-panel {
   width: 100%;
   display: grid;
-  gap: 16px;
+  gap: var(--space-2);
   max-width: 320px;
 }
 
@@ -599,7 +612,7 @@ a {
 .practice-answer-option {
   display: grid;
   gap: 4px;
-  padding: 12px 14px;
+  padding: var(--space-2);
   border-radius: 16px;
   border: 1px solid rgba(148, 163, 184, 0.16);
   background: rgba(241, 245, 249, 0.94);
@@ -622,7 +635,7 @@ a {
 
 .practice-card-footer {
   display: grid;
-  gap: 16px;
+  gap: var(--space-2);
   align-self: end;
 }
 
@@ -660,7 +673,7 @@ a {
 }
 
 .practice-secondary-action {
-  padding: 0 18px;
+  padding: 0 var(--space-3);
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(255, 255, 255, 0.72);
   color: #1e293b;
@@ -668,7 +681,7 @@ a {
 
 .practice-primary-action,
 .practice-secondary-action {
-  padding: 0 20px;
+  padding: 0 var(--space-3);
 }
 
 .practice-submit-action {
@@ -678,7 +691,7 @@ a {
 .practice-progress-stack {
   width: min(100%, 420px);
   display: grid;
-  gap: 10px;
+  gap: var(--space-1);
   justify-items: center;
 }
 
@@ -717,7 +730,7 @@ a {
   width: 100%;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-2);
   color: var(--muted);
   font-size: 0.92rem;
 }
@@ -730,7 +743,7 @@ a {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(5, 7, 13, 0.78));
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
-  padding: 20px;
+  padding: var(--space-3);
   animation: panel-enter 220ms ease;
 }
 
@@ -746,7 +759,7 @@ a {
 }
 
 .panel-header {
-  margin-bottom: 18px;
+  margin-bottom: var(--space-2);
 }
 
 .panel-header h2,
@@ -766,9 +779,9 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space-1);
   min-height: 46px;
-  padding: 0 18px;
+  padding: 0 var(--space-3);
   border-radius: 14px;
   border: 1px solid transparent;
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
@@ -814,7 +827,13 @@ a {
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: var(--space-1);
+}
+
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 .field span {
@@ -826,7 +845,7 @@ a {
 .field textarea,
 .field select {
   width: 100%;
-  padding: 14px 16px;
+  padding: var(--space-2);
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(8, 14, 28, 0.82);
@@ -851,7 +870,7 @@ a {
 .hero-grid,
 .dashboard-grid {
   display: grid;
-  gap: 24px;
+  gap: var(--space-3);
 }
 
 .hero-grid {
@@ -868,8 +887,8 @@ a {
 
 .feature-card {
   display: grid;
-  gap: 14px;
-  padding: 18px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border-radius: 22px;
   border: 1px solid rgba(58, 190, 255, 0.12);
   background: rgba(8, 15, 30, 0.76);
@@ -896,7 +915,7 @@ a {
 .badge-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-2);
 }
 
 .card-stack,
@@ -911,7 +930,7 @@ a {
 }
 
 .meta-item {
-  padding: 14px;
+  padding: var(--space-2);
   border-radius: 18px;
   background: rgba(8, 14, 28, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.12);
@@ -920,9 +939,9 @@ a {
 .status-banner {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: var(--space-2);
   align-items: start;
-  padding: 14px 16px;
+  padding: var(--space-2);
   border-radius: 16px;
   border: 1px solid transparent;
   animation: status-enter 180ms ease;
@@ -965,9 +984,9 @@ a {
   min-height: 100vh;
   display: grid;
   place-content: center;
-  gap: 14px;
+  gap: var(--space-2);
   text-align: center;
-  padding: 24px;
+  padding: var(--space-3);
   animation: route-enter 260ms ease;
 }
 
@@ -985,7 +1004,7 @@ a {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: var(--space-3);
 }
 
 .auth-card {
@@ -993,8 +1012,8 @@ a {
   min-height: min(820px, calc(100vh - 48px));
   display: grid;
   align-content: center;
-  gap: 20px;
-  padding: 24px;
+  gap: var(--space-3);
+  padding: var(--space-3);
 }
 
 .auth-card .logo-lockup,
@@ -1019,14 +1038,14 @@ a {
 .auth-brand {
   display: grid;
   justify-items: center;
-  gap: 12px;
+  gap: var(--space-2);
 }
 
 .auth-brand h1 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Space Grotesk", Inter, "Segoe UI", sans-serif;
   font-size: 2.4rem;
-  letter-spacing: 0.04em;
+  letter-spacing: -0.02em;
 }
 
 .auth-logo {
@@ -1042,7 +1061,7 @@ a {
 
 .auth-form {
   display: grid;
-  gap: 14px;
+  gap: var(--space-2);
 }
 
 .auth-google-button {
@@ -1067,11 +1086,14 @@ a {
 .auth-link-row {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .auth-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   padding: 0;
   border: 0;
   background: transparent;
@@ -1087,7 +1109,7 @@ a {
 @media (max-width: 560px) {
   .auth-card {
     width: min(100%, 100%);
-    gap: 18px;
+    gap: var(--space-2);
   }
 
   .auth-link-row {
@@ -1097,7 +1119,7 @@ a {
 
 .chat-bubble {
   max-width: 82%;
-  padding: 14px 16px;
+  padding: var(--space-2);
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.14);
   background: rgba(8, 14, 28, 0.78);
@@ -1118,7 +1140,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: var(--space-2);
 }
 
 .progress-ring {
@@ -1139,14 +1161,14 @@ a {
 
 .recorder-card {
   display: grid;
-  gap: 18px;
+  gap: var(--space-2);
 }
 
 .recorder-status-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-1);
 }
 
 .state-pill {
@@ -1207,7 +1229,7 @@ a {
 
 .option-grid {
   display: grid;
-  gap: 10px;
+  gap: var(--space-1);
 }
 
 .option-button {
@@ -1222,7 +1244,7 @@ a {
 
 .runtime-screen {
   display: grid;
-  gap: 18px;
+  gap: var(--space-2);
 }
 
 .reading-stage,
@@ -1231,13 +1253,13 @@ a {
 .transcript-card,
 .study-card {
   display: grid;
-  gap: 16px;
+  gap: var(--space-2);
 }
 
 .reading-passages,
 .transcript-card,
 .study-card {
-  padding: 18px;
+  padding: var(--space-3);
   border-radius: 20px;
   background: rgba(5, 10, 20, 0.42);
   border: 1px solid rgba(148, 163, 184, 0.12);
@@ -1274,8 +1296,8 @@ a {
   inset: 0;
   display: grid;
   align-content: start;
-  gap: 14px;
-  padding: 18px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border-radius: 20px;
   border: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(8, 14, 28, 0.84);
@@ -1303,7 +1325,7 @@ a {
   flex-wrap: wrap;
   align-items: start;
   justify-content: space-between;
-  gap: 18px;
+  gap: var(--space-2);
 }
 
 .study-card-title {
@@ -1313,7 +1335,7 @@ a {
 
 .study-card-progress {
   min-width: 120px;
-  padding: 14px 16px;
+  padding: var(--space-2);
   border-radius: 18px;
   background: rgba(12, 20, 38, 0.72);
   border: 1px solid rgba(148, 163, 184, 0.12);
@@ -1327,12 +1349,12 @@ a {
 
 .card-response-row {
   display: grid;
-  gap: 14px;
+  gap: var(--space-2);
 }
 
 .json-preview {
   margin: 0;
-  padding: 16px;
+  padding: var(--space-2);
   overflow: auto;
   border-radius: 18px;
   background: rgba(6, 10, 19, 0.92);
@@ -1348,36 +1370,57 @@ a {
 
 .json-preview-block {
   display: grid;
-  gap: 16px;
+  gap: var(--space-2);
 }
 
 .question-card {
-  padding: 16px;
+  padding: var(--space-2);
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(8, 14, 28, 0.75);
 }
 
 .yki-flow-screen {
-  min-height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .flow-panel {
   width: min(100%, 980px);
-  margin: 0 auto;
   display: grid;
-  gap: 24px;
+  gap: var(--space-3);
+}
+
+.exam-content-zone {
+  min-height: 0;
+}
+
+.exam-shell-panel {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.exam-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+  padding-right: var(--space-1);
 }
 
 .flow-header {
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: 18px;
+  gap: var(--space-2);
 }
 
 .flow-error-card {
-  padding: 14px 16px;
+  padding: var(--space-2);
   border-radius: 18px;
   border: 1px solid rgba(239, 68, 68, 0.32);
   background: rgba(120, 18, 24, 0.2);
@@ -1396,13 +1439,13 @@ a {
 
 .debug-log-list {
   display: grid;
-  gap: 16px;
+  gap: var(--space-2);
 }
 
 .debug-log-card {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-2);
+  padding: var(--space-2);
   border-radius: 20px;
   border: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(8, 14, 28, 0.72);
@@ -1412,7 +1455,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-2);
 }
 
 .debug-log-badge {
@@ -1441,21 +1484,21 @@ a {
 .empty-state {
   display: grid;
   justify-items: center;
-  gap: 12px;
-  padding: 24px;
+  gap: var(--space-2);
+  padding: var(--space-3);
   color: var(--muted);
 }
 
 .level-selector {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
+  gap: var(--space-2);
 }
 
 .level-card {
   display: grid;
-  gap: 6px;
-  padding: 18px;
+  gap: var(--space-1);
+  padding: var(--space-3);
   border-radius: 20px;
   border: 1px solid rgba(148, 163, 184, 0.12);
   background: rgba(8, 14, 28, 0.76);
@@ -1538,7 +1581,7 @@ a {
 
 @media (max-width: 980px) {
   .app-shell-frame {
-    padding: 14px;
+    padding: var(--space-2);
   }
 
   .app-shell,
@@ -1559,7 +1602,7 @@ a {
   }
 
   .main-content {
-    padding: 64px 20px 20px;
+    padding: 68px 16px 16px;
   }
 
   .dashboard-screen {
@@ -1652,7 +1695,7 @@ a {
   }
 
   .practice-topbar {
-    gap: 12px;
+    gap: var(--space-2);
   }
 
   .recall-pill {
@@ -1691,21 +1734,21 @@ a {
   }
 
   .screen-shell {
-    gap: 16px;
+    gap: var(--space-2);
   }
 
   .dashboard-surface {
-    gap: 16px;
+    gap: var(--space-2);
   }
 
   .practice-intro-card,
   .practice-complete-card {
-    padding: 20px 16px;
+    padding: 24px 16px;
     border-radius: 24px;
   }
 
   .practice-session-grid {
-    gap: 12px;
+    gap: var(--space-2);
   }
 
   .practice-card-inner,

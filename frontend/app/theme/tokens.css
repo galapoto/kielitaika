@@ -1,4 +1,6 @@
 :root {
+  --font-body: Inter, "Segoe UI", sans-serif;
+  --font-title: "Space Grotesk", Inter, "Segoe UI", sans-serif;
   --bg: #05070d;
   --surface: rgba(11, 18, 32, 0.82);
   --surface-strong: rgba(15, 23, 42, 0.92);
@@ -16,6 +18,11 @@
   --error-bg: #2a0e12;
   --error-border: #ef4444;
   --error-text: #f87171;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
   --shadow: 0 24px 80px rgba(2, 12, 27, 0.5);
   --radius-xl: 28px;
   --radius-lg: 20px;
