@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, File, Form, Header, Request, UploadFile
 
 from ..middleware.request_id import get_request_id
-from ..models.api_models import PronunciationAnalyzeRequest
+from ..models.api_models import PronunciationAnalyzeRequest, TtsRequest
 from ..core.responses import success_payload
 from ..services.auth_service import current_user_from_authorization
 from ..services.voice_service import analyze_pronunciation, create_tts_request, transcribe_audio
@@ -45,9 +45,9 @@ def build_voice_router() -> APIRouter:
         return success_payload(data=data, request_id=get_request_id(request))
 
     @router.post("/voice/tts/requests")
-    async def create_tts_request_route(request: Request, payload: dict[str, Any], authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    async def create_tts_request_route(request: Request, payload: TtsRequest, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         current_user_from_authorization(authorization)
-        return success_payload(data=create_tts_request(payload=payload), request_id=get_request_id(request))
+        return success_payload(data=create_tts_request(payload=payload.model_dump()), request_id=get_request_id(request))
 
     @router.post("/voice/pronunciation/analyze")
     async def analyze_pronunciation_route(request: Request, payload: PronunciationAnalyzeRequest, authorization: str | None = Header(default=None)) -> dict[str, Any]:

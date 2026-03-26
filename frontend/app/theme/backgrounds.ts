@@ -9,21 +9,25 @@ const backgrounds = {
     dark: new URL("../assets/images/backgrounds/dark/home/home_dark.png", import.meta.url).href,
     light: new URL("../assets/images/backgrounds/light/home/home_light.png", import.meta.url).href,
   },
-  cards: {
-    dark: new URL("../assets/images/backgrounds/dark/practice/practice_dark.png", import.meta.url).href,
-    light: new URL("../assets/images/backgrounds/light/practice/practice_light.png", import.meta.url).href,
+  practice: {
+    dark: null,
+    light: null,
   },
-  roleplay: {
+  conversation: {
     dark: new URL("../assets/images/backgrounds/dark/conversation/convo_dark.png", import.meta.url).href,
     light: new URL("../assets/images/backgrounds/light/conversation/convo_light.png", import.meta.url).href,
   },
-  voice: {
+  professional: {
     dark: new URL("../assets/images/backgrounds/dark/workplace/workplace_light.png", import.meta.url).href,
     light: new URL("../assets/images/backgrounds/light/workplace/workplace_light.png", import.meta.url).href,
   },
-  yki: {
-    dark: new URL("../assets/images/backgrounds/dark/yki/yki_read_dark.png", import.meta.url).href,
-    light: new URL("../assets/images/backgrounds/light/yki/yki_read_light.png", import.meta.url).href,
+  settings: {
+    dark: new URL("../assets/images/backgrounds/dark/misc/misc_dark_01.png", import.meta.url).href,
+    light: new URL("../assets/images/backgrounds/light/misc/misc_light_01.png", import.meta.url).href,
+  },
+  exam: {
+    dark: null,
+    light: null,
   },
 } as const;
 
@@ -56,11 +60,20 @@ export function useResolvedColorScheme(): ColorScheme {
 
 export function getBackgroundStyle(screen: BackgroundScreen, scheme: ColorScheme): CSSProperties {
   const source = backgrounds[screen][scheme];
-  const overlay =
-    scheme === "dark"
-      ? "linear-gradient(180deg, rgba(3, 8, 18, 0.76), rgba(2, 6, 23, 0.9))"
-      : "linear-gradient(180deg, rgba(248, 252, 255, 0.6), rgba(226, 236, 247, 0.78))";
+  const decorative = source
+    ? scheme === "dark"
+      ? "radial-gradient(circle at top right, rgba(58, 190, 255, 0.16), transparent 22%), radial-gradient(circle at bottom left, rgba(30, 58, 138, 0.28), transparent 26%)"
+      : "radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 22%), radial-gradient(circle at bottom left, rgba(147, 197, 253, 0.24), transparent 26%)"
+    : "none";
+  const overlay = source
+    ? scheme === "dark"
+      ? `linear-gradient(180deg, rgba(3, 8, 18, 0.76), rgba(2, 6, 23, 0.9)), url("${source}")`
+      : `linear-gradient(180deg, rgba(248, 252, 255, 0.6), rgba(226, 236, 247, 0.78)), url("${source}")`
+    : scheme === "dark"
+      ? "linear-gradient(180deg, rgba(6, 11, 22, 0.98), rgba(2, 6, 23, 1))"
+      : "linear-gradient(180deg, rgba(246, 249, 252, 0.98), rgba(232, 239, 247, 1))";
   return {
-    "--app-background-image": `${overlay}, url("${source}")`,
+    "--app-background-image": overlay,
+    "--app-background-accent": decorative,
   } as CSSProperties;
 }

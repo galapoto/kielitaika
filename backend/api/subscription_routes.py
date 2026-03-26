@@ -7,7 +7,7 @@ from fastapi import APIRouter, Header, Request
 from ..middleware.request_id import get_request_id
 from ..core.responses import success_payload
 from ..services.auth_service import current_user_from_authorization
-from ..services.subscription_service import subscription_status
+from ..services.subscription_service import check_feature, subscription_status
 
 
 def build_subscription_router() -> APIRouter:
@@ -17,5 +17,10 @@ def build_subscription_router() -> APIRouter:
     async def get_subscription_status(request: Request, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         user, _ = current_user_from_authorization(authorization)
         return success_payload(data=subscription_status(user=user), request_id=get_request_id(request))
+
+    @router.get("/subscription/check-feature")
+    async def check_subscription_feature(request: Request, feature: str, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        user, _ = current_user_from_authorization(authorization)
+        return success_payload(data=check_feature(user=user, feature=feature), request_id=get_request_id(request))
 
     return router

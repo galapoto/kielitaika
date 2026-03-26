@@ -44,6 +44,19 @@ def store_yki_session(*, user_id: str, runtime: dict[str, Any]) -> None:
         )
 
 
+def sanitize_runtime_for_client(value: Any) -> Any:
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for key, item in value.items():
+            if key in {"engine_session_token", "debug", "canonical_structure", "canonical_task", "internal_state", "raw_runtime"}:
+                continue
+            sanitized[key] = sanitize_runtime_for_client(item)
+        return sanitized
+    if isinstance(value, list):
+        return [sanitize_runtime_for_client(item) for item in value]
+    return value
+
+
 def get_yki_session_record(*, user_id: str, session_id: str) -> dict[str, Any]:
     with STORE.locked(("yki_sessions", session_id)):
         payload = STORE.get_ref("yki_sessions", session_id)

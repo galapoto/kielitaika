@@ -4,7 +4,7 @@ from typing import Any
 
 from ..services.subscription_service import require_feature
 from ..voice.runtime import resolve_voice_ref
-from ..yki.runtime import engine_request, get_yki_session_record, map_engine_error, store_yki_session
+from ..yki.runtime import engine_request, get_yki_session_record, map_engine_error, sanitize_runtime_for_client, store_yki_session
 
 
 async def start_yki_session(*, user: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -13,7 +13,7 @@ async def start_yki_session(*, user: dict[str, Any], payload: dict[str, Any]) ->
     map_engine_error(response=response)
     runtime = response.payload
     store_yki_session(user_id=user["user_id"], runtime=runtime)
-    return {"runtime": runtime}
+    return {"runtime": sanitize_runtime_for_client(runtime)}
 
 
 async def get_yki_session(*, user_id: str, session_id: str) -> dict[str, Any]:
@@ -22,7 +22,7 @@ async def get_yki_session(*, user_id: str, session_id: str) -> dict[str, Any]:
     map_engine_error(response=response)
     runtime = response.payload
     store_yki_session(user_id=user_id, runtime=runtime)
-    return {"runtime": runtime}
+    return {"runtime": sanitize_runtime_for_client(runtime)}
 
 
 async def submit_yki_answer(*, user_id: str, session_id: str, payload: dict[str, Any]) -> dict[str, Any]:

@@ -8,8 +8,18 @@ import { StatusBanner } from "../components/StatusBanner";
 import { createRoleplaySession, fetchRoleplayReview, fetchRoleplayTranscript, submitRoleplayTurn } from "../services/roleplayService";
 import { removeRoleplayCache, saveRoleplayCache } from "../services/storage";
 
+function roleplayCacheState(status: string): "created" | "active" | "awaiting_ai" | "completed" | "expired" | "abandoned" {
+  if (status === "completed") {
+    return "completed";
+  }
+  if (status === "expired") {
+    return "expired";
+  }
+  return "active";
+}
+
 function persistRoleplaySession(session: any | null): void {
-  if (!session || !session.session_id || !session.created_at || !session.expires_at || !session.status) {
+  if (!session || !session.session_id || !session.expires_at || !session.status) {
     return;
   }
   if (session.status === "expired") {
@@ -19,10 +29,11 @@ function persistRoleplaySession(session: any | null): void {
   saveRoleplayCache({
     schema_version: "1",
     roleplay_session_id: session.session_id,
-    created_at: session.created_at,
+    speaking_session_id: `spk_${session.session_id}`,
+    state: roleplayCacheState(session.status),
+    turn_count: Number(session.progress?.user_turns_completed || 0),
     expires_at: session.expires_at,
-    status: session.status,
-    saved_at: new Date().toISOString(),
+    last_synced_at: new Date().toISOString(),
   });
 }
 
@@ -129,14 +140,14 @@ export function RoleplayScreen(props: { restoredSession: any | null }) {
 
   return (
     <div className="screen-stack">
-      <Panel title="Roleplay Runtime" subtitle="Fixed-turn backend roleplay; frontend restores only backend-authored sessions that have not expired.">
+      <Panel title="Conversation" subtitle="Fixed-turn backend conversation flow; frontend restores only backend-authored sessions that have not expired.">
         <div className="grid-two">
           <Field label="Scenario id" value={scenarioId} onChange={(event) => setScenarioId(event.target.value)} />
           <Field label="Level" value={level} onChange={(event) => setLevel(event.target.value)} />
         </div>
         <div className="actions-row">
           <Button onClick={start} disabled={busy}>
-            {busy ? "Starting..." : "Start roleplay"}
+            {busy ? "Starting..." : "Start conversation"}
           </Button>
           {session ? (
             <>
@@ -149,7 +160,7 @@ export function RoleplayScreen(props: { restoredSession: any | null }) {
             </>
           ) : null}
         </div>
-        {error ? <StatusBanner tone="error" title="Roleplay error" message={error} /> : null}
+        {error ? <StatusBanner tone="error" title="Conversation error" message={error} /> : null}
       </Panel>
 
       {session ? (

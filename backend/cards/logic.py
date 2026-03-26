@@ -1,71 +1,218 @@
 from __future__ import annotations
 
+import hashlib
+import random
 from typing import Any
 
 from ..core.errors import AppError
 from ..core.state_store import STORE
 from ..core.utils import iso_now, new_id
+from .material_bank import load_authority_cards
 
 
 CARD_CONTENT_TYPES = ("vocabulary_card", "sentence_card", "grammar_card")
+LEVEL_EXPANSION = {
+    "A1_A2": ("A1_A2", "B1_B2"),
+    "B1_B2": ("B1_B2", "A1_A2", "C1_C2"),
+    "C1_C2": ("C1_C2", "B1_B2"),
+}
+LEVEL_ALIAS = {
+    "A1": "A1_A2",
+    "A2": "A1_A2",
+    "A1_A2": "A1_A2",
+    "A2_B1": "B1_B2",
+    "B1": "B1_B2",
+    "B2": "B1_B2",
+    "B1_B2": "B1_B2",
+    "C1": "C1_C2",
+    "C2": "C1_C2",
+    "C1_C2": "C1_C2",
+}
 
 
-def _seed_card(index: int, *, domain: str, content_type: str, profession: str, level: str, adaptive: bool = False) -> dict[str, Any]:
-    base_word = {
-        "vocabulary_card": "potilas",
-        "sentence_card": "Potilas odottaa vastaanotolla.",
-        "grammar_card": "vastaanotolla",
-    }[content_type]
-    variant_type = {
-        "vocabulary_card": "recognition_mcq",
-        "sentence_card": "typed_recall",
-        "grammar_card": "fill_in",
-    }[content_type]
-    options = [
-        {"option_id": "o1", "text": "potilas"},
-        {"option_id": "o2", "text": "laakari"},
-        {"option_id": "o3", "text": "hoitaja"},
-    ] if variant_type == "recognition_mcq" else []
-    return {
-        "id": new_id("card"),
-        "content_type": content_type,
-        "path": domain,
-        "domain": domain,
-        "profession": profession,
-        "level_band": level,
-        "difficulty": "core",
-        "tags": [domain, content_type],
-        "prompt_family": "core",
-        "word": base_word,
-        "state": "new",
-        "seen_count": 0,
-        "correct_rate": 0.0,
-        "front_text": base_word,
-        "back_prompt": "Answer the prompt.",
-        "audio": None,
-        "served_follow_up": {
-            "variant_type": variant_type,
-            "prompt": "Choose, recall, or complete the answer.",
-            "options": options,
-            "blank_template": "Potilas odottaa ____." if variant_type == "fill_in" else None,
-            "context_text": None,
-            "stimulus_text": None,
-        },
-        "order_index": index,
-        "_answer_value": "potilas" if content_type != "grammar_card" else "vastaanotolla",
-        "_accepted_variants": ["potilas", "o1"] if variant_type == "recognition_mcq" else (["potilas"] if content_type == "vocabulary_card" else [base_word.lower()]),
-        "_adaptive": adaptive,
+def _normalized_level(level: str | None) -> str:
+    return LEVEL_ALIAS.get(str(level or "").strip().upper(), "A1_A2")
+
+
+def _filtered_cards(*, domain: str, content_type: str | None, profession: str | None) -> list[dict[str, Any]]:
+    cards = load_authority_cards()
+    if not cards:
+        raise AppError(503, "CARDS_AUTHORITY_MISSING", "Normalized card authority bank is unavailable.", True, {"classification": "retryable"})
+
+    requested_type = str(content_type or "").strip() or None
+    requested_profession = str(profession or "").strip().lower() or None
+    selected = []
+    for card in cards:
+        if requested_type and card["content_type"] != requested_type:
+            continue
+        if domain == "general":
+            if card["path"] != "general":
+                continue
+        else:
+            if card["path"] != "professional":
+                continue
+            if requested_profession and requested_profession != "none" and card["profession"] != requested_profession:
+                continue
+        selected.append(card)
+    return selected
+
+
+def _history_records(user_id: str) -> list[dict[str, Any]]:
+    with STORE.locked(("user_content_history", user_id)):
+        payload = STORE.get_ref("user_content_history", user_id)
+        if isinstance(payload, list):
+            return payload
+        payload = []
+        STORE.set("user_content_history", user_id, payload)
+        return payload
+
+
+def _served_history_index(user_id: str) -> tuple[set[str], dict[str, str]]:
+    history = _history_records(user_id)
+    seen_ids: set[str] = set()
+    last_seen: dict[str, str] = {}
+    for item in history:
+        if not isinstance(item, dict):
+            continue
+        content_id = str(item.get("content_id") or "").strip()
+        timestamp = str(item.get("timestamp") or "").strip()
+        if not content_id:
+            continue
+        seen_ids.add(content_id)
+        if timestamp:
+            last_seen[content_id] = timestamp
+    return seen_ids, last_seen
+
+
+def _selection_seed(*, user_id: str, domain: str, content_type: str | None, profession: str | None, level_band: str, history_size: int) -> int:
+    digest = hashlib.sha256(
+        "|".join(
+            [
+                user_id,
+                domain,
+                content_type or "*",
+                profession or "*",
+                level_band,
+                str(history_size),
+                iso_now(),
+            ]
+        ).encode("utf-8")
+    ).hexdigest()
+    return int(digest[:16], 16)
+
+
+def _rank_cards(
+    cards: list[dict[str, Any]],
+    *,
+    user_id: str,
+    domain: str,
+    content_type: str | None,
+    profession: str | None,
+    level_band: str,
+) -> list[dict[str, Any]]:
+    seen_ids, last_seen = _served_history_index(user_id)
+    prioritized: list[dict[str, Any]] = []
+    for allowed_band in LEVEL_EXPANSION[level_band]:
+        band_cards = [card for card in cards if card["level_band"] == allowed_band]
+        unseen = [card for card in band_cards if card["id"] not in seen_ids]
+        if unseen:
+            rng = random.Random(
+                _selection_seed(
+                    user_id=user_id,
+                    domain=domain,
+                    content_type=content_type,
+                    profession=profession,
+                    level_band=allowed_band,
+                    history_size=len(seen_ids),
+                )
+            )
+            rng.shuffle(unseen)
+            prioritized.extend(unseen)
+
+    if prioritized:
+        return prioritized
+
+    recycled = list(cards)
+    if not recycled:
+        return recycled
+    rng = random.Random(
+        _selection_seed(
+            user_id=user_id,
+            domain=domain,
+            content_type=content_type,
+            profession=profession,
+            level_band=level_band,
+            history_size=len(seen_ids) + 1,
+        )
+    )
+    recycled.sort(key=lambda card: (last_seen.get(card["id"], ""), card["level_band"], card["id"]))
+    rng.shuffle(recycled)
+    return recycled
+
+
+def _record_served_cards(*, user_id: str, cards: list[dict[str, Any]]) -> None:
+    if not cards:
+        return
+    now = iso_now()
+    history = _history_records(user_id)
+    for card in cards:
+        history.append(
+            {
+                "user_id": user_id,
+                "content_id": card["id"],
+                "content_type": card["content_type"],
+                "timestamp": now,
+            }
+        )
+
+
+def _materialized_card(card: dict[str, Any], *, order_index: int, adaptive: bool) -> dict[str, Any]:
+    materialized = {
+        key: value
+        for key, value in card.items()
+        if key != "_signature"
     }
+    materialized["state"] = "new"
+    materialized["seen_count"] = 0
+    materialized["correct_rate"] = 0.0
+    materialized["order_index"] = order_index
+    materialized["_adaptive"] = adaptive
+    return materialized
 
 
-def _cards_for_filters(*, domain: str, content_type: str | None, profession: str | None, level: str | None, adaptive: bool = False) -> list[dict[str, Any]]:
-    effective_types = [content_type] if content_type else list(CARD_CONTENT_TYPES)
-    resolved_profession = profession or ("general_workplace" if domain == "professional" else "none")
-    resolved_level = level or "A1_A2"
-    return [
-        _seed_card(i, domain=domain, content_type=card_type, profession=resolved_profession, level=resolved_level, adaptive=adaptive)
-        for i, card_type in enumerate(effective_types)
-    ]
+def _cards_for_filters(
+    *,
+    user_id: str,
+    domain: str,
+    content_type: str | None,
+    profession: str | None,
+    level: str | None,
+    adaptive: bool = False,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    if domain not in {"general", "professional"}:
+        raise AppError(400, "VALIDATION_ERROR", "Cards domain must be general or professional.", False, {"classification": "non_retryable"})
+    if content_type and content_type not in CARD_CONTENT_TYPES:
+        raise AppError(400, "VALIDATION_ERROR", "Unsupported card content type.", False, {"classification": "non_retryable"})
+
+    authority_cards = _filtered_cards(domain=domain, content_type=content_type, profession=profession)
+    if not authority_cards:
+        raise AppError(404, "CARDS_NO_AUTHORITY_MATCH", "No authoritative cards matched the requested filters.", False, {"classification": "terminal"})
+
+    level_band = _normalized_level(level)
+    ranked = _rank_cards(
+        authority_cards,
+        user_id=user_id,
+        domain=domain,
+        content_type=content_type,
+        profession=profession,
+        level_band=level_band,
+    )
+    selected = [_materialized_card(card, order_index=index, adaptive=adaptive) for index, card in enumerate(ranked[: max(1, limit)])]
+    if not selected:
+        raise AppError(404, "CARDS_NO_AUTHORITY_MATCH", "No authoritative cards are available for this user right now.", False, {"classification": "terminal"})
+    _record_served_cards(user_id=user_id, cards=selected)
+    return selected
 
 
 def _session_state(session: dict[str, Any]) -> dict[str, Any]:
@@ -85,7 +232,15 @@ def _public_card(card: dict[str, Any]) -> dict[str, Any]:
 
 
 def start_cards_session(*, user_id: str, domain: str, content_type: str | None, profession: str | None, level: str | None, adaptive: bool = False, limit: int = 10) -> dict[str, Any]:
-    cards = _cards_for_filters(domain=domain, content_type=content_type, profession=profession, level=level, adaptive=adaptive)[:max(1, limit)]
+    cards = _cards_for_filters(
+        user_id=user_id,
+        domain=domain,
+        content_type=content_type,
+        profession=profession,
+        level=level,
+        adaptive=adaptive,
+        limit=limit,
+    )
     session_id = new_id("cards")
     now = iso_now()
     session = {
@@ -110,8 +265,8 @@ def start_cards_session(*, user_id: str, domain: str, content_type: str | None, 
         data["selection_reasons"] = [
             {
                 "card_id": card["id"],
-                "reason_code": "new_card",
-                "reason_message": "New card selected for learning.",
+                "reason_code": "authority_unseen_card",
+                "reason_message": "Authoritative card selected from the unseen pool.",
                 "due_at": None,
                 "difficulty_score": 0.5,
                 "success_rate": 0.0,
@@ -170,6 +325,9 @@ def answer_card(*, user_id: str, session_id: str, user_answer: str) -> dict[str,
         card = session["cards"][session["current_card_index"]]
         accepted = [variant.lower() for variant in card["_accepted_variants"]]
         correct = normalized_answer in accepted
+        card["seen_count"] += 1
+        card["correct_rate"] = 1.0 if correct else 0.0
+        card["state"] = "correct" if correct else "incorrect"
         session["answered_count"] += 1
         session["current_card_index"] += 1
         session["updated_at"] = iso_now()
@@ -185,7 +343,9 @@ def answer_card(*, user_id: str, session_id: str, user_answer: str) -> dict[str,
             "submitted_answer_normalized": normalized_answer,
             "correct_answer": {
                 "value": card["_answer_value"],
-                "option_id": "o1" if card["served_follow_up"]["variant_type"] == "recognition_mcq" else None,
+                "option_id": next((option["option_id"] for option in card["served_follow_up"]["options"] if option["text"] == card["_answer_value"]), None)
+                if card["served_follow_up"]["variant_type"] == "recognition_mcq"
+                else None,
                 "display_text": card["_answer_value"],
             },
             "accepted_variants": card["_accepted_variants"],

@@ -14,6 +14,12 @@ type AuthSuccess = {
   };
 };
 
+type GoogleAuthStart = {
+  provider: "google";
+  authorization_url: string;
+  expires_at: string;
+};
+
 export async function registerWithPassword(payload: { email: string; password: string; name: string }): Promise<ApiEnvelope<AuthSuccess>> {
   const response = await apiRequest<AuthSuccess>({
     method: "POST",
@@ -40,6 +46,28 @@ export async function loginWithPassword(payload: { email: string; password: stri
   return response;
 }
 
+export async function startGoogleAuth(payload: { redirect_origin: string }): Promise<ApiEnvelope<GoogleAuthStart>> {
+  return apiRequest<GoogleAuthStart>({
+    method: "POST",
+    path: "/api/v1/auth/google",
+    body: payload,
+    auth: false,
+  });
+}
+
+export async function completeGoogleAuth(payload: { oauth_result_id: string }): Promise<ApiEnvelope<AuthSuccess>> {
+  const response = await apiRequest<AuthSuccess>({
+    method: "POST",
+    path: "/api/v1/auth/google",
+    body: payload,
+    auth: false,
+  });
+  if (response.ok) {
+    saveAuthSession(toPersistedAuthSession(loadAuthSession(), response.data));
+  }
+  return response;
+}
+
 export async function restoreSession(): Promise<ApiEnvelope<{ auth_user: PersistedAuthSession["auth_user"]; auth_session_id: string; available_auth_methods: Array<Record<string, unknown>> }>> {
   return apiRequest({
     method: "GET",
@@ -48,6 +76,18 @@ export async function restoreSession(): Promise<ApiEnvelope<{ auth_user: Persist
   });
 }
 
-export function logout(): void {
-  clearAuthSession();
+export async function logout(): Promise<void> {
+  const current = loadAuthSession();
+  try {
+    if (current) {
+      await apiRequest({
+        method: "POST",
+        path: "/api/v1/auth/logout",
+        auth: true,
+        body: { refresh_token: current.tokens.refresh_token },
+      });
+    }
+  } finally {
+    clearAuthSession();
+  }
 }

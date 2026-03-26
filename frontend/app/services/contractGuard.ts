@@ -83,13 +83,14 @@ export function isPersistedAuthSession(value: unknown): value is PersistedAuthSe
     return false;
   }
   if (
-    !isNonEmptyString(value.access_token) ||
-    !isNonEmptyString(value.refresh_token) ||
-    !isNonEmptyString(value.token_type) ||
-    !isNonEmptyString(value.access_expires_at) ||
-    !isNonEmptyString(value.refresh_expires_at) ||
-    !isNonEmptyString(value.auth_session_id) ||
-    !isNonEmptyString(value.stored_at)
+    !isRecord(value.tokens) ||
+    !isNonEmptyString(value.tokens.access_token) ||
+    !isNonEmptyString(value.tokens.refresh_token) ||
+    value.tokens.token_type !== "Bearer" ||
+    !isNonEmptyString(value.tokens.access_expires_at) ||
+    !isNonEmptyString(value.tokens.refresh_expires_at) ||
+    !isNonEmptyString(value.tokens.auth_session_id) ||
+    !isNonEmptyString(value.restored_at)
   ) {
     return false;
   }
@@ -109,7 +110,6 @@ export function isYkiRuntimeCache(value: unknown): value is YkiRuntimeCache {
     isRecord(value) &&
     value.schema_version === "1" &&
     isNonEmptyString(value.exam_session_id) &&
-    isNonEmptyString(value.engine_session_token) &&
     (value.level_band === "A1_A2" || value.level_band === "B1_B2" || value.level_band === "C1_C2") &&
     isNonEmptyString(value.current_screen_key) &&
     isNonEmptyString(value.runtime_contract_version) &&
@@ -123,9 +123,18 @@ export function isRoleplaySessionCache(value: unknown): value is RoleplaySession
     isRecord(value) &&
     value.schema_version === "1" &&
     isNonEmptyString(value.roleplay_session_id) &&
-    isNonEmptyString(value.created_at) &&
+    isNonEmptyString(value.speaking_session_id) &&
+    (value.state === "created" ||
+      value.state === "active" ||
+      value.state === "awaiting_ai" ||
+      value.state === "completed" ||
+      value.state === "expired" ||
+      value.state === "abandoned") &&
+    typeof value.turn_count === "number" &&
+    Number.isInteger(value.turn_count) &&
+    value.turn_count >= 0 &&
+    value.turn_count <= 5 &&
     isNonEmptyString(value.expires_at) &&
-    (value.status === "active" || value.status === "completed" || value.status === "expired") &&
-    isNonEmptyString(value.saved_at)
+    isNonEmptyString(value.last_synced_at)
   );
 }

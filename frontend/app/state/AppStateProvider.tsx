@@ -1,25 +1,27 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
 
-import { loginWithPassword, logout as clearLocalAuth, registerWithPassword, restoreSession } from "../services/authService";
+import { DEV_MODE } from "../config/devMode";
+import { completeGoogleAuth, loginWithPassword, logout as logoutSession, registerWithPassword, restoreSession } from "../services/authService";
 import { refreshPersistedSession } from "../services/apiClient";
 import { playWelcome, preloadAudio } from "../services/audioService";
 import { fetchRoleplaySession } from "../services/roleplayService";
 import { listRoleplayCaches, listYkiCaches, loadAuthSession, removeRoleplayCache, removeYkiCache, saveAuthSession } from "../services/storage";
 import { fetchSubscriptionStatus } from "../services/subscriptionService";
 import { fetchYkiSession } from "../services/ykiService";
-import type { AuthState, PersistedAuthSession, RouteKey, SubscriptionStatus } from "./types";
+import type { AppScreen, AuthState, PersistedAuthSession, SubscriptionStatus } from "./types";
 
 type AppStateContextValue = {
   auth: AuthState;
   subscription: SubscriptionStatus | null;
-  route: RouteKey;
+  screen: AppScreen;
   bootComplete: boolean;
   restoredRoleplaySession: any | null;
   restoredYkiRuntime: any | null;
-  setRoute: (route: RouteKey) => void;
+  setScreen: (screen: AppScreen) => void;
   login: (payload: { email: string; password: string }) => Promise<{ ok: boolean; message: string | null }>;
+  loginWithGoogle: (payload: { oauth_result_id: string }) => Promise<{ ok: boolean; message: string | null }>;
   register: (payload: { email: string; password: string; name: string }) => Promise<{ ok: boolean; message: string | null }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
 };
 
@@ -29,7 +31,23 @@ function toPersistedSessionFromRestore(current: PersistedAuthSession, authUser: 
   return {
     ...current,
     auth_user: authUser,
-    stored_at: new Date().toISOString(),
+    restored_at: new Date().toISOString(),
+  };
+}
+
+function devSubscriptionStatus(user: PersistedAuthSession["auth_user"]): SubscriptionStatus {
+  return {
+    user_id: user.user_id,
+    tier: "professional_premium",
+    features: {
+      general_finnish: { available: true, limit: -1, unit: "unlimited", message: "Dev mode override enabled." },
+      workplace: { available: true, limit: -1, unit: "unlimited", message: "Dev mode override enabled." },
+      yki: { available: true, limit: -1, unit: "unlimited", message: "Dev mode override enabled." },
+    },
+    expires_at: user.subscription_tier === "free" ? null : null,
+    trial_ends_at: null,
+    is_trial: false,
+    is_active: true,
   };
 }
 
@@ -37,7 +55,7 @@ export function AppStateProvider(props: PropsWithChildren) {
   const [auth, setAuth] = useState<AuthState>({ status: "booting", session: null });
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [bootComplete, setBootComplete] = useState(false);
-  const [route, setRoute] = useState<RouteKey>("dashboard");
+  const [screen, setScreen] = useState<AppScreen>("home");
   const [restoredRoleplaySession, setRestoredRoleplaySession] = useState<any | null>(null);
   const [restoredYkiRuntime, setRestoredYkiRuntime] = useState<any | null>(null);
 
@@ -45,6 +63,10 @@ export function AppStateProvider(props: PropsWithChildren) {
     const response = await fetchSubscriptionStatus();
     if (response.ok) {
       setSubscription(response.data);
+      return;
+    }
+    if (DEV_MODE && auth.status === "authenticated") {
+      setSubscription(devSubscriptionStatus(auth.session.auth_user));
     }
   }
 
@@ -92,6 +114,8 @@ export function AppStateProvider(props: PropsWithChildren) {
         const subscriptionResponse = await fetchSubscriptionStatus();
         if (subscriptionResponse.ok) {
           setSubscription(subscriptionResponse.data);
+        } else if (DEV_MODE) {
+          setSubscription(devSubscriptionStatus(canonical.auth_user));
         }
 
         let restoredRoleplay: any | null = null;
@@ -120,7 +144,7 @@ export function AppStateProvider(props: PropsWithChildren) {
 
         setRestoredRoleplaySession(restoredRoleplay);
         setRestoredYkiRuntime(restoredYki);
-        setRoute(restoredYki ? "yki" : restoredRoleplay ? "roleplay" : "dashboard");
+        setScreen(restoredYki ? "yki_runtime" : restoredRoleplay ? "conversation" : "home");
       } catch {
         setAuth({ status: "unauthenticated", session: null });
       } finally {
@@ -131,24 +155,42 @@ export function AppStateProvider(props: PropsWithChildren) {
     bootstrap();
   }, []);
 
+  async function applySuccessfulAuth() {
+    const stored = loadAuthSession();
+    if (!stored) {
+      return { ok: false, message: "Session persistence failed." };
+    }
+    setAuth({ status: "authenticated", session: stored });
+    const subscriptionResponse = await fetchSubscriptionStatus();
+    if (subscriptionResponse.ok) {
+      setSubscription(subscriptionResponse.data);
+    } else if (DEV_MODE) {
+      setSubscription(devSubscriptionStatus(stored.auth_user));
+    }
+    setScreen("home");
+    setBootComplete(true);
+    return { ok: true, message: null };
+  }
+
   async function login(payload: { email: string; password: string }) {
     try {
       const response = await loginWithPassword(payload);
       if (!response.ok) {
         return { ok: false, message: response.error.message };
       }
-      const stored = loadAuthSession();
-      if (!stored) {
-        return { ok: false, message: "Session persistence failed." };
+      return applySuccessfulAuth();
+    } catch {
+      return { ok: false, message: "Transport request failed." };
+    }
+  }
+
+  async function loginWithGoogle(payload: { oauth_result_id: string }) {
+    try {
+      const response = await completeGoogleAuth(payload);
+      if (!response.ok) {
+        return { ok: false, message: response.error.message };
       }
-      setAuth({ status: "authenticated", session: stored });
-      const subscriptionResponse = await fetchSubscriptionStatus();
-      if (subscriptionResponse.ok) {
-        setSubscription(subscriptionResponse.data);
-      }
-      setRoute("dashboard");
-      setBootComplete(true);
-      return { ok: true, message: null };
+      return applySuccessfulAuth();
     } catch {
       return { ok: false, message: "Transport request failed." };
     }
@@ -160,30 +202,19 @@ export function AppStateProvider(props: PropsWithChildren) {
       if (!response.ok) {
         return { ok: false, message: response.error.message };
       }
-      const stored = loadAuthSession();
-      if (!stored) {
-        return { ok: false, message: "Session persistence failed." };
-      }
-      setAuth({ status: "authenticated", session: stored });
-      const subscriptionResponse = await fetchSubscriptionStatus();
-      if (subscriptionResponse.ok) {
-        setSubscription(subscriptionResponse.data);
-      }
-      setRoute("dashboard");
-      setBootComplete(true);
-      return { ok: true, message: null };
+      return applySuccessfulAuth();
     } catch {
       return { ok: false, message: "Transport request failed." };
     }
   }
 
-  function logout() {
-    clearLocalAuth();
+  async function logout() {
+    await logoutSession();
     setAuth({ status: "unauthenticated", session: null });
     setSubscription(null);
     setRestoredRoleplaySession(null);
     setRestoredYkiRuntime(null);
-    setRoute("dashboard");
+    setScreen("home");
   }
 
   return (
@@ -191,12 +222,13 @@ export function AppStateProvider(props: PropsWithChildren) {
       value={{
         auth,
         subscription,
-        route,
+        screen,
         bootComplete,
         restoredRoleplaySession,
         restoredYkiRuntime,
-        setRoute,
+        setScreen,
         login,
+        loginWithGoogle,
         register,
         logout,
         refreshSubscription,

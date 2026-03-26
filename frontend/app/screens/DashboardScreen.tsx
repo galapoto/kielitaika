@@ -1,18 +1,19 @@
 import { Button } from "../components/Button";
 import { Panel } from "../components/Panel";
-import type { AuthUser, SubscriptionStatus, RouteKey } from "../state/types";
+import type { AppScreen, AuthUser, SubscriptionStatus } from "../state/types";
 
-const features: Array<{ route: RouteKey; title: string; description: string }> = [
-  { route: "cards", title: "Cards", description: "Contract-bound card sessions with session isolation and answer validation." },
-  { route: "roleplay", title: "Roleplay", description: "Fixed-turn roleplay driven by backend progress and review endpoints." },
-  { route: "voice", title: "Voice", description: "User-controlled microphone capture, STT upload, and pronunciation feedback." },
-  { route: "yki", title: "YKI Exam", description: "Runtime-sequenced exam screens rendered directly from adapter payloads." },
+const features: Array<{ screen: AppScreen; title: string; description: string }> = [
+  { screen: "practice", title: "Practice", description: "Vocabulary, grammar, and phrase practice now live under one isolated screen." },
+  { screen: "conversation", title: "Conversation", description: "Fixed-turn conversation runtime driven by backend progress and review endpoints." },
+  { screen: "yki_intro", title: "YKI Exam", description: "Entry screen -> runtime -> result. Only one YKI screen stays active at a time." },
+  { screen: "professional", title: "Professional Finnish", description: "Work-oriented speaking, pronunciation, and transcript tools." },
+  { screen: "settings", title: "Settings", description: "Profile and subscription details in a dedicated settings screen." },
 ];
 
 export function DashboardScreen(props: {
   user: AuthUser;
   subscription: SubscriptionStatus | null;
-  onRouteChange: (route: RouteKey) => void;
+  onScreenChange: (screen: AppScreen) => void;
 }) {
   const ykiFeature = props.subscription?.features?.yki;
 
@@ -20,10 +21,10 @@ export function DashboardScreen(props: {
     <div className="screen-stack">
       <div className="hero-grid">
         <Panel className="hero-banner">
-          <span className="eyebrow">Authenticated shell</span>
+          <span className="eyebrow">Active screen shell</span>
           <h1 className="hero-title">Welcome back, {props.user.name || props.user.email}.</h1>
           <p className="hero-subtitle">
-            The frontend is rendering backend-owned state only. Protected navigation stays blocked until auth and subscription are both resolved.
+            The app now routes through one active screen at a time. Start YKI from its intro screen, continue in runtime, and finish on the result screen.
           </p>
         </Panel>
         <Panel>
@@ -44,10 +45,10 @@ export function DashboardScreen(props: {
 
       <div className="dashboard-grid">
         {features.map((feature) => (
-          <Panel key={feature.route} className="feature-card">
+          <Panel key={feature.screen} className="feature-card">
             <strong>{feature.title}</strong>
             <p className="muted">{feature.description}</p>
-            <Button onClick={() => props.onRouteChange(feature.route)}>Open {feature.title}</Button>
+            <Button onClick={() => props.onScreenChange(feature.screen)}>Open {feature.title}</Button>
           </Panel>
         ))}
       </div>

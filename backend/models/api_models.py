@@ -23,8 +23,17 @@ class LoginProviderRequest(BaseModel):
     redirect_uri: str | None = None
 
 
+class GoogleAuthRequest(BaseModel):
+    redirect_origin: str | None = None
+    oauth_result_id: str | None = None
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str | None = None
 
 
 class SessionStartRequest(BaseModel):
@@ -124,3 +133,11 @@ class PronunciationAnalyzeRequest(BaseModel):
     expected_text: str
     transcript: str
     audio_ref: str | None = None
+
+
+class TtsRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    mode: Literal["system", "conversation", "roleplay", "yki"]
+    voice_preference: Literal["male", "female", "neutral"] | None = None
+    replayable: bool
+    speed: float | None = Field(default=None, ge=0.5, le=2.0)

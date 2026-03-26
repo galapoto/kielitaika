@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "generated_from": "/home/vitus/Asiakirjat/Professional_Finnish_materials",
+  "cards_total_recovered": 1425,
+  "cards_total_normalized": 1425,
+  "duplicates_removed": 0,
+  "datasets": [
+    {
+      "source_root": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/lähihoitaja_fraasit/lähihoitaja_fraasit.json",
+      "dataset_type": "professional_finnish_cards",
+      "classification": "VALID",
+      "reason": "Recovered valid card batches and normalized them into runtime authority.",
+      "records_found": 515,
+      "records_kept": 515,
+      "decode_error": null
+    },
+    {
+      "source_root": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/lääkäri_fraasit/lääkäri_fraasit.json",
+      "dataset_type": "professional_finnish_cards",
+      "classification": "VALID",
+      "reason": "Recovered valid card batches and normalized them into runtime authority.",
+      "records_found": 18,
+      "records_kept": 18,
+      "decode_error": null
+    },
+    {
+      "source_root": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/sairaanhoitaja_fraasit/sairaanhoitaja_fraasit.json",
+      "dataset_type": "professional_finnish_cards",
+      "classification": "VALID",
+      "reason": "Recovered valid card batches and normalized them into runtime authority.",
+      "records_found": 53,
+      "records_kept": 53,
+      "decode_error": null
+    },
+    {
+      "source_root": "/home/vitus/Asiakirjat/Professional_Finnish_materials/kielioppi/lähihoitaja_kielioppi/lähihoitaja_kielioppi.json",
+      "dataset_type": "professional_finnish_cards",
+      "classification": "VALID",
+      "reason": "Recovered valid card batches and normalized them into runtime authority.",
+      "records_found": 124,
+      "records_kept": 124,
+      "decode_error": null
+    },
+    {
+      "source_root": "/home/vitus/Asiakirjat/Professional_Finnish_materials/kielioppi/lääkäri_kielioppi/lääkäri_kielioppi.json",
+      "dataset_type": "professional_finnish_cards",
+      "classification": "VALID",
+      "reason": "Recovered valid card batches and normalized them into runtime authority.",
+      "records_found": 60,
+      "records_kept": 60,
+      "decode_error": null
+    },
+    {
+      "source_root": "/home/vitus/Asiakirjat/Professional_Finnish_materials/kielioppi/sairaanhoitaja_kielioppi/sairaanhoitaja_kielioppi.json",
+      "dataset_type": "professional_finnish_cards",
+      "classification": "VALID",
+      "reason": "Recovered valid card batches and normalized them into runtime authority.",
+      "records_found": 60,
+      "records_kept": 60,
+      "decode_error": null
+    },
+    {
+      "source_root": "/home/vitus/Asiakirjat/Professional_Finnish_materials/sanasto/lähihoitaja_sanasto/lähihoitaja_sanasto.json",
+      "dataset_type": "professional_finnish_cards",
+      "classification": "VALID",
+      "reason": "Recovered valid card batches and normalized them into runtime authority.",
+      "records_found": 147,
+      "records_kept": 147,
+      "decode_error": null
+    },
+    {
+      "source_root": "/home/vitus/Asiakirjat/Professional_Finnish_materials/sanasto/lääkäri_sanasto/lääkäri_sanasto.json",
+      "dataset_type": "professional_finnish_cards",
+      "classification": "VALID",
+      "reason": "Recovered valid card batches and normalized them into runtime authority.",
+      "records_found": 264,
+      "records_kept": 264,
+      "decode_error": null
+    },
+    {
+      "source_root": "/home/vitus/Asiakirjat/Professional_Finnish_materials/sanasto/sairaanhoitaja_sanasto/sairaanhoitaja_sanasto.json",
+      "dataset_type": "professional_finnish_cards",
+      "classification": "VALID",
+      "reason": "Recovered valid card batches and normalized them into runtime authority.",
+      "records_found": 184,
+      "records_kept": 184,
+      "decode_error": null
+    },
+    {
+      "source_root": "backend/cards/logic.py",
+      "dataset_type": "cards_runtime_seed_data",
+      "classification": "INVALID",
+      "reason": "Synthetic placeholder cards were the active runtime source before normalization.",
+      "records_found": 3,
+      "records_kept": 0
+    },
+    {
+      "source_root": "/home/vitus/kielitaikka-yki-engine/task_banks/task_index_v3_2.json",
+      "dataset_type": "yki_task_bank",
+      "classification": "VALID",
+      "reason": "Certified YKI task index is present and already structured as backend authority.",
+      "records_found": 9706,
+      "records_kept": 9706
+    },
+    {
+      "source_root": "/home/vitus/kielitaikka-yki-engine/exam_sessions",
+      "dataset_type": "yki_exam_runtime_snapshots",
+      "classification": "INVALID",
+      "reason": "Exam session snapshots are runtime artifacts, not authoritative learning material.",
+      "records_found": 156,
+      "records_kept": 0
+    }
+  ]
+}

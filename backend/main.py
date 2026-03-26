@@ -12,7 +12,8 @@ from .middleware.request_id import register_request_id_middleware
 app = FastAPI(title="KieliTaika API", version=SETTINGS.api_version)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:4173"],
+    allow_origins=list(SETTINGS.cors_allow_origins),
+    allow_origin_regex=SETTINGS.cors_allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

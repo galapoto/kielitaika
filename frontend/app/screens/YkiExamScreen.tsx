@@ -2,18 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "../components/Button";
 import { TextAreaField } from "../components/Field";
-import { JsonPreview } from "../components/JsonPreview";
 import { Panel } from "../components/Panel";
-import { StatusBanner } from "../components/StatusBanner";
 import { useRecorder } from "../hooks/useRecorder";
 import { saveYkiCache } from "../services/storage";
 import { uploadVoiceTranscription } from "../services/voiceService";
 import {
-  fetchYkiCertificate,
   fetchYkiSession,
   requestYkiReply,
   startYkiConversation,
-  startYkiSession,
   submitYkiAnswer,
   submitYkiAudio,
   submitYkiConversationTurn,
@@ -144,10 +140,6 @@ function extractConfirmedAnswers(runtime: any): Record<string, unknown> {
   };
 }
 
-function extractEngineSessionToken(runtime: any): string {
-  return runtime?.metadata?.engine_session_token || "";
-}
-
 function buildRuntimeGuardSignature(runtime: any): string {
   const metadata = readRuntimeMetadata(runtime);
   return JSON.stringify({
@@ -159,16 +151,19 @@ function buildRuntimeGuardSignature(runtime: any): string {
   });
 }
 
-export function YkiExamScreen(props: { restoredRuntime: any | null }) {
+export function YkiExamScreen(props: {
+  runtime: any | null;
+  onRuntimeChange: (runtime: any | null) => void;
+  onBackToIntro: () => void;
+  onComplete: () => void;
+}) {
   const recorder = useRecorder();
-  const [levelBand, setLevelBand] = useState<"A1_A2" | "B1_B2" | "C1_C2">("A1_A2");
-  const [runtime, setRuntime] = useState<any | null>(props.restoredRuntime);
   const [writingDraft, setWritingDraft] = useState("");
   const [conversationState, setConversationState] = useState<any | null>(null);
-  const [certificate, setCertificate] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const flowGuardRef = useRef<{ sessionId: string; signature: string; screenKey: string } | null>(null);
+  const runtime = props.runtime;
   const screenIndex = useMemo(() => findCurrentScreenIndex(runtime), [runtime]);
   const currentScreen = readCurrentScreen(runtime, screenIndex);
   const promptContext = readPromptContext(runtime, screenIndex);
@@ -184,7 +179,7 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
       setError(response.error.message);
       return false;
     }
-    setRuntime(response.data.runtime);
+    props.onRuntimeChange(response.data.runtime);
     return true;
   }
 
@@ -195,20 +190,13 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
     saveYkiCache({
       schema_version: "1",
       exam_session_id: runtime.session_id,
-      engine_session_token: extractEngineSessionToken(runtime),
-      level_band: levelBand,
+      level_band: runtime.metadata?.level_band || "B1_B2",
       current_screen_key: extractCurrentScreenKey(runtime),
       runtime_contract_version: runtime.runtime_schema_version || "unknown",
       answers: submittedAnswers,
       saved_at: new Date().toISOString(),
     });
-  }, [levelBand, runtime, submittedAnswers]);
-
-  useEffect(() => {
-    if (props.restoredRuntime) {
-      setRuntime(props.restoredRuntime);
-    }
-  }, [props.restoredRuntime]);
+  }, [runtime, submittedAnswers]);
 
   useEffect(() => {
     if (!currentScreen || currentScreen.screen_type !== "speaking_task" || currentScreen.payload?.speaking_mode !== "conversation") {
@@ -236,28 +224,10 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
       flowGuardRef.current.signature === nextState.signature &&
       flowGuardRef.current.screenKey !== nextState.screenKey
     ) {
-      const message = "YKI flow guardrail triggered: screen changed without backend state update.";
-      console.error(message, { previous: flowGuardRef.current, next: nextState });
-      setError(message);
+      setError("YKI flow guardrail triggered: screen changed without backend state update.");
     }
     flowGuardRef.current = nextState;
   }, [runtime]);
-
-  async function start() {
-    setBusy(true);
-    setError(null);
-    const response = await startYkiSession({ level_band: levelBand });
-    if (!response.ok) {
-      setError(response.error.message);
-      setBusy(false);
-      return;
-    }
-    setRuntime(response.data.runtime);
-    setWritingDraft("");
-    setConversationState(null);
-    setCertificate(null);
-    setBusy(false);
-  }
 
   async function submitQuestion(question: any, choice: string) {
     if (!runtime) {
@@ -312,6 +282,11 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
       setBusy(false);
       return;
     }
+    if (!sttResponse.data.ok || !sttResponse.data.audio_ref) {
+      setError("Speech transcription failed. Retry is required before the YKI flow can continue.");
+      setBusy(false);
+      return;
+    }
 
     if (screenPayload.speaking_mode === "conversation") {
       if (!conversationState) {
@@ -360,78 +335,60 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
     setBusy(false);
   }
 
-  async function submitExam(confirmIncomplete: boolean) {
+  async function finishExam(confirmIncomplete: boolean) {
     if (!runtime) {
       return;
     }
     setBusy(true);
     setError(null);
     const response = await submitYkiExam(runtime.session_id, { confirm_incomplete: confirmIncomplete });
-    if (response.ok) {
-      await syncRuntime(runtime.session_id);
-    } else {
+    if (!response.ok) {
       setError(response.error.message);
-    }
-    setBusy(false);
-  }
-
-  async function loadCertificate() {
-    if (!runtime) {
+      setBusy(false);
       return;
     }
-    const response = await fetchYkiCertificate(runtime.session_id);
-    if (response.ok) {
-      setCertificate(response.data);
-    } else {
-      setError(response.error.message);
+    const synced = await syncRuntime(runtime.session_id);
+    setBusy(false);
+    if (synced) {
+      props.onComplete();
     }
+  }
+
+  if (!runtime) {
+    return (
+      <div className="screen-stack yki-flow-screen">
+        <Panel className="flow-panel">
+          <span className="eyebrow">YKI Runtime</span>
+          <h1 className="hero-title">No active exam session</h1>
+          <p className="hero-subtitle">Start or resume the YKI exam from the intro screen first.</p>
+          <div className="actions-row">
+            <Button onClick={props.onBackToIntro}>Back to YKI home</Button>
+          </div>
+        </Panel>
+      </div>
+    );
   }
 
   return (
-    <div className="screen-stack">
-      <Panel title="YKI Exam Runtime" subtitle="Runtime order is fixed by backend adapter output. The UI renders the first unconfirmed engine screen only.">
-        <div className="grid-two">
-          <label className="field">
-            <span>Level band</span>
-            <select value={levelBand} onChange={(event) => setLevelBand(event.target.value as "A1_A2" | "B1_B2" | "C1_C2")}>
-              <option value="A1_A2">A1_A2</option>
-              <option value="B1_B2">B1_B2</option>
-              <option value="C1_C2">C1_C2</option>
-            </select>
-          </label>
-          <div className="actions-row">
-            <Button onClick={start} disabled={busy}>
-              {busy ? "Starting..." : "Start exam"}
-            </Button>
+    <div className="screen-stack yki-flow-screen">
+      <Panel className="flow-panel">
+        <div className="flow-header">
+          <div>
+            <span className="eyebrow">YKI Runtime</span>
+            <h1 className="hero-title">{currentScreen?.payload?.title || "Active exam screen"}</h1>
+            <p className="hero-subtitle">
+              Session {runtime.session_id} · Section {activeSectionLabel}
+              {screenIndex >= 0 ? ` · Screen ${screenIndex + 1} of ${runtime.screens.length}` : " · All screens confirmed"}
+            </p>
           </div>
+          <Button tone="secondary" onClick={props.onBackToIntro} disabled={busy}>
+            Exit to intro
+          </Button>
         </div>
-        {error ? <StatusBanner tone="error" title="YKI error" message={error} /> : null}
-      </Panel>
 
-      {runtime ? (
-        <Panel
-          title={`Session ${runtime.session_id}`}
-          subtitle={screenIndex >= 0 ? `Screen ${screenIndex + 1} of ${runtime.screens.length}` : "All engine-confirmed runtime screens are complete."}
-        >
-          <div className="meta-grid">
-            <div className="meta-item">
-              <span className="eyebrow">Current screen key</span>
-              <strong>{extractCurrentScreenKey(runtime)}</strong>
-            </div>
-            <div className="meta-item">
-              <span className="eyebrow">Active section</span>
-              <strong>{activeSectionLabel}</strong>
-            </div>
-            <div className="meta-item">
-              <span className="eyebrow">Runtime schema</span>
-              <strong>{runtime.runtime_schema_version}</strong>
-            </div>
-          </div>
-        </Panel>
-      ) : null}
+        {error ? <div className="flow-error-card">{error}</div> : null}
 
-      {promptContext ? (
-        <Panel title={promptContext.payload?.title || promptContext.screen_type} subtitle={promptContext.payload?.instruction || "Backend-authored prompt context."}>
+        {promptContext ? (
           <div className="runtime-screen reading-stage">
             {promptParagraphs.length ? (
               <div className="reading-passages">
@@ -445,11 +402,9 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
             ) : null}
             {promptContext.payload?.audio_url ? <audio className="audio-player" src={promptContext.payload.audio_url} controls /> : null}
           </div>
-        </Panel>
-      ) : null}
+        ) : null}
 
-      {currentScreen ? (
-        <Panel title={currentScreen.payload?.title || currentScreen.screen_type} subtitle={currentScreen.payload?.instruction || "Backend-authored runtime screen."}>
+        {currentScreen ? (
           <div className="runtime-screen">
             {currentParagraphs.length ? (
               <div className="reading-passages">
@@ -465,7 +420,6 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
 
             {currentScreen.payload?.questions?.length ? (
               <div className="question-list">
-                <span className="eyebrow">Questions</span>
                 {currentScreen.payload.questions.map((question: any) => (
                   <div className="question-card" key={question.answer_id}>
                     <strong>{question.prompt}</strong>
@@ -520,11 +474,10 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
                   </span>
                 </div>
                 {recorder.audioUrl ? <audio className="audio-player" src={recorder.audioUrl} controls /> : null}
-                <div className="actions-row">
-                  <Button onClick={() => submitSpeakingTask(currentScreen.payload)} disabled={busy || !recorder.audioBlob}>
-                    Submit speaking response
-                  </Button>
-                </div>
+                {recorder.error ? <div className="flow-error-card">{recorder.error}</div> : null}
+                <Button onClick={() => submitSpeakingTask(currentScreen.payload)} disabled={busy || !recorder.audioBlob}>
+                  Submit speaking response
+                </Button>
                 {conversationEntries.length ? (
                   <div className="transcript-stack">
                     <span className="eyebrow">Conversation transcript</span>
@@ -536,31 +489,32 @@ export function YkiExamScreen(props: { restoredRuntime: any | null }) {
                     ))}
                   </div>
                 ) : null}
-                {conversationState ? <JsonPreview title="Conversation state" value={conversationState} /> : null}
               </>
             ) : null}
           </div>
-        </Panel>
-      ) : null}
-
-      {runtime ? (
-        <Panel title="Submission" subtitle="Review reads only backend-confirmed state.">
-          <div className="actions-row">
-            <Button onClick={() => submitExam(false)} disabled={busy}>
-              Submit exam
-            </Button>
-            <Button tone="secondary" onClick={() => submitExam(true)} disabled={busy}>
-              Submit with incomplete confirmation
-            </Button>
-            <Button tone="secondary" onClick={loadCertificate} disabled={busy}>
-              Load certificate
-            </Button>
+        ) : (
+          <div className="runtime-screen">
+            <div className="reading-passages">
+              <span className="eyebrow">Runtime complete</span>
+              <p className="reading-paragraph">All engine-confirmed runtime screens are complete. Continue to the result screen.</p>
+            </div>
           </div>
-        </Panel>
-      ) : null}
+        )}
 
-      {runtime ? <JsonPreview title="Runtime snapshot" value={runtime} /> : null}
-      {certificate ? <JsonPreview title="Certificate" value={certificate} /> : null}
+        <div className="actions-row">
+          <Button onClick={() => finishExam(false)} disabled={busy}>
+            Submit exam
+          </Button>
+          <Button tone="secondary" onClick={() => finishExam(true)} disabled={busy}>
+            Submit with incomplete confirmation
+          </Button>
+          {screenIndex < 0 ? (
+            <Button tone="secondary" onClick={props.onComplete} disabled={busy}>
+              Open result screen
+            </Button>
+          ) : null}
+        </div>
+      </Panel>
     </div>
   );
 }

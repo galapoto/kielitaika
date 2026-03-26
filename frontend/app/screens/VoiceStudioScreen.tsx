@@ -25,7 +25,7 @@ function formatRecorderState(state: string): string {
   return "Idle";
 }
 
-export function VoiceStudioScreen() {
+export function VoiceStudioScreen(props: { title?: string; subtitle?: string; modeLabel?: string }) {
   const recorder = useRecorder();
   const [speakingSessionId, setSpeakingSessionId] = useState("");
   const [expectedText, setExpectedText] = useState("potilas");
@@ -60,6 +60,11 @@ export function VoiceStudioScreen() {
     });
     if (!response.ok) {
       setError(response.error.message);
+      setBusy(false);
+      return;
+    }
+    if (!response.data.ok || !response.data.audio_ref) {
+      setError("Speech transcription failed. Retry is required before analysis can continue.");
       setBusy(false);
       return;
     }
@@ -102,11 +107,14 @@ export function VoiceStudioScreen() {
 
   return (
     <div className="screen-stack">
-      <Panel title="Voice Studio" subtitle="KAIL-style explicit start and stop. No auto-stop, no speculative transcript persistence.">
+      <Panel
+        title={props.title || "Voice Studio"}
+        subtitle={props.subtitle || "KAIL-style explicit start and stop. No auto-stop, no speculative transcript persistence."}
+      >
         <div className="recorder-card">
           <div className="screen-hero">
             <div>
-              <span className="eyebrow">Speaking session</span>
+              <span className="eyebrow">{props.modeLabel || "Speaking session"}</span>
               <h2>{speakingSessionId || "Preparing..."}</h2>
               <p className="muted">Mode: conversation · Locale: fi-FI</p>
             </div>

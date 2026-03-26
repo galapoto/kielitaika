@@ -1,4 +1,6 @@
-export type RouteKey = "dashboard" | "cards" | "roleplay" | "voice" | "yki";
+export type AppScreen = "home" | "practice" | "conversation" | "yki_intro" | "yki_runtime" | "yki_result" | "professional" | "settings";
+
+export type PracticeSection = "vocabulary" | "grammar" | "phrases";
 
 export type ApiSuccessEnvelope<T> = {
   ok: true;
@@ -36,16 +38,20 @@ export type AuthUser = {
   subscription_tier: string;
 };
 
-export type PersistedAuthSession = {
-  schema_version: "1";
+export type AuthTokens = {
   access_token: string;
   refresh_token: string;
   token_type: string;
   access_expires_at: string;
   refresh_expires_at: string;
   auth_session_id: string;
+};
+
+export type PersistedAuthSession = {
+  schema_version: "1";
   auth_user: AuthUser;
-  stored_at: string;
+  tokens: AuthTokens;
+  restored_at: string;
 };
 
 export type SubscriptionFeature = {
@@ -68,16 +74,16 @@ export type SubscriptionStatus = {
 export type RoleplaySessionCache = {
   schema_version: "1";
   roleplay_session_id: string;
-  created_at: string;
+  speaking_session_id: string;
+  state: "created" | "active" | "awaiting_ai" | "completed" | "expired" | "abandoned";
+  turn_count: number;
   expires_at: string;
-  status: "active" | "completed" | "expired";
-  saved_at: string;
+  last_synced_at: string;
 };
 
 export type YkiRuntimeCache = {
   schema_version: "1";
   exam_session_id: string;
-  engine_session_token: string;
   level_band: "A1_A2" | "B1_B2" | "C1_C2";
   current_screen_key: string;
   runtime_contract_version: string;

@@ -44,7 +44,7 @@ Runtime boot order is fixed:
 
 Auth and session coordination rules:
 
-1. Auth creation happens only through `POST /api/v1/auth/register/password`, `POST /api/v1/auth/login/password`, or `POST /api/v1/auth/login/provider`.
+1. Auth creation happens only through `POST /api/v1/auth/register/password`, `POST /api/v1/auth/login/password`, `POST /api/v1/auth/login/provider`, or the Google OAuth pair `POST /api/v1/auth/google` + `GET /api/v1/auth/google/callback`.
 2. Successful auth returns `auth_user` plus `AuthTokens`.
 3. Frontend writes exactly one `kt.auth.session.v1` snapshot.
 4. `kt.auth.session.v1` is the boot cache, not the long-term authority.

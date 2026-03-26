@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0",
     "validate:no-direct-fetch": "node scripts/validate_no_direct_fetch.mjs",
     "validate:guardrails": "node scripts/validate_guardrails.mjs",
     "validate:system-guardrails": "npm run validate:no-direct-fetch && npm run validate:guardrails"

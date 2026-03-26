@@ -149,6 +149,47 @@ Request:
 
 Response `data`: same as register.
 
+`POST /api/v1/auth/google`
+
+Purpose:
+
+- start the Google OAuth browser flow when `oauth_result_id` is omitted
+- finalize a completed Google OAuth browser flow when `oauth_result_id` is present
+
+Start request:
+
+| Field | Type | Required | Validation |
+| --- | --- | --- | --- |
+| `redirect_origin` | `string` | yes | absolute frontend origin allowed by backend CORS policy |
+| `oauth_result_id` | `string \| null` | no | omitted for start |
+
+Start response `data`:
+
+| Field | Type | Required | Validation |
+| --- | --- | --- | --- |
+| `provider` | `"google"` | yes | exact value |
+| `authorization_url` | `string` | yes | absolute Google OAuth URL |
+| `expires_at` | `string` | yes | ISO 8601 UTC timestamp |
+
+Finalize request:
+
+| Field | Type | Required | Validation |
+| --- | --- | --- | --- |
+| `oauth_result_id` | `string` | yes | one-time backend-issued completion identifier |
+| `redirect_origin` | `string \| null` | no | ignored on finalize |
+
+Finalize response `data`: same as register.
+
+`GET /api/v1/auth/google/callback`
+
+Purpose:
+
+- Google OAuth redirect target owned by backend
+- exchanges authorization code for tokens
+- validates Google identity token issuer, audience, and expiry
+- resolves existing user by canonical email before creating a new account
+- redirects back to frontend with a one-time `oauth_result_id`
+
 `POST /api/v1/auth/token/refresh`
 
 Request:
@@ -304,6 +345,7 @@ Other systems:
 Safe extensions:
 
 - add new provider methods through `/api/v1/auth/methods`
+- provider-specific OAuth browser handshakes may use backend-owned `/api/v1/auth/<provider>` start/finalize routes plus a backend callback route
 - add password reset or email verification endpoints under `/api/v1/auth/*`
 - add optional fields to `AuthUser` only if they are nullable or backward-compatible
 

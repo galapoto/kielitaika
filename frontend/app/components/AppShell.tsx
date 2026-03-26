@@ -1,59 +1,198 @@
-import type { PropsWithChildren } from "react";
+import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
 
 import { playTap } from "../services/audioService";
 import type { ColorScheme } from "../theme/backgrounds";
-import type { RouteKey, SubscriptionStatus } from "../state/types";
+import type { AppScreen, PracticeSection, SubscriptionStatus } from "../state/types";
+import { useResponsiveLayout } from "../hooks/useResponsiveLayout";
 import { Button } from "./Button";
 import { Logo } from "./Logo";
 
-const navItems: Array<{ key: RouteKey; label: string }> = [
-  { key: "dashboard", label: "Dashboard" },
-  { key: "cards", label: "Cards" },
-  { key: "roleplay", label: "Roleplay" },
-  { key: "voice", label: "Voice" },
-  { key: "yki", label: "YKI Exam" },
+type NavNode =
+  | { kind: "item"; key: AppScreen; label: string }
+  | { kind: "group"; key: "practice"; label: string; children: Array<{ key: PracticeSection; label: string }> };
+
+const navTree: NavNode[] = [
+  { kind: "item", key: "home", label: "Home" },
+  {
+    kind: "group",
+    key: "practice",
+    label: "Practice",
+    children: [
+      { key: "vocabulary", label: "Vocabulary" },
+      { key: "grammar", label: "Grammar" },
+      { key: "phrases", label: "Phrases" },
+    ],
+  },
+  { kind: "item", key: "conversation", label: "Conversation" },
+  { kind: "item", key: "yki_intro", label: "YKI Exam" },
+  { kind: "item", key: "professional", label: "Professional Finnish" },
+  { kind: "item", key: "settings", label: "Settings" },
 ];
 
+function activeNavKey(screen: AppScreen): AppScreen {
+  if (screen === "yki_runtime" || screen === "yki_result") {
+    return "yki_intro";
+  }
+  return screen;
+}
+
+function currentTitle(screen: AppScreen, practiceSection: PracticeSection): string {
+  if (screen === "practice") {
+    if (practiceSection === "grammar") {
+      return "Practice / Grammar";
+    }
+    if (practiceSection === "phrases") {
+      return "Practice / Phrases";
+    }
+    return "Practice / Vocabulary";
+  }
+  if (screen === "conversation") {
+    return "Conversation";
+  }
+  if (screen === "professional") {
+    return "Professional Finnish";
+  }
+  if (screen === "settings") {
+    return "Settings";
+  }
+  if (screen === "yki_runtime") {
+    return "YKI Runtime";
+  }
+  if (screen === "yki_result") {
+    return "YKI Result";
+  }
+  if (screen === "yki_intro") {
+    return "YKI Exam";
+  }
+  return "Home";
+}
+
 export function AppShell(props: PropsWithChildren<{
-  route: RouteKey;
-  onRouteChange: (route: RouteKey) => void;
-  onLogout: () => void;
+  screen: AppScreen;
+  practiceSection: PracticeSection;
+  onPracticeSectionChange: (section: PracticeSection) => void;
+  onScreenChange: (screen: AppScreen) => void;
+  onLogout: () => Promise<void>;
   userName: string;
   subscription: SubscriptionStatus | null;
   colorScheme: ColorScheme;
 }>) {
+  const { isMobile } = useResponsiveLayout();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const currentNav = activeNavKey(props.screen);
+  const title = useMemo(() => currentTitle(props.screen, props.practiceSection), [props.practiceSection, props.screen]);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [isMobile, props.practiceSection, props.screen]);
+
+  function openDrawer() {
+    playTap();
+    setDrawerOpen(true);
+  }
+
+  function closeDrawer() {
+    setDrawerOpen(false);
+  }
+
+  function navigate(screen: AppScreen) {
+    playTap();
+    props.onScreenChange(screen);
+  }
+
+  function navigatePractice(section: PracticeSection) {
+    playTap();
+    props.onPracticeSectionChange(section);
+    props.onScreenChange("practice");
+  }
+
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand-lockup">
-          <Logo scheme={props.colorScheme} size={58} />
-        </div>
-        <nav className="nav-stack">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={item.key === props.route ? "nav-item active" : "nav-item"}
-              onClick={() => {
-                playTap();
-                props.onRouteChange(item.key);
-              }}
-            >
-              {item.label}
+    <div className="app-shell-frame">
+      <div className="app-shell">
+        {isMobile ? (
+          <>
+            <button type="button" className="mobile-nav-toggle" onClick={openDrawer} aria-label="Open navigation menu">
+              <span aria-hidden="true">☰</span>
             </button>
-          ))}
-        </nav>
-        <div className="sidebar-footer">
-          <div className="subscription-chip">
-            <span>{props.userName}</span>
-            <strong>{props.subscription?.tier || "free"}</strong>
+            <div className="mobile-shell-title">{title}</div>
+          </>
+        ) : null}
+
+        {isMobile && drawerOpen ? <button type="button" className="drawer-overlay" aria-label="Close navigation menu" onClick={closeDrawer} /> : null}
+
+        <aside className={`sidebar ${isMobile ? "drawer-sidebar" : ""} ${isMobile && drawerOpen ? "is-open" : ""}`.trim()}>
+          <div className="brand-lockup">
+            <Logo scheme={props.colorScheme} size={58} />
           </div>
-          <Button tone="ghost" onClick={props.onLogout}>
-            Sign out
-          </Button>
-        </div>
-      </aside>
-      <main className="main-content">{props.children}</main>
+
+          <div className="sidebar-user-card">
+            <div className="profile-placeholder" aria-hidden="true">
+              {props.userName.charAt(0).toUpperCase()}
+            </div>
+            <div className="profile-copy">
+              <span className="eyebrow">Account</span>
+              <strong>{props.userName}</strong>
+              <small className="muted">{props.subscription?.tier || "free"}</small>
+            </div>
+          </div>
+
+          <nav className="nav-stack">
+            {navTree.map((item) => {
+              if (item.kind === "group") {
+                return (
+                  <div key={item.key} className="nav-group">
+                    <button
+                      type="button"
+                      className={currentNav === "practice" ? "nav-item active" : "nav-item"}
+                      onClick={() => navigate("practice")}
+                    >
+                      {item.label}
+                    </button>
+                    <div className="nav-substack">
+                      {item.children.map((child) => (
+                        <button
+                          key={child.key}
+                          type="button"
+                          className={currentNav === "practice" && props.practiceSection === child.key ? "nav-subitem active" : "nav-subitem"}
+                          onClick={() => navigatePractice(child.key)}
+                        >
+                          {child.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={item.key === currentNav ? "nav-item active" : "nav-item"}
+                  onClick={() => navigate(item.key)}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="sidebar-footer">
+            <div className="subscription-chip">
+              <span>Subscription</span>
+              <strong>{props.subscription?.tier || "free"}</strong>
+            </div>
+            <button type="button" className="nav-item sidebar-settings-button" onClick={() => navigate("settings")}>
+              Settings
+            </button>
+            <Button tone="ghost" onClick={() => void props.onLogout()}>
+              Sign out
+            </Button>
+          </div>
+        </aside>
+
+        <main className="main-content">{props.children}</main>
+      </div>
     </div>
   );
 }
