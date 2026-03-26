@@ -1,6 +1,6 @@
 export function JsonPreview(props: { title: string; value: unknown }) {
   return (
-    <div className="panel">
+    <div className="json-preview-block">
       <div className="panel-header">
         <h2>{props.title}</h2>
         <p>Raw backend state rendered without reshaping.</p>

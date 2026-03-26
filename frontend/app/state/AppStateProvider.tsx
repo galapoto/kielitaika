@@ -4,6 +4,7 @@ import { DEV_MODE } from "../config/devMode";
 import { completeGoogleAuth, loginWithPassword, logout as logoutSession, registerWithPassword, restoreSession } from "../services/authService";
 import { refreshPersistedSession } from "../services/apiClient";
 import { playWelcome, preloadAudio } from "../services/audioService";
+import { logDebugEvent, logNavigationEvent } from "../services/debugLogger";
 import { fetchRoleplaySession } from "../services/roleplayService";
 import { listRoleplayCaches, listYkiCaches, loadAuthSession, removeRoleplayCache, removeYkiCache, saveAuthSession } from "../services/storage";
 import { fetchSubscriptionStatus } from "../services/subscriptionService";
@@ -51,13 +52,57 @@ function devSubscriptionStatus(user: PersistedAuthSession["auth_user"]): Subscri
   };
 }
 
+function readRequestedScreen(pathname: string): AppScreen | null {
+  if (pathname === "/debug") {
+    return "debug";
+  }
+  if (pathname === "/settings") {
+    return "settings";
+  }
+  if (pathname === "/practice" || pathname.startsWith("/practice/")) {
+    return "practice";
+  }
+  if (pathname === "/conversation" || pathname.startsWith("/conversation/")) {
+    return "conversation";
+  }
+  if (pathname === "/professional" || pathname.startsWith("/professional/")) {
+    return "professional";
+  }
+  if (pathname === "/yki/result") {
+    return "yki_result";
+  }
+  if (pathname === "/yki/runtime") {
+    return "yki_runtime";
+  }
+  if (pathname === "/yki" || pathname === "/yki/intro" || pathname.startsWith("/yki/")) {
+    return "yki_intro";
+  }
+  if (pathname === "/") {
+    return null;
+  }
+  return "home";
+}
+
 export function AppStateProvider(props: PropsWithChildren) {
   const [auth, setAuth] = useState<AuthState>({ status: "booting", session: null });
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [bootComplete, setBootComplete] = useState(false);
-  const [screen, setScreen] = useState<AppScreen>("home");
+  const [screen, setScreenState] = useState<AppScreen>("home");
   const [restoredRoleplaySession, setRestoredRoleplaySession] = useState<any | null>(null);
   const [restoredYkiRuntime, setRestoredYkiRuntime] = useState<any | null>(null);
+
+  function updateScreen(nextScreen: AppScreen, reason: string) {
+    setScreenState((previous) => {
+      if (previous !== nextScreen) {
+        logNavigationEvent(`Screen changed to ${nextScreen}`, {
+          from: previous,
+          to: nextScreen,
+          reason,
+        });
+      }
+      return nextScreen;
+    });
+  }
 
   async function refreshSubscription() {
     const response = await fetchSubscriptionStatus();
@@ -144,8 +189,11 @@ export function AppStateProvider(props: PropsWithChildren) {
 
         setRestoredRoleplaySession(restoredRoleplay);
         setRestoredYkiRuntime(restoredYki);
-        setScreen(restoredYki ? "yki_runtime" : restoredRoleplay ? "conversation" : "home");
+        const fallbackScreen = restoredYki ? "yki_runtime" : restoredRoleplay ? "conversation" : "home";
+        const requestedScreen = typeof window !== "undefined" ? readRequestedScreen(window.location.pathname) : null;
+        updateScreen(requestedScreen || fallbackScreen, "bootstrap");
       } catch {
+        logDebugEvent("error", "runtime", "App bootstrap failed. Falling back to unauthenticated state.");
         setAuth({ status: "unauthenticated", session: null });
       } finally {
         setBootComplete(true);
@@ -167,7 +215,7 @@ export function AppStateProvider(props: PropsWithChildren) {
     } else if (DEV_MODE) {
       setSubscription(devSubscriptionStatus(stored.auth_user));
     }
-    setScreen("home");
+    updateScreen("home", "auth-success");
     setBootComplete(true);
     return { ok: true, message: null };
   }
@@ -214,7 +262,7 @@ export function AppStateProvider(props: PropsWithChildren) {
     setSubscription(null);
     setRestoredRoleplaySession(null);
     setRestoredYkiRuntime(null);
-    setScreen("home");
+    updateScreen("home", "logout");
   }
 
   return (
@@ -226,7 +274,7 @@ export function AppStateProvider(props: PropsWithChildren) {
         bootComplete,
         restoredRoleplaySession,
         restoredYkiRuntime,
-        setScreen,
+        setScreen: (nextScreen) => updateScreen(nextScreen, "ui"),
         login,
         loginWithGoogle,
         register,

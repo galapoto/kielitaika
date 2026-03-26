@@ -2,51 +2,107 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "./components/AppShell";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { logNavigationEvent } from "./services/debugLogger";
 import { AuthScreen } from "./screens/AuthScreen";
-import { ConversationScreen } from "./screens/ConversationScreen";
+import { CardsScreen } from "./screens/CardsScreen";
 import { DashboardScreen } from "./screens/DashboardScreen";
-import { PracticeScreen } from "./screens/PracticeScreen";
-import { ProfessionalFinnishScreen } from "./screens/ProfessionalFinnishScreen";
+import { DebugScreen } from "./screens/DebugScreen";
+import { RoleplayScreen } from "./screens/RoleplayScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
+import { VoiceStudioScreen } from "./screens/VoiceStudioScreen";
 import { YkiExamScreen } from "./screens/YkiExamScreen";
 import { YkiIntroScreen } from "./screens/YkiIntroScreen";
 import { YkiResultScreen } from "./screens/YkiResultScreen";
 import { useAppState } from "./state/AppStateProvider";
-import type { PracticeSection } from "./state/types";
-import { getBackgroundStyle, useResolvedColorScheme, type BackgroundScreen } from "./theme/backgrounds";
+import type { AppScreen, PracticeSection } from "./state/types";
+import { getBackgroundClass, useResolvedColorScheme } from "./theme/backgrounds";
+import { logoAssets } from "./theme/logoAssets";
+
+function resolveBackgroundScreen(authenticated: boolean, screen: AppScreen): AppScreen | "auth" {
+  if (!authenticated) {
+    return "auth";
+  }
+  return screen;
+}
+
+function resolvePracticeSectionFromPath(pathname: string): PracticeSection {
+  if (pathname.startsWith("/practice/grammar")) {
+    return "grammar";
+  }
+  if (pathname.startsWith("/practice/phrases")) {
+    return "phrases";
+  }
+  return "vocabulary";
+}
+
+function resolvePath(screen: AppScreen, practiceSection: PracticeSection): string {
+  if (screen === "practice") {
+    return `/practice/${practiceSection}`;
+  }
+  if (screen === "conversation") {
+    return "/conversation";
+  }
+  if (screen === "professional") {
+    return "/professional";
+  }
+  if (screen === "settings") {
+    return "/settings";
+  }
+  if (screen === "debug") {
+    return "/debug";
+  }
+  if (screen === "yki_intro") {
+    return "/yki";
+  }
+  if (screen === "yki_runtime") {
+    return "/yki/runtime";
+  }
+  if (screen === "yki_result") {
+    return "/yki/result";
+  }
+  return "/";
+}
 
 export function App() {
   const app = useAppState();
   const colorScheme = useResolvedColorScheme();
   const [ykiRuntime, setYkiRuntime] = useState<any | null>(app.restoredYkiRuntime);
   const [practiceSection, setPracticeSection] = useState<PracticeSection>("vocabulary");
-  let backgroundScreen: BackgroundScreen = "dashboard";
+  const backgroundScreen = resolveBackgroundScreen(app.auth.status === "authenticated" && app.bootComplete, app.screen);
 
   useEffect(() => {
     setYkiRuntime(app.restoredYkiRuntime ?? null);
   }, [app.restoredYkiRuntime]);
 
-  if (!app.bootComplete || app.auth.status === "booting" || app.auth.status === "restoring") {
-    backgroundScreen = "auth";
-  } else if (app.auth.status !== "authenticated") {
-    backgroundScreen = "auth";
-  } else if (app.screen === "practice") {
-    backgroundScreen = "practice";
-  } else if (app.screen === "conversation") {
-    backgroundScreen = "conversation";
-  } else if (app.screen === "professional") {
-    backgroundScreen = "professional";
-  } else if (app.screen === "settings") {
-    backgroundScreen = "settings";
-  } else if (app.screen === "yki_intro" || app.screen === "yki_runtime" || app.screen === "yki_result") {
-    backgroundScreen = "exam";
-  }
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    setPracticeSection(resolvePracticeSectionFromPath(window.location.pathname));
+  }, [app.auth.status, app.bootComplete]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !app.bootComplete || app.auth.status !== "authenticated") {
+      return;
+    }
+    const nextPath = resolvePath(app.screen, practiceSection);
+    if (window.location.pathname !== nextPath) {
+      window.history.replaceState({}, "", nextPath);
+      logNavigationEvent(`Route synchronized to ${nextPath}`, {
+        screen: app.screen,
+        practiceSection,
+      });
+    }
+  }, [app.auth.status, app.bootComplete, app.screen, practiceSection]);
 
   if (!app.bootComplete || app.auth.status === "booting" || app.auth.status === "restoring") {
     return (
-      <div className="app-frame" style={getBackgroundStyle(backgroundScreen, colorScheme)}>
+      <div className={`app-frame ${getBackgroundClass(backgroundScreen, colorScheme)}`}>
+        <div className="app-logo-overlay" aria-hidden="true">
+          <img src={logoAssets[colorScheme]} alt="" />
+        </div>
         <div className="route-stage" key="boot">
-          <LoadingScreen title="Hydrating runtime" message="Auth restore, entitlement resolution, and session recovery are hard-blocking." />
+          <LoadingScreen title="Preparing KieliTaika" message="Restoring your learning space and saved progress." />
         </div>
       </div>
     );
@@ -54,7 +110,10 @@ export function App() {
 
   if (app.auth.status !== "authenticated") {
     return (
-      <div className="app-frame" style={getBackgroundStyle(backgroundScreen, colorScheme)}>
+      <div className={`app-frame ${getBackgroundClass(backgroundScreen, colorScheme)}`}>
+        <div className="app-logo-overlay" aria-hidden="true">
+          <img src={logoAssets[colorScheme]} alt="" />
+        </div>
         <div className="route-stage" key="auth">
           <AuthScreen onLogin={app.login} onGoogleLogin={app.loginWithGoogle} onRegister={app.register} />
         </div>
@@ -65,13 +124,21 @@ export function App() {
   let screen = <DashboardScreen user={app.auth.session.auth_user} subscription={app.subscription} onScreenChange={app.setScreen} />;
 
   if (app.screen === "practice") {
-    screen = <PracticeScreen section={practiceSection} />;
+    screen = <CardsScreen section={practiceSection} />;
   } else if (app.screen === "conversation") {
-    screen = <ConversationScreen restoredSession={app.restoredRoleplaySession} />;
+    screen = <RoleplayScreen restoredSession={app.restoredRoleplaySession} />;
   } else if (app.screen === "professional") {
-    screen = <ProfessionalFinnishScreen />;
+    screen = (
+      <VoiceStudioScreen
+        title="Professional Finnish"
+        subtitle="Speaking, pronunciation, and transcript tools for workplace-focused Finnish practice."
+        modeLabel="Professional session"
+      />
+    );
   } else if (app.screen === "settings") {
     screen = <SettingsScreen user={app.auth.session.auth_user} subscription={app.subscription} />;
+  } else if (app.screen === "debug") {
+    screen = <DebugScreen />;
   } else if (app.screen === "yki_intro") {
     screen = (
       <YkiIntroScreen
@@ -98,7 +165,10 @@ export function App() {
   }
 
   return (
-    <div className="app-frame" style={getBackgroundStyle(backgroundScreen, colorScheme)}>
+    <div className={`app-frame ${getBackgroundClass(backgroundScreen, colorScheme)}`}>
+      <div className="app-logo-overlay" aria-hidden="true">
+        <img src={logoAssets[colorScheme]} alt="" />
+      </div>
       <AppShell
         screen={app.screen}
         practiceSection={practiceSection}

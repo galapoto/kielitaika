@@ -1,16 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { ArrowRight, RefreshCw, Volume2, Waves } from "lucide-react";
 
 import { Button } from "../components/Button";
 import { Field } from "../components/Field";
-import { JsonPreview } from "../components/JsonPreview";
 import { Panel } from "../components/Panel";
+import { ScreenScaffold } from "../components/ScreenScaffold";
 import { StatusBanner } from "../components/StatusBanner";
 import { useRecorder } from "../hooks/useRecorder";
 import { analyzePronunciation, requestTts, uploadVoiceTranscription } from "../services/voiceService";
-
-function createSpeakingSessionId(): string {
-  return `spk_${crypto.randomUUID().replace(/-/g, "")}`;
-}
 
 function formatRecorderState(state: string): string {
   if (state === "recording") {
@@ -25,9 +22,32 @@ function formatRecorderState(state: string): string {
   return "Idle";
 }
 
+function readPronunciationScore(payload: any): string {
+  const candidate = payload?.overall_score ?? payload?.score ?? payload?.accuracy_score ?? null;
+  if (typeof candidate === "number") {
+    return `${Math.round(candidate)}%`;
+  }
+  if (typeof candidate === "string" && candidate.trim().length > 0) {
+    return candidate;
+  }
+  return "Ready";
+}
+
+function readPronunciationMessage(payload: any): string {
+  const candidate = payload?.summary || payload?.feedback || payload?.message || payload?.notes || null;
+  return typeof candidate === "string" && candidate.trim().length > 0
+    ? candidate
+    : "Use the model audio and your transcript to repeat the phrase with clearer rhythm and pronunciation.";
+}
+
+function readTtsAudioUrl(payload: any): string | null {
+  const candidate = payload?.audio_url || payload?.replay_url || payload?.url || null;
+  return typeof candidate === "string" && candidate.trim().length > 0 ? candidate : null;
+}
+
 export function VoiceStudioScreen(props: { title?: string; subtitle?: string; modeLabel?: string }) {
   const recorder = useRecorder();
-  const [speakingSessionId, setSpeakingSessionId] = useState("");
+  const [speakingSessionId] = useState(() => `spk_${crypto.randomUUID().replace(/-/g, "")}`);
   const [expectedText, setExpectedText] = useState("potilas");
   const [ttsText, setTtsText] = useState("Hei, tervetuloa takaisin.");
   const [transcription, setTranscription] = useState<any | null>(null);
@@ -35,10 +55,6 @@ export function VoiceStudioScreen(props: { title?: string; subtitle?: string; mo
   const [ttsResponse, setTtsResponse] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setSpeakingSessionId(createSpeakingSessionId());
-  }, []);
 
   async function upload() {
     if (!recorder.audioBlob || !speakingSessionId) {
@@ -64,11 +80,12 @@ export function VoiceStudioScreen(props: { title?: string; subtitle?: string; mo
       return;
     }
     if (!response.data.ok || !response.data.audio_ref) {
-      setError("Speech transcription failed. Retry is required before analysis can continue.");
+      setError("We could not read that recording clearly. Please record it again.");
       setBusy(false);
       return;
     }
     setTranscription(response.data);
+    setPronunciation(null);
     setBusy(false);
   }
 
@@ -105,18 +122,63 @@ export function VoiceStudioScreen(props: { title?: string; subtitle?: string; mo
     }
   }
 
+  const primaryAction = !transcription
+    ? {
+        label: busy ? "Uploading..." : "Upload recording",
+        icon: ArrowRight,
+        onClick: upload,
+        disabled: busy || !recorder.audioBlob,
+      }
+    : !pronunciation
+      ? {
+          label: "Analyze pronunciation",
+          icon: Waves,
+          onClick: runPronunciation,
+          disabled: busy,
+        }
+      : {
+          label: "Play model audio",
+          icon: Volume2,
+          onClick: runTts,
+          disabled: busy,
+        };
+  const PrimaryIcon = primaryAction.icon;
+  const modelAudioUrl = readTtsAudioUrl(ttsResponse);
+
   return (
-    <div className="screen-stack">
+    <ScreenScaffold
+      className="voice-studio-screen"
+      header={
+        <div className="screen-heading">
+          <span className="eyebrow">{props.modeLabel || "Speaking session"}</span>
+          <h1 className="hero-title">{props.title || "Voice Studio"}</h1>
+          <p className="hero-subtitle">{props.subtitle || "Record your voice, review the transcript, and refine your pronunciation in one focused speaking flow."}</p>
+        </div>
+      }
+      actions={
+        <div className="actions-row">
+          <Button onClick={primaryAction.onClick} disabled={primaryAction.disabled}>
+            <PrimaryIcon size={16} aria-hidden="true" />
+            {primaryAction.label}
+          </Button>
+          <Button tone="ghost" onClick={recorder.resetRecording}>
+            <RefreshCw size={16} aria-hidden="true" />
+            Reset recording
+          </Button>
+        </div>
+      }
+    >
       <Panel
         title={props.title || "Voice Studio"}
-        subtitle={props.subtitle || "KAIL-style explicit start and stop. No auto-stop, no speculative transcript persistence."}
+        subtitle="Stay in one speaking loop: record, upload, listen, and improve."
+        className="primary-card"
       >
         <div className="recorder-card">
           <div className="screen-hero">
             <div>
               <span className="eyebrow">{props.modeLabel || "Speaking session"}</span>
-              <h2>{speakingSessionId || "Preparing..."}</h2>
-              <p className="muted">Mode: conversation · Locale: fi-FI</p>
+              <h2>{props.title || "Professional Finnish"}</h2>
+              <p className="muted">Speak clearly, then continue to the next step from the action area below.</p>
             </div>
             <button
               type="button"
@@ -129,24 +191,16 @@ export function VoiceStudioScreen(props: { title?: string; subtitle?: string; mo
           </div>
           <div className="recorder-status-row">
             <span className={`state-pill ${recorder.state}`}>{formatRecorderState(recorder.state)}</span>
-            <span className="muted">{recorder.durationMs ? `${(recorder.durationMs / 1000).toFixed(1)}s captured` : "Explicit user-controlled capture only."}</span>
+            <span className="muted">{recorder.durationMs ? `${(recorder.durationMs / 1000).toFixed(1)}s captured` : "Record when you're ready, then upload the clip to continue."}</span>
           </div>
           {recorder.audioUrl ? <audio className="audio-player" src={recorder.audioUrl} controls /> : null}
           {recorder.error ? <StatusBanner tone="error" title="Microphone error" message={recorder.error} /> : null}
-          {error ? <StatusBanner tone="error" title="Voice API error" message={error} /> : null}
-          <div className="actions-row">
-            <Button onClick={upload} disabled={busy || !recorder.audioBlob}>
-              Upload for transcription
-            </Button>
-            <Button tone="ghost" onClick={recorder.resetRecording}>
-              Reset recording
-            </Button>
-          </div>
+          {error ? <StatusBanner tone="error" title="Voice practice error" message={error} /> : null}
         </div>
       </Panel>
 
       {transcription ? (
-        <Panel title="Transcript" subtitle="Backend-confirmed transcription only.">
+        <Panel title="Transcript" subtitle="Review what the app heard before moving on to pronunciation feedback." className="secondary-card">
           <div className="transcript-card">
             <span className="eyebrow">Recognized speech</span>
             <p className="transcript-text">{transcription.transcript || "No transcript returned."}</p>
@@ -154,25 +208,21 @@ export function VoiceStudioScreen(props: { title?: string; subtitle?: string; mo
         </Panel>
       ) : null}
 
-      <Panel title="Pronunciation" subtitle="Analysis only after confirmed backend STT response exists.">
+      <Panel title="Pronunciation" subtitle="Compare your spoken phrase with the target wording." className="secondary-card">
         <div className="grid-two">
           <Field label="Expected phrase" value={expectedText} onChange={(event) => setExpectedText(event.target.value)} />
-          <Button onClick={runPronunciation} disabled={!transcription}>
-            Analyze pronunciation
-          </Button>
+          <div className="meta-item">
+            <span className="eyebrow">Status</span>
+            <strong>{pronunciation ? readPronunciationScore(pronunciation) : transcription ? "Ready to analyze" : "Waiting for transcript"}</strong>
+            <p className="muted">{pronunciation ? readPronunciationMessage(pronunciation) : "Upload a recording first, then continue with pronunciation feedback."}</p>
+          </div>
         </div>
       </Panel>
 
-      <Panel title="TTS Request" subtitle="Backend errors are surfaced directly and never hidden.">
-        <div className="grid-two">
-          <Field label="Text" value={ttsText} onChange={(event) => setTtsText(event.target.value)} />
-          <Button onClick={runTts}>Request TTS</Button>
-        </div>
+      <Panel title="Model audio" subtitle="Listen to a clean reference version of the same phrase." className="secondary-card">
+        <Field label="Text" value={ttsText} onChange={(event) => setTtsText(event.target.value)} />
+        {modelAudioUrl ? <audio className="audio-player" src={modelAudioUrl} controls /> : <p className="muted">Generate model audio from the action area after pronunciation feedback is ready.</p>}
       </Panel>
-
-      {transcription ? <JsonPreview title="STT response" value={transcription} /> : null}
-      {pronunciation ? <JsonPreview title="Pronunciation response" value={pronunciation} /> : null}
-      {ttsResponse ? <JsonPreview title="TTS response" value={ttsResponse} /> : null}
-    </div>
+    </ScreenScaffold>
   );
 }

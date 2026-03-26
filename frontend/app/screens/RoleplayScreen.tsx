@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { ArrowRight, MessageSquareMore, Sparkles, Star } from "lucide-react";
 
 import { Button } from "../components/Button";
 import { Field } from "../components/Field";
-import { JsonPreview } from "../components/JsonPreview";
 import { Panel } from "../components/Panel";
+import { ScreenScaffold } from "../components/ScreenScaffold";
 import { StatusBanner } from "../components/StatusBanner";
-import { createRoleplaySession, fetchRoleplayReview, fetchRoleplayTranscript, submitRoleplayTurn } from "../services/roleplayService";
+import { createRoleplaySession, fetchRoleplayReview, submitRoleplayTurn } from "../services/roleplayService";
 import { removeRoleplayCache, saveRoleplayCache } from "../services/storage";
 
 function roleplayCacheState(status: string): "created" | "active" | "awaiting_ai" | "completed" | "expired" | "abandoned" {
@@ -37,12 +38,51 @@ function persistRoleplaySession(session: any | null): void {
   });
 }
 
+function describeConversationProgress(session: any | null): string {
+  if (!session) {
+    return "Choose a scenario and begin a guided conversation.";
+  }
+  if (session.status === "completed") {
+    return "Your guided conversation is complete. Review your feedback and start a new one whenever you're ready.";
+  }
+  return `${session.progress.user_turns_completed} of ${session.progress.user_turns_total} replies completed.`;
+}
+
+function roleLabel(value: string): string {
+  if (value === "USER") {
+    return "You";
+  }
+  if (value === "SYSTEM") {
+    return "Guide";
+  }
+  return value;
+}
+
+function reviewHighlights(review: any): string[] {
+  if (!review) {
+    return [];
+  }
+  const directValues = [
+    review.summary,
+    review.feedback,
+    review.overall_feedback,
+    review.overview,
+    review.message,
+  ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+  if (directValues.length) {
+    return directValues;
+  }
+  if (Array.isArray(review.highlights)) {
+    return review.highlights.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0);
+  }
+  return [];
+}
+
 export function RoleplayScreen(props: { restoredSession: any | null }) {
   const [scenarioId, setScenarioId] = useState("ajanvaraus");
   const [level, setLevel] = useState("A2");
   const [session, setSession] = useState<any | null>(props.restoredSession);
   const [message, setMessage] = useState("");
-  const [transcript, setTranscript] = useState<any | null>(null);
   const [review, setReview] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -69,8 +109,8 @@ export function RoleplayScreen(props: { restoredSession: any | null }) {
       return;
     }
     setSession(response.data);
-    setTranscript(null);
     setReview(null);
+    setMessage("");
     setBusy(false);
   }
 
@@ -114,80 +154,116 @@ export function RoleplayScreen(props: { restoredSession: any | null }) {
     setBusy(false);
   }
 
-  async function loadTranscript() {
-    if (!session) {
-      return;
-    }
-    const response = await fetchRoleplayTranscript(session.session_id);
-    if (response.ok) {
-      setTranscript(response.data);
-    } else {
-      setError(response.error.message);
-    }
-  }
-
   async function loadReview() {
     if (!session) {
       return;
     }
+    setBusy(true);
+    setError(null);
     const response = await fetchRoleplayReview(session.session_id);
     if (response.ok) {
       setReview(response.data);
     } else {
       setError(response.error.message);
     }
+    setBusy(false);
   }
 
   return (
-    <div className="screen-stack">
-      <Panel title="Conversation" subtitle="Fixed-turn backend conversation flow; frontend restores only backend-authored sessions that have not expired.">
-        <div className="grid-two">
-          <Field label="Scenario id" value={scenarioId} onChange={(event) => setScenarioId(event.target.value)} />
-          <Field label="Level" value={level} onChange={(event) => setLevel(event.target.value)} />
+    <ScreenScaffold
+      className="conversation-screen"
+      header={
+        <div className="screen-heading">
+          <span className="eyebrow">Conversation</span>
+          <h1 className="hero-title">{session ? session.scenario.title : "Practice a guided conversation"}</h1>
+          <p className="hero-subtitle">{describeConversationProgress(session)}</p>
         </div>
+      }
+      actions={
         <div className="actions-row">
-          <Button onClick={start} disabled={busy}>
-            {busy ? "Starting..." : "Start conversation"}
-          </Button>
-          {session ? (
-            <>
-              <Button tone="secondary" onClick={loadTranscript}>
-                Load transcript
-              </Button>
-              <Button tone="secondary" onClick={loadReview} disabled={session.status !== "completed"}>
-                Load review
-              </Button>
-            </>
-          ) : null}
+          {!session ? (
+            <Button onClick={start} disabled={busy}>
+              <MessageSquareMore size={16} aria-hidden="true" />
+              {busy ? "Starting..." : "Start conversation"}
+            </Button>
+          ) : session.status === "completed" ? (
+            <Button tone="secondary" onClick={loadReview} disabled={busy}>
+              <Star size={16} aria-hidden="true" />
+              {busy ? "Loading..." : "View feedback"}
+            </Button>
+          ) : (
+            <Button onClick={submit} disabled={busy || !message || !session.ui.allow_submit}>
+              <ArrowRight size={16} aria-hidden="true" />
+              Send reply
+            </Button>
+          )}
         </div>
-        {error ? <StatusBanner tone="error" title="Conversation error" message={error} /> : null}
-      </Panel>
-
-      {session ? (
+      }
+    >
+      {!session ? (
+        <Panel title="Conversation setup" subtitle="Choose a scenario and level, then start one active conversation." className="primary-card">
+          <div className="grid-two">
+            <Field label="Scenario id" value={scenarioId} onChange={(event) => setScenarioId(event.target.value)} />
+            <Field label="Level" value={level} onChange={(event) => setLevel(event.target.value)} />
+          </div>
+          {error ? <StatusBanner tone="error" title="Conversation error" message={error} /> : null}
+        </Panel>
+      ) : (
         <Panel
           title={session.scenario.title}
-          subtitle={`Status ${session.status} · expires ${session.expires_at} · ${session.progress.user_turns_completed}/${session.progress.user_turns_total}`}
+          subtitle={describeConversationProgress(session)}
+          className="primary-card"
         >
+          {error ? <StatusBanner tone="error" title="Conversation error" message={error} /> : null}
+          <div className="meta-grid">
+            <div className="meta-item">
+              <span className="eyebrow">Level</span>
+              <strong>{session.level || level}</strong>
+              <p className="muted">Stay in the same scenario until the conversation is complete.</p>
+            </div>
+            <div className="meta-item">
+              <span className="eyebrow">Progress</span>
+              <strong>
+                {session.progress.user_turns_completed}/{session.progress.user_turns_total}
+              </strong>
+              <p className="muted">{session.status === "completed" ? "Conversation finished." : "Keep moving forward one reply at a time."}</p>
+            </div>
+          </div>
           <div className="chat-stack">
             {session.messages.map((item: any) => (
               <div key={item.message_id} className={item.speaker === "USER" ? "chat-bubble user" : "chat-bubble"}>
-                <strong>{item.speaker}</strong>
+                <strong>{roleLabel(item.speaker)}</strong>
                 <p>{item.text}</p>
                 {item.translation ? <small className="muted">{item.translation}</small> : null}
               </div>
             ))}
           </div>
-          <div className="actions-row">
-            <Field label="Your turn" value={message} onChange={(event) => setMessage(event.target.value)} disabled={!session.ui.show_input} />
-            <Button onClick={submit} disabled={busy || !message || !session.ui.allow_submit}>
-              Submit turn
-            </Button>
+          {session.status !== "completed" ? (
+            <Field label="Your reply" value={message} onChange={(event) => setMessage(event.target.value)} disabled={!session.ui.show_input} />
+          ) : null}
+        </Panel>
+      )}
+
+      {review ? (
+        <Panel className="secondary-card" title="Conversation feedback" subtitle="Review the main takeaways from your completed session.">
+          <div className="study-card">
+            <div className="badge-row">
+              <span className="state-pill stopped">
+                <Sparkles size={14} aria-hidden="true" />
+                Review ready
+              </span>
+            </div>
+            <div className="card-stack">
+              {reviewHighlights(review).map((item) => (
+                <p key={item} className="study-card-subtitle">
+                  {item}
+                </p>
+              ))}
+              {!reviewHighlights(review).length ? <p className="study-card-subtitle">Your feedback is ready. Start a new conversation to keep practicing.</p> : null}
+            </div>
           </div>
         </Panel>
       ) : null}
-
-      {transcript ? <JsonPreview title="Transcript" value={transcript} /> : null}
-      {review ? <JsonPreview title="Review" value={review} /> : null}
-    </div>
+    </ScreenScaffold>
   );
 }

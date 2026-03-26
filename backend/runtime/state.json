@@ -110,11 +110,6 @@
       "expires_at": "2026-03-25T23:01:27+00:00",
       "user_id": "usr_17a9d0fbfaad4c198bc8dcbc0ecb1e4d"
     },
-    "atk_1b95b19e2c924a59aa8225b2d3165c87": {
-      "auth_session_id": "auth_dfc6059ddc7b476e9e24e09ab3a34831",
-      "expires_at": "2026-03-26T17:47:47+00:00",
-      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
-    },
     "atk_1b98dce84c8d448daac0c25a3a00c34f": {
       "auth_session_id": "auth_e65320db453a49f6ae3b927674e1b3de",
       "expires_at": "2026-03-25T23:05:07+00:00",
@@ -475,11 +470,6 @@
       "expires_at": "2026-03-25T21:00:02+00:00",
       "user_id": "usr_b46215f54bc94aa685941e119f0560e4"
     },
-    "atk_6d489ad4b1c248d5b29c7f2689d34946": {
-      "auth_session_id": "auth_1f84c41728ca478780f7e724e35c0beb",
-      "expires_at": "2026-03-26T17:13:22+00:00",
-      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
-    },
     "atk_6d524168f3474f6cb68fd032b5f60963": {
       "auth_session_id": "auth_1b71551955394b1f8cea09b1b5ff6ba0",
       "expires_at": "2026-03-26T15:35:47+00:00",
@@ -579,6 +569,11 @@
       "auth_session_id": "auth_8e9137ae4cac47f88ee16aeb1c767249",
       "expires_at": "2026-03-25T23:01:23+00:00",
       "user_id": "usr_e1becae6d4004cd2842bc2d87a52bdaf"
+    },
+    "atk_8c34d1dc68044938b08a3772970c128a": {
+      "auth_session_id": "auth_dfc6059ddc7b476e9e24e09ab3a34831",
+      "expires_at": "2026-03-26T21:30:42+00:00",
+      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
     },
     "atk_8d791afb83e4479d840518c2c5576e6c": {
       "auth_session_id": "auth_6c44498a687e4ddb9aaca9f9081287f0",
@@ -809,6 +804,11 @@
       "auth_session_id": "auth_a82dc3ae381948619f0fae321c4a42e9",
       "expires_at": "2026-03-25T20:36:30+00:00",
       "user_id": "usr_11a9806103294d84babad472bb8dffe6"
+    },
+    "atk_c5c55b510bd942d98597531280d3fdb8": {
+      "auth_session_id": "auth_1f84c41728ca478780f7e724e35c0beb",
+      "expires_at": "2026-03-26T20:59:30+00:00",
+      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
     },
     "atk_ca9aa0d6a0444185a59b04a39171b0ff": {
       "auth_session_id": "auth_90d257b2b5cd489b87b7e83e1d267ada",
@@ -1086,7 +1086,7 @@
       "created_at": "2026-03-26T16:08:45+00:00",
       "status": "active",
       "terminated_at": null,
-      "updated_at": "2026-03-26T16:43:22+00:00",
+      "updated_at": "2026-03-26T20:29:30+00:00",
       "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
     },
     "auth_37ee01a87aa440a29a5e1dcf64ca5e56": {
@@ -1134,7 +1134,7 @@
       "created_at": "2026-03-26T16:06:19+00:00",
       "status": "active",
       "terminated_at": null,
-      "updated_at": "2026-03-26T17:17:47+00:00",
+      "updated_at": "2026-03-26T21:00:42+00:00",
       "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
     },
     "auth_f593319184404380896c486ea96d3fae": {
@@ -5462,6 +5462,598 @@
       "status": "COMPLETED",
       "updated_at": "2026-03-25T22:31:23+00:00",
       "user_id": "usr_fc97b978ee0847a9bf14f70b569990c0"
+    },
+    "cards_57a756bd94d24a3ba00e45652b22761a": {
+      "adaptive": false,
+      "answered_count": 2,
+      "cards": [
+        {
+          "_accepted_variants": [
+            "o2",
+            "withdrawal"
+          ],
+          "_adaptive": false,
+          "_answer_value": "withdrawal",
+          "_quality_score": 0.9,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'vieroitus' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 1.0,
+          "difficulty": "stretch",
+          "domain": "general_finnish",
+          "front_text": "vieroitus",
+          "id": "card.vocab.general.vieroitus.0001",
+          "level_band": "C1_C2",
+          "order_index": 0,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 1,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "addiction"
+              },
+              {
+                "option_id": "o2",
+                "text": "withdrawal"
+              },
+              {
+                "option_id": "o3",
+                "text": "treatment"
+              },
+              {
+                "option_id": "o4",
+                "text": "detox"
+              }
+            ],
+            "prompt": "What does 'vieroitus' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "correct",
+          "tags": [
+            "noun",
+            "withdrawal",
+            "c1",
+            "stretch"
+          ],
+          "word": "vieroitus"
+        },
+        {
+          "_accepted_variants": [
+            "o2",
+            "stock"
+          ],
+          "_adaptive": false,
+          "_answer_value": "stock",
+          "_quality_score": 0.92,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'osake' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 0.0,
+          "difficulty": "stretch",
+          "domain": "general_finnish",
+          "front_text": "osake",
+          "id": "card.vocab.general.osake.0001",
+          "level_band": "B1_B2",
+          "order_index": 1,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 1,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "bond"
+              },
+              {
+                "option_id": "o2",
+                "text": "stock"
+              },
+              {
+                "option_id": "o3",
+                "text": "share"
+              },
+              {
+                "option_id": "o4",
+                "text": "fund"
+              }
+            ],
+            "prompt": "What does 'osake' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "incorrect",
+          "tags": [
+            "noun",
+            "stock",
+            "b2",
+            "stretch"
+          ],
+          "word": "osake"
+        },
+        {
+          "_accepted_variants": [
+            "o2",
+            "worker"
+          ],
+          "_adaptive": false,
+          "_answer_value": "worker",
+          "_quality_score": 0.95,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'ty\u00f6ntekij\u00e4' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 0.0,
+          "difficulty": "core",
+          "domain": "general_finnish",
+          "front_text": "ty\u00f6ntekij\u00e4",
+          "id": "card.vocab.general.ty\u00f6ntekij\u00e4.0001",
+          "level_band": "A1_A2",
+          "order_index": 2,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 0,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "employer"
+              },
+              {
+                "option_id": "o2",
+                "text": "worker"
+              },
+              {
+                "option_id": "o3",
+                "text": "employee"
+              },
+              {
+                "option_id": "o4",
+                "text": "staff"
+              }
+            ],
+            "prompt": "What does 'ty\u00f6ntekij\u00e4' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "new",
+          "tags": [
+            "noun",
+            "worker",
+            "a2",
+            "core"
+          ],
+          "word": "ty\u00f6ntekij\u00e4"
+        },
+        {
+          "_accepted_variants": [
+            "o2",
+            "employer"
+          ],
+          "_adaptive": false,
+          "_answer_value": "employer",
+          "_quality_score": 0.94,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'ty\u00f6nantaja' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 0.0,
+          "difficulty": "core",
+          "domain": "general_finnish",
+          "front_text": "ty\u00f6nantaja",
+          "id": "card.vocab.general.ty\u00f6nantaja.0001",
+          "level_band": "B1_B2",
+          "order_index": 3,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 0,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "employee"
+              },
+              {
+                "option_id": "o2",
+                "text": "employer"
+              },
+              {
+                "option_id": "o3",
+                "text": "worker"
+              },
+              {
+                "option_id": "o4",
+                "text": "boss"
+              }
+            ],
+            "prompt": "What does 'ty\u00f6nantaja' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "new",
+          "tags": [
+            "noun",
+            "employer",
+            "b1",
+            "core"
+          ],
+          "word": "ty\u00f6nantaja"
+        },
+        {
+          "_accepted_variants": [
+            "o2",
+            "medicine"
+          ],
+          "_adaptive": false,
+          "_answer_value": "medicine",
+          "_quality_score": 0.95,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'l\u00e4\u00e4ke' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 0.0,
+          "difficulty": "core",
+          "domain": "general_finnish",
+          "front_text": "l\u00e4\u00e4ke",
+          "id": "card.vocab.general.l\u00e4\u00e4ke.0001",
+          "level_band": "A1_A2",
+          "order_index": 4,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 0,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "poison"
+              },
+              {
+                "option_id": "o2",
+                "text": "medicine"
+              },
+              {
+                "option_id": "o3",
+                "text": "drug"
+              },
+              {
+                "option_id": "o4",
+                "text": "remedy"
+              }
+            ],
+            "prompt": "What does 'l\u00e4\u00e4ke' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "new",
+          "tags": [
+            "noun",
+            "medicine",
+            "a2",
+            "core"
+          ],
+          "word": "l\u00e4\u00e4ke"
+        },
+        {
+          "_accepted_variants": [
+            "o2",
+            "insurance"
+          ],
+          "_adaptive": false,
+          "_answer_value": "insurance",
+          "_quality_score": 0.94,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'vakuutus' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 0.0,
+          "difficulty": "core",
+          "domain": "general_finnish",
+          "front_text": "vakuutus",
+          "id": "card.vocab.general.vakuutus.0001",
+          "level_band": "B1_B2",
+          "order_index": 5,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 0,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "warranty"
+              },
+              {
+                "option_id": "o2",
+                "text": "insurance"
+              },
+              {
+                "option_id": "o3",
+                "text": "guarantee"
+              },
+              {
+                "option_id": "o4",
+                "text": "coverage"
+              }
+            ],
+            "prompt": "What does 'vakuutus' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "new",
+          "tags": [
+            "noun",
+            "insurance",
+            "b1",
+            "core"
+          ],
+          "word": "vakuutus"
+        },
+        {
+          "_accepted_variants": [
+            "o2",
+            "interest rate"
+          ],
+          "_adaptive": false,
+          "_answer_value": "interest rate",
+          "_quality_score": 0.94,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'korko' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 0.0,
+          "difficulty": "core",
+          "domain": "general_finnish",
+          "front_text": "korko",
+          "id": "card.vocab.general.korko.0001",
+          "level_band": "B1_B2",
+          "order_index": 6,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 0,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "price"
+              },
+              {
+                "option_id": "o2",
+                "text": "interest rate"
+              },
+              {
+                "option_id": "o3",
+                "text": "fee"
+              },
+              {
+                "option_id": "o4",
+                "text": "profit"
+              }
+            ],
+            "prompt": "What does 'korko' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "new",
+          "tags": [
+            "noun",
+            "interest",
+            "b1",
+            "core"
+          ],
+          "word": "korko"
+        },
+        {
+          "_accepted_variants": [
+            "o2",
+            "alcohol"
+          ],
+          "_adaptive": false,
+          "_answer_value": "alcohol",
+          "_quality_score": 0.94,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'alkoholi' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 0.0,
+          "difficulty": "core",
+          "domain": "general_finnish",
+          "front_text": "alkoholi",
+          "id": "card.vocab.general.alkoholi.0001",
+          "level_band": "B1_B2",
+          "order_index": 7,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 0,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "caffeine"
+              },
+              {
+                "option_id": "o2",
+                "text": "alcohol"
+              },
+              {
+                "option_id": "o3",
+                "text": "sugar"
+              },
+              {
+                "option_id": "o4",
+                "text": "tobacco"
+              }
+            ],
+            "prompt": "What does 'alkoholi' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "new",
+          "tags": [
+            "noun",
+            "substance",
+            "b1",
+            "core"
+          ],
+          "word": "alkoholi"
+        },
+        {
+          "_accepted_variants": [
+            "o2",
+            "loan"
+          ],
+          "_adaptive": false,
+          "_answer_value": "loan",
+          "_quality_score": 0.94,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'laina' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 0.0,
+          "difficulty": "core",
+          "domain": "general_finnish",
+          "front_text": "laina",
+          "id": "card.vocab.general.laina.0001",
+          "level_band": "B1_B2",
+          "order_index": 8,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 0,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "savings"
+              },
+              {
+                "option_id": "o2",
+                "text": "loan"
+              },
+              {
+                "option_id": "o3",
+                "text": "debt"
+              },
+              {
+                "option_id": "o4",
+                "text": "credit"
+              }
+            ],
+            "prompt": "What does 'laina' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "new",
+          "tags": [
+            "noun",
+            "loan",
+            "b1",
+            "core"
+          ],
+          "word": "laina"
+        },
+        {
+          "_accepted_variants": [
+            "o2",
+            "tax"
+          ],
+          "_adaptive": false,
+          "_answer_value": "tax",
+          "_quality_score": 0.94,
+          "_source_id": "source.generated.general.vocabulary",
+          "_source_path": "/home/vitus/Asiakirjat/Professional_Finnish_materials/fraasit/l\u00e4hihoitaja_fraasit/l\u00e4hihoitaja_fraasit.json",
+          "audio": null,
+          "back_prompt": "What does 'vero' mean?",
+          "content_type": "vocabulary_card",
+          "correct_rate": 0.0,
+          "difficulty": "core",
+          "domain": "general_finnish",
+          "front_text": "vero",
+          "id": "card.vocab.general.vero.0001",
+          "level_band": "B1_B2",
+          "order_index": 9,
+          "path": "general",
+          "profession": "none",
+          "prompt_family": "vocabulary_memory",
+          "seen_count": 0,
+          "served_follow_up": {
+            "blank_template": null,
+            "context_text": null,
+            "options": [
+              {
+                "option_id": "o1",
+                "text": "fee"
+              },
+              {
+                "option_id": "o2",
+                "text": "tax"
+              },
+              {
+                "option_id": "o3",
+                "text": "fine"
+              },
+              {
+                "option_id": "o4",
+                "text": "charge"
+              }
+            ],
+            "prompt": "What does 'vero' mean?",
+            "stimulus_text": null,
+            "variant_type": "recognition_mcq"
+          },
+          "state": "new",
+          "tags": [
+            "noun",
+            "tax",
+            "b1",
+            "core"
+          ],
+          "word": "vero"
+        }
+      ],
+      "created_at": "2026-03-26T20:00:23+00:00",
+      "current_card_index": 2,
+      "session_id": "cards_57a756bd94d24a3ba00e45652b22761a",
+      "status": "ACTIVE",
+      "updated_at": "2026-03-26T20:01:00+00:00",
+      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
     },
     "cards_58c9cca137e542a3aa047031de9024f6": {
       "adaptive": false,
@@ -13680,6 +14272,11 @@
       "expires_at": "2026-04-01T22:31:25+00:00",
       "user_id": "usr_8b1d69cc232546519f057a223ff24082"
     },
+    "rtk_61857f52ee354710b91344fcaba113c6": {
+      "auth_session_id": "auth_dfc6059ddc7b476e9e24e09ab3a34831",
+      "expires_at": "2026-04-02T21:00:42+00:00",
+      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+    },
     "rtk_61d3b71982c146f298c0eb89200de7a4": {
       "auth_session_id": "auth_fca9e28df5e2472caabba9c9115785c6",
       "expires_at": "2026-04-01T22:31:28+00:00",
@@ -13775,6 +14372,11 @@
       "expires_at": "2026-04-01T22:31:26+00:00",
       "user_id": "usr_5f27513fd14f4859b4051c2aef374031"
     },
+    "rtk_78754911622f4b0191bf113be82bc904": {
+      "auth_session_id": "auth_1f84c41728ca478780f7e724e35c0beb",
+      "expires_at": "2026-04-02T20:29:30+00:00",
+      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+    },
     "rtk_792b89187fd04e1c87caf612e18fe454": {
       "auth_session_id": "auth_4bb08ee846ad456e88914b1752ebd106",
       "expires_at": "2026-04-01T22:35:15+00:00",
@@ -13809,11 +14411,6 @@
       "auth_session_id": "auth_508d3e99287749568266aea968792b49",
       "expires_at": "2026-04-01T22:31:23+00:00",
       "user_id": "usr_e1becae6d4004cd2842bc2d87a52bdaf"
-    },
-    "rtk_828be9127db44615acf9500ab59e52cc": {
-      "auth_session_id": "auth_dfc6059ddc7b476e9e24e09ab3a34831",
-      "expires_at": "2026-04-02T17:17:47+00:00",
-      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
     },
     "rtk_82c283d1153b41799058348c94b57d90": {
       "auth_session_id": "auth_93ebac85d4a942ad8740762eb0afe82e",
@@ -14124,11 +14721,6 @@
       "auth_session_id": "auth_dd65eaafbfa1426ea6691685c47cf3f2",
       "expires_at": "2026-04-01T22:35:08+00:00",
       "user_id": "usr_2af5f9c9a5b24e0f9751d0a8eaa826ab"
-    },
-    "rtk_cf7e9d9436c54285918d207ac376b97f": {
-      "auth_session_id": "auth_1f84c41728ca478780f7e724e35c0beb",
-      "expires_at": "2026-04-02T16:43:22+00:00",
-      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
     },
     "rtk_cfba202661f14c77aa8aaf3deb2b2ac3": {
       "auth_session_id": "auth_b31f525f6ec1403fb2e8956911568e50",
@@ -29016,6 +29608,66 @@
         "content_type": "vocabulary_card",
         "timestamp": "2026-03-26T16:08:59+00:00",
         "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.vieroitus.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.osake.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.ty\u00f6ntekij\u00e4.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.ty\u00f6nantaja.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.l\u00e4\u00e4ke.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.vakuutus.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.korko.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.alkoholi.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.laina.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
+      },
+      {
+        "content_id": "card.vocab.general.vero.0001",
+        "content_type": "vocabulary_card",
+        "timestamp": "2026-03-26T20:00:23+00:00",
+        "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
       }
     ]
   },
@@ -30693,6 +31345,12 @@
       "runtime_schema_version": "1.0",
       "updated_at": "2026-03-25T20:28:38+00:00",
       "user_id": "usr_5826d778b06546f983c0b8ed8e993c31"
+    },
+    "1bccaf2b-44fa-4c98-af3b-dda5bd5dee5f": {
+      "engine_session_token": "eyJzaWQiOiIxYmNjYWYyYi00NGZhLTRjOTgtYWYzYi1kZGE1YmQ1ZGVlNWYiLCJpYXQiOjE3NzQ1NTUyODJ9.HcrC3PhjgmCM_Y-SQSeW-_8ITBB-tit-CR2N7u8G0Yo",
+      "runtime_schema_version": "1.0",
+      "updated_at": "2026-03-26T20:31:06+00:00",
+      "user_id": "2731b648-0764-4aab-a406-7a0138ce1618"
     },
     "257273dc-8441-46ae-9256-c097f4929c1e": {
       "engine_session_token": "eyJzaWQiOiIyNTcyNzNkYy04NDQxLTQ2YWUtOTI1Ni1jMDk3ZjQ5MjljMWUiLCJpYXQiOjE3NzQ0Nzc4ODR9.BTwW1F1a_gRN9Ba5hYBFOlp64zixAQoANSrpkBOwPRo",

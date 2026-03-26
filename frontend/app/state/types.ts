@@ -1,4 +1,4 @@
-export type AppScreen = "home" | "practice" | "conversation" | "yki_intro" | "yki_runtime" | "yki_result" | "professional" | "settings";
+export type AppScreen = "home" | "practice" | "conversation" | "yki_intro" | "yki_runtime" | "yki_result" | "professional" | "settings" | "debug";
 
 export type PracticeSection = "vocabulary" | "grammar" | "phrases";
 

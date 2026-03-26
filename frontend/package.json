@@ -5,13 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "prebuild": "PATH=./scripts:$PATH ts-node app/system/ui_violation_detector.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "validate:no-direct-fetch": "node scripts/validate_no_direct_fetch.mjs",
     "validate:guardrails": "node scripts/validate_guardrails.mjs",
-    "validate:system-guardrails": "npm run validate:no-direct-fetch && npm run validate:guardrails"
+    "validate:system-guardrails": "npm run validate:no-direct-fetch && npm run validate:guardrails",
+    "validate:ui-invariants": "PATH=./scripts:$PATH ts-node app/system/ui_violation_detector.ts"
   },
   "dependencies": {
+    "lucide-react": "^1.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

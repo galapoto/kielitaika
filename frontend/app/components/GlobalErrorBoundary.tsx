@@ -68,7 +68,7 @@ export class GlobalErrorBoundary extends React.Component<React.PropsWithChildren
         <Panel className="auth-card" title="Application Guardrail Triggered" subtitle="Unhandled failures are surfaced instead of being hidden.">
           <StatusBanner tone="error" title={this.state.error.source.toUpperCase()} message={this.state.error.message} />
           {this.state.error.details ? (
-            <pre className="json-preview" style={{ whiteSpace: "pre-wrap" }}>
+            <pre className="json-preview json-preview-wrap">
               {this.state.error.details}
             </pre>
           ) : null}

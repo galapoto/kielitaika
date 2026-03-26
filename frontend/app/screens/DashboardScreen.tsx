@@ -1,71 +1,66 @@
+import { ArrowRight, Compass, Sparkles } from "lucide-react";
+
 import { Button } from "../components/Button";
 import { Panel } from "../components/Panel";
+import { ScreenScaffold } from "../components/ScreenScaffold";
 import type { AppScreen, AuthUser, SubscriptionStatus } from "../state/types";
-
-const features: Array<{ screen: AppScreen; title: string; description: string }> = [
-  { screen: "practice", title: "Practice", description: "Vocabulary, grammar, and phrase practice now live under one isolated screen." },
-  { screen: "conversation", title: "Conversation", description: "Fixed-turn conversation runtime driven by backend progress and review endpoints." },
-  { screen: "yki_intro", title: "YKI Exam", description: "Entry screen -> runtime -> result. Only one YKI screen stays active at a time." },
-  { screen: "professional", title: "Professional Finnish", description: "Work-oriented speaking, pronunciation, and transcript tools." },
-  { screen: "settings", title: "Settings", description: "Profile and subscription details in a dedicated settings screen." },
-];
 
 export function DashboardScreen(props: {
   user: AuthUser;
   subscription: SubscriptionStatus | null;
   onScreenChange: (screen: AppScreen) => void;
 }) {
-  const ykiFeature = props.subscription?.features?.yki;
-
   return (
-    <div className="screen-stack">
-      <div className="hero-grid">
-        <Panel className="hero-banner">
-          <span className="eyebrow">Active screen shell</span>
-          <h1 className="hero-title">Welcome back, {props.user.name || props.user.email}.</h1>
-          <p className="hero-subtitle">
-            The app now routes through one active screen at a time. Start YKI from its intro screen, continue in runtime, and finish on the result screen.
-          </p>
-        </Panel>
-        <Panel>
-          <div className="screen-hero">
-            <div>
-              <span className="eyebrow">Tier</span>
-              <h2>{props.subscription?.tier || props.user.subscription_tier}</h2>
-              <p className="muted">{ykiFeature?.message || "Subscription status not loaded yet."}</p>
+    <ScreenScaffold
+      className="dashboard-screen"
+      header={
+        <div className="screen-heading">
+          <span className="eyebrow">Home</span>
+          <h1 className="hero-title">Welcome to KieliTaika</h1>
+          <p className="hero-subtitle">Master Finnish through focused practice, guided conversation, and exam preparation inside one clear learning path at a time.</p>
+        </div>
+      }
+      actions={
+        <div className="actions-row">
+          <Button onClick={() => props.onScreenChange("practice")}>
+            <ArrowRight size={16} aria-hidden="true" />
+            Start learning
+          </Button>
+        </div>
+      }
+    >
+      <Panel className="dashboard-surface">
+        <div className="dashboard-hero-block">
+          <div className="feature-card">
+            <span className="eyebrow">Your learning space</span>
+            <h2>{props.user.name || props.user.email}</h2>
+            <p className="hero-subtitle">Use the sidebar to choose one destination, then keep moving forward inside that focused screen.</p>
+          </div>
+          <div className="dashboard-meta-grid">
+            <div className="meta-item">
+              <span className="eyebrow">Focus</span>
+              <strong>
+                <Sparkles size={16} aria-hidden="true" /> One purpose
+              </strong>
+              <p className="muted">Each screen keeps one clear task in front of you.</p>
             </div>
-            <div className="progress-ring">
-              <div>
-                <strong>{props.subscription?.is_active ? "ON" : "OFF"}</strong>
-              </div>
+            <div className="meta-item">
+              <span className="eyebrow">Navigation</span>
+              <strong>
+                <Compass size={16} aria-hidden="true" /> Sidebar only
+              </strong>
+              <p className="muted">Move between practice, conversation, YKI, and settings from the left menu.</p>
+            </div>
+            <div className="meta-item">
+              <span className="eyebrow">Direction</span>
+              <strong>
+                <ArrowRight size={16} aria-hidden="true" /> Keep moving
+              </strong>
+              <p className="muted">Start with practice, then use the sidebar whenever you want to switch to a different learning path.</p>
             </div>
           </div>
-        </Panel>
-      </div>
-
-      <div className="dashboard-grid">
-        {features.map((feature) => (
-          <Panel key={feature.screen} className="feature-card">
-            <strong>{feature.title}</strong>
-            <p className="muted">{feature.description}</p>
-            <Button onClick={() => props.onScreenChange(feature.screen)}>Open {feature.title}</Button>
-          </Panel>
-        ))}
-      </div>
-
-      <Panel title="Entitlements" subtitle="Direct rendering of /subscription/status feature map.">
-        <div className="meta-grid">
-          {Object.entries(props.subscription?.features || {}).map(([key, value]) => (
-            <div className="meta-item" key={key}>
-              <span className="eyebrow">{key}</span>
-              <strong>{value.available ? "Available" : "Locked"}</strong>
-              <p className="muted">
-                {value.message} ({value.limit} {value.unit})
-              </p>
-            </div>
-          ))}
         </div>
       </Panel>
-    </div>
+    </ScreenScaffold>
   );
 }

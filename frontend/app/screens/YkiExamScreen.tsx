@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, CheckCheck, CircleStop, RotateCcw } from "lucide-react";
 
 import { Button } from "../components/Button";
 import { TextAreaField } from "../components/Field";
 import { Panel } from "../components/Panel";
+import { ScreenScaffold } from "../components/ScreenScaffold";
+import { StatusBanner } from "../components/StatusBanner";
 import { useRecorder } from "../hooks/useRecorder";
 import { saveYkiCache } from "../services/storage";
 import { uploadVoiceTranscription } from "../services/voiceService";
@@ -64,6 +67,16 @@ function formatRecorderState(state: string): string {
     return "Error";
   }
   return "Idle";
+}
+
+function formatConversationSpeaker(value: string): string {
+  if (value === "USER") {
+    return "You";
+  }
+  if (value === "SYSTEM") {
+    return "Guide";
+  }
+  return value;
 }
 
 function readCurrentScreen(runtime: any, screenIndex: number) {
@@ -224,7 +237,7 @@ export function YkiExamScreen(props: {
       flowGuardRef.current.signature === nextState.signature &&
       flowGuardRef.current.screenKey !== nextState.screenKey
     ) {
-      setError("YKI flow guardrail triggered: screen changed without backend state update.");
+      setError("The exam changed unexpectedly. Please exit and reopen the exam before continuing.");
     }
     flowGuardRef.current = nextState;
   }, [runtime]);
@@ -283,7 +296,7 @@ export function YkiExamScreen(props: {
       return;
     }
     if (!sttResponse.data.ok || !sttResponse.data.audio_ref) {
-      setError("Speech transcription failed. Retry is required before the YKI flow can continue.");
+      setError("We could not read that recording clearly. Please record the answer again.");
       setBusy(false);
       return;
     }
@@ -356,37 +369,84 @@ export function YkiExamScreen(props: {
 
   if (!runtime) {
     return (
-      <div className="screen-stack yki-flow-screen">
-        <Panel className="flow-panel">
-          <span className="eyebrow">YKI Runtime</span>
-          <h1 className="hero-title">No active exam session</h1>
-          <p className="hero-subtitle">Start or resume the YKI exam from the intro screen first.</p>
-          <div className="actions-row">
-            <Button onClick={props.onBackToIntro}>Back to YKI home</Button>
+      <ScreenScaffold
+        className="yki-flow-screen"
+        header={
+          <div className="screen-heading">
+            <span className="eyebrow">YKI Exam</span>
+            <h1 className="hero-title">No exam in progress</h1>
+            <p className="hero-subtitle">Start a new exam or continue a saved one from the exam home screen.</p>
           </div>
+        }
+        actions={
+          <div className="actions-row">
+            <Button onClick={props.onBackToIntro}>
+              <RotateCcw size={16} aria-hidden="true" />
+              Go to exam home
+            </Button>
+          </div>
+        }
+      >
+        <Panel className="flow-panel primary-card">
+          <span className="eyebrow">Ready to begin</span>
+          <p className="hero-subtitle">Choose your level and start the exam from the YKI intro screen.</p>
         </Panel>
-      </div>
+      </ScreenScaffold>
     );
   }
 
+  const runtimeAction =
+    currentScreen?.screen_type === "writing_response" ? (
+      <Button onClick={() => submitWriting(currentScreen.payload.task_id)} disabled={busy || !writingDraft}>
+        <ArrowRight size={16} aria-hidden="true" />
+        Submit writing
+      </Button>
+    ) : currentScreen?.screen_type === "speaking_task" ? (
+      <Button onClick={() => submitSpeakingTask(currentScreen.payload)} disabled={busy || !recorder.audioBlob}>
+        <ArrowRight size={16} aria-hidden="true" />
+        Submit speaking response
+      </Button>
+    ) : null;
+
   return (
-    <div className="screen-stack yki-flow-screen">
-      <Panel className="flow-panel">
+    <ScreenScaffold
+      className="yki-flow-screen"
+      header={
         <div className="flow-header">
           <div>
-            <span className="eyebrow">YKI Runtime</span>
-            <h1 className="hero-title">{currentScreen?.payload?.title || "Active exam screen"}</h1>
+            <span className="eyebrow">YKI Exam</span>
+            <h1 className="hero-title">{currentScreen?.payload?.title || "Continue your exam"}</h1>
             <p className="hero-subtitle">
-              Session {runtime.session_id} · Section {activeSectionLabel}
-              {screenIndex >= 0 ? ` · Screen ${screenIndex + 1} of ${runtime.screens.length}` : " · All screens confirmed"}
+              {activeSectionLabel}
+              {screenIndex >= 0 ? ` · Stage ${screenIndex + 1} of ${runtime.screens.length}` : " · All stages complete"}
             </p>
           </div>
           <Button tone="secondary" onClick={props.onBackToIntro} disabled={busy}>
-            Exit to intro
+            <CircleStop size={16} aria-hidden="true" />
+            Exit exam
           </Button>
         </div>
-
-        {error ? <div className="flow-error-card">{error}</div> : null}
+      }
+      actions={
+        <div className="actions-row">
+          {runtimeAction}
+          <Button onClick={() => finishExam(false)} disabled={busy}>
+            <CheckCheck size={16} aria-hidden="true" />
+            Finish exam
+          </Button>
+          <Button tone="secondary" onClick={() => finishExam(true)} disabled={busy}>
+            Finish with unanswered tasks
+          </Button>
+          {screenIndex < 0 ? (
+            <Button tone="secondary" onClick={props.onComplete} disabled={busy}>
+              View results
+            </Button>
+          ) : null}
+        </div>
+      }
+    >
+      <Panel className="flow-panel primary-card">
+        {error ? <StatusBanner tone="error" title="Exam error" message={error} /> : null}
 
         {promptContext ? (
           <div className="runtime-screen reading-stage">
@@ -443,10 +503,7 @@ export function YkiExamScreen(props: {
 
             {currentScreen.screen_type === "writing_response" ? (
               <>
-                <TextAreaField label="Writing answer" value={writingDraft} onChange={(event) => setWritingDraft(event.target.value)} />
-                <Button onClick={() => submitWriting(currentScreen.payload.task_id)} disabled={busy || !writingDraft}>
-                  Submit writing
-                </Button>
+                <TextAreaField label="Your answer" value={writingDraft} onChange={(event) => setWritingDraft(event.target.value)} />
               </>
             ) : null}
 
@@ -454,8 +511,8 @@ export function YkiExamScreen(props: {
               <>
                 <div className="screen-hero">
                   <div>
-                    <span className="eyebrow">Speaking mode</span>
-                    <h2>{currentScreen.payload.speaking_mode}</h2>
+                    <span className="eyebrow">Speaking task</span>
+                    <h2>{formatSectionLabel(currentScreen.payload.speaking_mode)}</h2>
                     <p className="muted">{currentScreen.payload.prompt_text}</p>
                   </div>
                   <button
@@ -474,16 +531,13 @@ export function YkiExamScreen(props: {
                   </span>
                 </div>
                 {recorder.audioUrl ? <audio className="audio-player" src={recorder.audioUrl} controls /> : null}
-                {recorder.error ? <div className="flow-error-card">{recorder.error}</div> : null}
-                <Button onClick={() => submitSpeakingTask(currentScreen.payload)} disabled={busy || !recorder.audioBlob}>
-                  Submit speaking response
-                </Button>
+                {recorder.error ? <StatusBanner tone="error" title="Recording error" message={recorder.error} /> : null}
                 {conversationEntries.length ? (
                   <div className="transcript-stack">
-                    <span className="eyebrow">Conversation transcript</span>
+                    <span className="eyebrow">Conversation so far</span>
                     {conversationEntries.map((entry) => (
                       <div key={entry.key} className={entry.speaker === "USER" ? "chat-bubble user" : "chat-bubble"}>
-                        <strong>{entry.speaker}</strong>
+                        <strong>{formatConversationSpeaker(entry.speaker)}</strong>
                         <p>{entry.text}</p>
                       </div>
                     ))}
@@ -495,26 +549,12 @@ export function YkiExamScreen(props: {
         ) : (
           <div className="runtime-screen">
             <div className="reading-passages">
-              <span className="eyebrow">Runtime complete</span>
-              <p className="reading-paragraph">All engine-confirmed runtime screens are complete. Continue to the result screen.</p>
+              <span className="eyebrow">Exam complete</span>
+              <p className="reading-paragraph">All tasks are complete. Continue to the results screen when you are ready.</p>
             </div>
           </div>
         )}
-
-        <div className="actions-row">
-          <Button onClick={() => finishExam(false)} disabled={busy}>
-            Submit exam
-          </Button>
-          <Button tone="secondary" onClick={() => finishExam(true)} disabled={busy}>
-            Submit with incomplete confirmation
-          </Button>
-          {screenIndex < 0 ? (
-            <Button tone="secondary" onClick={props.onComplete} disabled={busy}>
-              Open result screen
-            </Button>
-          ) : null}
-        </div>
       </Panel>
-    </div>
+    </ScreenScaffold>
   );
 }

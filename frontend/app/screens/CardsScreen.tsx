@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 
 import { Field } from "../components/Field";
+import { ScreenScaffold } from "../components/ScreenScaffold";
 import { StatusBanner } from "../components/StatusBanner";
 import { playTap } from "../services/audioService";
 import { fetchNextCard, startAdaptiveCardsSession, startCardsSession, submitCardAnswer } from "../services/cardsService";
 import type { PracticeSection } from "../state/types";
+import { assertKnownBackendContentType, resolvePracticeContentType, UI_INVARIANTS } from "../system/ui_invariants";
 
 function readCardKey(card: any | null): string {
   return card?.card_id || card?.word || card?.front_text || "card-runtime";
@@ -16,12 +18,12 @@ function safeCount(value: number | null | undefined): number {
 
 function sectionDefaults(section: PracticeSection): { domain: string; contentType: string; label: string } {
   if (section === "grammar") {
-    return { domain: "general", contentType: "grammar_card", label: "Grammar" };
+    return { domain: "general", contentType: resolvePracticeContentType(section), label: "Grammar" };
   }
   if (section === "phrases") {
-    return { domain: "general", contentType: "sentence_card", label: "Phrases" };
+    return { domain: "general", contentType: resolvePracticeContentType(section), label: "Phrases" };
   }
-  return { domain: "general", contentType: "vocabulary_card", label: "Vocabulary" };
+  return { domain: "general", contentType: resolvePracticeContentType(section), label: "Vocabulary" };
 }
 
 function followUpPrompt(card: any | null): string {
@@ -40,18 +42,49 @@ function statePresentation(card: any | null): { tone: "new" | "practiced" | "mas
 
 function sectionDescription(section: PracticeSection): string {
   if (section === "grammar") {
-    return "Grammar prompts keep the same centered card proportions but swap in rule-focused recall tasks.";
+    return "Review grammar patterns with one focused recall card at a time.";
   }
   if (section === "phrases") {
-    return "Phrase cards run through the sentence-card contract while staying grouped under the user-facing Phrases section.";
+    return "Practice useful Finnish phrases with the same centered card flow.";
   }
-  return "Vocabulary cards use the centered recall layout with backend-authored prompts and progress.";
+  return "Build your Finnish vocabulary with a clear card-by-card learning rhythm.";
+}
+
+function practiceModeLabel(value: boolean): string {
+  return value ? "Adaptive" : "Standard";
+}
+
+function sessionStatusLabel(value: string | null | undefined): string {
+  if (value === "completed") {
+    return "Complete";
+  }
+  if (value === "active") {
+    return "Active";
+  }
+  return "In progress";
 }
 
 function buildDots(answered: number, total: number): boolean[] {
   const ratio = total > 0 ? answered / total : 0;
   const activeCount = Math.max(1, Math.min(4, Math.ceil(ratio * 4)));
   return Array.from({ length: 4 }, (_, index) => index < activeCount);
+}
+
+function assertCardStructure(card: any): void {
+  const cardContent = String(card?.front_text || card?.word || "").trim();
+  if (!card?.state) {
+    throw new Error("Missing card.state");
+  }
+  if (!cardContent) {
+    throw new Error("Missing card.content");
+  }
+  if (!card?.content_type) {
+    throw new Error("Missing card.content_type");
+  }
+  assertKnownBackendContentType(String(card.content_type));
+  if (!UI_INVARIANTS.CARD_STATES.includes(card.state)) {
+    throw new Error(`Unknown card.state: ${card.state}`);
+  }
 }
 
 export function CardsScreen(props: { section?: PracticeSection }) {
@@ -75,12 +108,17 @@ export function CardsScreen(props: { section?: PracticeSection }) {
   const progressRatio = Math.min(1, answeredCount / totalCards);
   const dots = buildDots(answeredCount, totalCards);
 
+  if (card) {
+    assertCardStructure(card);
+  }
+
   useEffect(() => {
     setIsFlipped(false);
   }, [cardKey]);
 
   useEffect(() => {
     const nextDefaults = sectionDefaults(currentSection);
+    assertKnownBackendContentType(nextDefaults.contentType);
     setDomain(nextDefaults.domain);
     setContentType(nextDefaults.contentType);
     setRuntime(null);
@@ -101,6 +139,7 @@ export function CardsScreen(props: { section?: PracticeSection }) {
     setBusy(true);
     setError(null);
     setFeedback(null);
+    assertKnownBackendContentType(contentType);
     const response = adaptive
       ? await startAdaptiveCardsSession({ domain, content_type: contentType, profession: "none", level, limit: 10 })
       : await startCardsSession({ domain, content_type: contentType, profession: "none", level });
@@ -204,57 +243,82 @@ export function CardsScreen(props: { section?: PracticeSection }) {
   }
 
   return (
-    <div className="practice-screen">
-      <section className="practice-intro-card">
-        <div>
+    <ScreenScaffold
+      className="practice-screen"
+      centerContent={Boolean(runtime)}
+      header={
+        <div className="screen-heading">
           <span className="eyebrow">Practice</span>
           <h1 className="hero-title">{defaults.label}</h1>
           <p className="hero-subtitle">{sectionDescription(currentSection)}</p>
         </div>
-        <div className="practice-session-grid">
-          <Field label="Domain" value={domain} onChange={(event) => setDomain(event.target.value)} />
-          <Field label="Content type" value={contentType} onChange={(event) => setContentType(event.target.value)} />
-          <Field label="Level" value={level} onChange={(event) => setLevel(event.target.value)} />
-          <label className="field">
-            <span>Session mode</span>
-            <select value={adaptive ? "yes" : "no"} onChange={(event) => setAdaptive(event.target.value === "yes")}>
-              <option value="no">Standard</option>
-              <option value="yes">Adaptive</option>
-            </select>
-          </label>
-        </div>
-        <div className="practice-chip-row">
-          <span className="practice-chip">8px rhythm</span>
-          <span className="practice-chip">{adaptive ? "Adaptive session" : "Linear session"}</span>
-          <span className="practice-chip">One card at a time</span>
-        </div>
-        <div className="actions-row">
-          <button type="button" className="practice-primary-action" onClick={start} disabled={busy}>
-            {busy ? "Starting..." : runtime ? "Restart session" : "Start session"}
-          </button>
-          {runtime ? (
-            <button type="button" className="practice-secondary-action" onClick={next} disabled={busy}>
-              Refresh current card
-            </button>
-          ) : null}
-        </div>
-        {error ? <StatusBanner tone="error" title="Practice error" message={error} /> : null}
-      </section>
-
-      {runtime ? (
-        <section className="practice-runtime-shell">
-          <div className="practice-topbar">
-            <button type="button" className="recall-pill" onClick={toggleFlip}>
-              <span aria-hidden="true">⟲</span>
-              <span>Recall</span>
-            </button>
-            <button type="button" className="recall-pill" onClick={toggleFlip}>
-              <span aria-hidden="true">⟲</span>
-              <span>{isFlipped ? "Prompt" : "Answer"}</span>
+      }
+      actions={
+        !runtime ? (
+          <div className="actions-row">
+            <button type="button" className="practice-primary-action" onClick={start} disabled={busy}>
+              {busy ? "Starting..." : "Start session"}
             </button>
           </div>
+        ) : (
+          <div className="actions-row practice-runtime-actions">
+            {isFlipped ? (
+              <button
+                type="button"
+                className="practice-secondary-action practice-submit-action"
+                onClick={submit}
+                disabled={busy || !answer}
+              >
+                {busy ? "Submitting..." : "Submit answer"}
+              </button>
+            ) : null}
+            <button type="button" className="practice-skip-button" onClick={skip} disabled={busy}>
+              Skip
+            </button>
+          </div>
+        )
+      }
+    >
+      {!runtime && (
+        <section className="practice-intro-card primary-card">
+          <div>
+            <span className="eyebrow">Practice</span>
+            <h2>{defaults.label}</h2>
+            <p className="hero-subtitle">{sectionDescription(currentSection)}</p>
+          </div>
+          <div className="practice-session-grid">
+            <Field label="Level" value={level} onChange={(event) => setLevel(event.target.value)} />
+            <label className="field">
+              <span>Learning mode</span>
+              <select value={adaptive ? "yes" : "no"} onChange={(event) => setAdaptive(event.target.value === "yes")}>
+                <option value="no">Standard</option>
+                <option value="yes">Adaptive</option>
+              </select>
+            </label>
+          </div>
+          <div className="practice-chip-row">
+            <span className="practice-chip">8px rhythm</span>
+            <span className="practice-chip">{practiceModeLabel(adaptive)} session</span>
+            <span className="practice-chip">One card at a time</span>
+          </div>
+          {error ? <StatusBanner tone="error" title="Practice error" message={error} /> : null}
+        </section>
+      )}
 
-          <div className="practice-card-stage">
+      {runtime ? (
+        <div className="practice-runtime-root">
+          <div className="practice-card-stage primary-card">
+            <div className="practice-topbar">
+              <button type="button" className="recall-pill" onClick={toggleFlip}>
+                <span aria-hidden="true">⟲</span>
+                <span>Recall</span>
+              </button>
+              <button type="button" className="recall-pill" onClick={toggleFlip}>
+                <span aria-hidden="true">⟲</span>
+                <span>{isFlipped ? "Prompt" : "Answer"}</span>
+              </button>
+            </div>
+
             {card ? (
               <div key={cardKey} className="practice-card-wrapper">
                 <div className={`practice-card-shell ${cardState.tone}`.trim()}>
@@ -279,14 +343,6 @@ export function CardsScreen(props: { section?: PracticeSection }) {
                           <div className="practice-answer-panel">
                             <p className="practice-answer-prompt">{followUpPrompt(card)}</p>
                             {renderAnswerComposer()}
-                            <button
-                              type="button"
-                              className="practice-secondary-action practice-submit-action"
-                              onClick={submit}
-                              disabled={busy || !answer}
-                            >
-                              {busy ? "Submitting..." : "Submit answer"}
-                            </button>
                           </div>
                         ) : (
                           <p className="practice-card-hint">Tap the recall controls to reveal the answer side and submit your response.</p>
@@ -295,9 +351,7 @@ export function CardsScreen(props: { section?: PracticeSection }) {
 
                       <div className="practice-card-footer">
                         <div className="practice-card-divider" />
-                        <button type="button" className="practice-skip-button" onClick={skip} disabled={busy}>
-                          Skip
-                        </button>
+                        <div className="practice-card-action-note">Use the action zone below to skip or submit.</div>
                       </div>
                     </section>
                   </div>
@@ -322,20 +376,21 @@ export function CardsScreen(props: { section?: PracticeSection }) {
               </div>
               <div className="practice-progress-copy">
                 <span>{answeredCount}/{totalCards} complete</span>
-                <strong>{runtime.status}</strong>
+                <strong>{sessionStatusLabel(runtime.status)}</strong>
               </div>
             </div>
           </div>
-        </section>
+          {error ? <StatusBanner tone="error" title="Practice error" message={error} /> : null}
+        </div>
       ) : null}
 
-      {feedback ? (
+      {feedback && !runtime ? (
         <StatusBanner
           tone={feedback.correct ? "success" : "error"}
           title={feedback.correct ? "Correct answer" : "Incorrect answer"}
           message={`${feedback.explanation} Next action: ${feedback.next_recommended_action}.`}
         />
       ) : null}
-    </div>
+    </ScreenScaffold>
   );
 }

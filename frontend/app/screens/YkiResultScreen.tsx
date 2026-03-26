@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { Award, RefreshCw, RotateCcw } from "lucide-react";
 
 import { Button } from "../components/Button";
 import { Panel } from "../components/Panel";
+import { ScreenScaffold } from "../components/ScreenScaffold";
+import { StatusBanner } from "../components/StatusBanner";
 import { fetchYkiCertificate } from "../services/ykiService";
 
 function activeSectionLabel(runtime: any): string {
@@ -13,6 +16,23 @@ function activeSectionLabel(runtime: any): string {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function summarizeCertificate(certificate: any): Array<{ label: string; value: string }> {
+  if (!certificate || typeof certificate !== "object") {
+    return [];
+  }
+  const candidates: Array<{ label: string; value: unknown }> = [
+    { label: "Overall result", value: certificate.result || certificate.overall_result || certificate.summary },
+    { label: "Level", value: certificate.level || certificate.level_band || certificate.assessed_level },
+    { label: "Listening", value: certificate.listening || certificate.listening_result },
+    { label: "Reading", value: certificate.reading || certificate.reading_result },
+    { label: "Writing", value: certificate.writing || certificate.writing_result },
+    { label: "Speaking", value: certificate.speaking || certificate.speaking_result },
+  ];
+  return candidates
+    .filter((item) => typeof item.value === "string" && item.value.trim().length > 0)
+    .map((item) => ({ label: item.label, value: String(item.value) }));
 }
 
 export function YkiResultScreen(props: {
@@ -44,44 +64,77 @@ export function YkiResultScreen(props: {
   }
 
   return (
-    <div className="screen-stack yki-flow-screen">
-      <Panel className="flow-panel">
-        <span className="eyebrow">YKI Result</span>
-        <h1 className="hero-title">Exam flow complete</h1>
-        <p className="hero-subtitle">The runtime has moved out of the active screen. Review the result summary here or return to the intro screen.</p>
+    <ScreenScaffold
+      className="yki-flow-screen"
+      header={
+        <div className="screen-heading">
+          <span className="eyebrow">YKI Results</span>
+          <h1 className="hero-title">Your exam is complete</h1>
+          <p className="hero-subtitle">Review your result summary here, then start another exam whenever you are ready.</p>
+        </div>
+      }
+      actions={
+        <div className="actions-row">
+          <Button tone="secondary" onClick={props.onBackToIntro}>
+            <RotateCcw size={16} aria-hidden="true" />
+            Start another exam
+          </Button>
+          {props.runtime ? (
+            <Button onClick={loadCertificate} disabled={busy}>
+              <RefreshCw size={16} aria-hidden="true" />
+              {busy ? "Loading..." : "Load results"}
+            </Button>
+          ) : null}
+        </div>
+      }
+    >
+      <Panel className="flow-panel primary-card">
+        <span className="eyebrow">Result summary</span>
+        <p className="hero-subtitle">This screen gives you the final overview after the exam flow ends.</p>
 
         {props.runtime ? (
           <div className="meta-grid">
             <div className="meta-item">
-              <span className="eyebrow">Session</span>
-              <strong>{props.runtime.session_id}</strong>
+              <span className="eyebrow">Exam status</span>
+              <strong>Complete</strong>
+              <p className="muted">Your exam session has finished successfully.</p>
             </div>
             <div className="meta-item">
-              <span className="eyebrow">Section</span>
+              <span className="eyebrow">Last section</span>
               <strong>{activeSectionLabel(props.runtime)}</strong>
+              <p className="muted">This was the final stage shown before your result summary.</p>
             </div>
             <div className="meta-item">
-              <span className="eyebrow">Runtime schema</span>
-              <strong>{props.runtime.runtime_schema_version || "unknown"}</strong>
+              <span className="eyebrow">Next step</span>
+              <strong>Review and restart</strong>
+              <p className="muted">Load your result summary below or return to the exam home screen.</p>
             </div>
           </div>
         ) : null}
 
-        {error ? <div className="flow-error-card">{error}</div> : null}
+        {error ? <StatusBanner tone="error" title="Result error" message={error} /> : null}
 
-        {certificate ? <pre className="json-preview">{JSON.stringify(certificate, null, 2)}</pre> : null}
-
-        <div className="actions-row">
-          <Button tone="secondary" onClick={props.onBackToIntro}>
-            Back to YKI home
-          </Button>
-          {props.runtime ? (
-            <Button onClick={loadCertificate} disabled={busy}>
-              {busy ? "Loading..." : "Load certificate"}
-            </Button>
-          ) : null}
-        </div>
+        {certificate ? (
+          <div className="debug-summary-grid">
+            {summarizeCertificate(certificate).length ? (
+              summarizeCertificate(certificate).map((item) => (
+                <div className="meta-item" key={item.label}>
+                  <span className="eyebrow">{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              ))
+            ) : (
+              <div className="meta-item">
+                <span className="eyebrow">Result ready</span>
+                <strong>
+                  <Award size={16} aria-hidden="true" /> Summary loaded
+                </strong>
+                <p className="muted">Your result information is available for this completed exam.</p>
+              </div>
+            )}
+          </div>
+        ) : null}
       </Panel>
-    </div>
+    </ScreenScaffold>
   );
 }

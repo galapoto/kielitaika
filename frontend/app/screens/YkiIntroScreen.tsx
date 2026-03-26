@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
+import { Play, RotateCcw } from "lucide-react";
 
 import { Button } from "../components/Button";
 import { Panel } from "../components/Panel";
+import { ScreenScaffold } from "../components/ScreenScaffold";
+import { StatusBanner } from "../components/StatusBanner";
 import type { SubscriptionStatus } from "../state/types";
 import { startYkiSession } from "../services/ykiService";
 
@@ -39,12 +42,34 @@ export function YkiIntroScreen(props: {
   }
 
   return (
-    <div className="screen-stack yki-flow-screen">
-      <Panel className="flow-panel yki-intro-panel">
-        <span className="eyebrow">YKI Flow</span>
-        <h1 className="hero-title">Engine-backed YKI exam</h1>
+    <ScreenScaffold
+      className="yki-flow-screen"
+      header={
+        <div className="screen-heading">
+          <span className="eyebrow">YKI Exam</span>
+          <h1 className="hero-title">Prepare for your YKI exam</h1>
+          <p className="hero-subtitle">Choose your level, review your access, and continue into the next exam stage when you are ready.</p>
+        </div>
+      }
+      actions={
+        <div className="actions-row">
+          <Button onClick={start} disabled={busy}>
+            <Play size={16} aria-hidden="true" />
+            {busy ? "Starting..." : "Start exam"}
+          </Button>
+          {props.restoredRuntime ? (
+            <Button tone="secondary" onClick={props.onResume} disabled={busy}>
+              <RotateCcw size={16} aria-hidden="true" />
+              Continue saved exam
+            </Button>
+          ) : null}
+        </div>
+      }
+    >
+      <Panel className="flow-panel yki-intro-panel primary-card">
+        <span className="eyebrow">Exam overview</span>
         <p className="hero-subtitle">
-          One active exam screen at a time. Start from the intro screen, continue inside the runtime, and finish on the result screen.
+          Move through the exam one stage at a time. You can start fresh or continue from your saved progress.
         </p>
 
         <div className="meta-grid">
@@ -61,7 +86,7 @@ export function YkiIntroScreen(props: {
           <div className="meta-item">
             <span className="eyebrow">Resume</span>
             <strong>{props.restoredRuntime ? "Available" : "None"}</strong>
-            <p className="muted">{props.restoredRuntime ? `Session ${props.restoredRuntime.session_id}` : "No saved YKI runtime was restored."}</p>
+            <p className="muted">{props.restoredRuntime ? "You can continue from your saved exam." : "No saved exam was found for this account."}</p>
           </div>
         </div>
 
@@ -83,19 +108,8 @@ export function YkiIntroScreen(props: {
           })}
         </div>
 
-        {error ? <div className="flow-error-card">{error}</div> : null}
-
-        <div className="actions-row">
-          <Button onClick={start} disabled={busy}>
-            {busy ? "Starting..." : "Start exam"}
-          </Button>
-          {props.restoredRuntime ? (
-            <Button tone="secondary" onClick={props.onResume} disabled={busy}>
-              Resume saved runtime
-            </Button>
-          ) : null}
-        </div>
+        {error ? <StatusBanner tone="error" title="Exam unavailable" message={error} /> : null}
       </Panel>
-    </div>
+    </ScreenScaffold>
   );
 }

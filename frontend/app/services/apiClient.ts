@@ -1,5 +1,6 @@
 import { clearAuthSession, loadAuthSession, saveAuthSession } from "./storage";
 import { assertApiEnvelope, createClientErrorEnvelope } from "./contractGuard";
+import { logApiFailure } from "./debugLogger";
 import type { ApiEnvelope, PersistedAuthSession } from "../state/types";
 
 const API_BASE_URL = ((import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || "").replace(/\/+$/, "");
@@ -106,11 +107,21 @@ export async function apiRequest<T>(options: RequestOptions): Promise<ApiEnvelop
       body: options.formData ? options.formData : options.body ? JSON.stringify(options.body) : undefined,
     });
   } catch {
+    logApiFailure(options.path, {
+      method: options.method,
+      stage: "transport",
+      message: "Network request failed.",
+    });
     return transportErrorEnvelope("Network request failed.") as ApiEnvelope<T>;
   }
 
   const rawPayload = await response.json().catch(() => null);
   if (!rawPayload) {
+    logApiFailure(options.path, {
+      method: options.method,
+      stage: "invalid-json",
+      status: response.status,
+    });
     return createClientErrorEnvelope("CONTRACT_VIOLATION", "Invalid API response.", false) as ApiEnvelope<T>;
   }
 
@@ -119,6 +130,12 @@ export async function apiRequest<T>(options: RequestOptions): Promise<ApiEnvelop
     payload = assertApiEnvelope<T>(rawPayload);
   } catch (error) {
     console.error("API contract violation", { path: options.path, error });
+    logApiFailure(options.path, {
+      method: options.method,
+      stage: "contract-validation",
+      status: response.status,
+      error,
+    });
     return createClientErrorEnvelope("CONTRACT_VIOLATION", "API response failed contract validation.", false, {
       path: options.path,
     }) as ApiEnvelope<T>;
@@ -137,6 +154,17 @@ export async function apiRequest<T>(options: RequestOptions): Promise<ApiEnvelop
       return apiRequest<T>({ ...options, retrying: true });
     }
     return payload;
+  }
+
+  if (!payload.ok) {
+    logApiFailure(options.path, {
+      method: options.method,
+      status: response.status,
+      code: payload.error.code,
+      message: payload.error.message,
+      request_id: payload.meta.request_id,
+      retryable: payload.error.retryable,
+    });
   }
 
   return payload;
