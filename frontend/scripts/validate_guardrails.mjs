@@ -15,9 +15,16 @@ const checks = [
     patterns: ["isPersistedAuthSession", "isYkiRuntimeCache", "Rejected incomplete auth session cache payload."],
   },
   {
-    file: "app/screens/YkiExamScreen.tsx",
-    patterns: ["fetchYkiSession", "buildRuntimeGuardSignature", "YKI flow guardrail triggered"],
-    forbidden: ["setScreenIndex(", "Next screen", "Continue to next screen"],
+    file: "app/utils/validateRuntime.ts",
+    patterns: ["RUNTIME_CONTRACT_VERSION", "Runtime payload missing sections", "Runtime payload missing responses"],
+  },
+  {
+    file: "app/exam_runtime/hooks/useExamRuntimeState.ts",
+    patterns: ["submitYkiAnswer", "submitYkiWriting", "submitYkiExam", "currentIndex"],
+  },
+  {
+    file: "app/exam_runtime/screens/ExamRuntimeScreen.tsx",
+    patterns: ["useExamRuntimeState", "QuestionList", 'className="exam-content"', "RuntimeGuard"],
   },
   {
     file: "app/components/GlobalErrorBoundary.tsx",

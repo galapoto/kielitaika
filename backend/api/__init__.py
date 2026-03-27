@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from .audio_routes import build_audio_router
 from .auth_routes import build_auth_router
 from .cards_routes import build_cards_router
 from .payment_routes import build_payment_router
@@ -14,6 +15,7 @@ from .yki_routes import build_yki_router
 
 def all_routers() -> list[APIRouter]:
     return [
+        build_audio_router(),
         build_auth_router(),
         build_subscription_router(),
         build_payment_router(),

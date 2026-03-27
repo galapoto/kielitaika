@@ -9,6 +9,7 @@ from ..models.api_models import (
     AudioReferenceRequest,
     GenerateConversationReplyRequest,
     ObjectiveAnswerRequest,
+    SpeakingAnswerRequest,
     StartConversationRequest,
     StartExamRequest,
     SubmitConversationTurnRequest,
@@ -26,6 +27,7 @@ from ..services.yki_service import (
     submit_yki_answer,
     submit_yki_audio,
     submit_yki_exam,
+    submit_yki_speaking,
     submit_yki_turn,
     submit_yki_writing,
 )
@@ -66,6 +68,18 @@ def build_yki_router() -> APIRouter:
             session_id=session_id,
             task_id=payload.task_id,
             audio_ref=payload.audio_ref,
+        )
+        return success_payload(data=data, request_id=get_request_id(request))
+
+    @router.post("/yki/sessions/{session_id}/speaking")
+    async def submit_yki_speaking_route(request: Request, session_id: str, payload: SpeakingAnswerRequest, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        user, _ = current_user_from_authorization(authorization)
+        data = await submit_yki_speaking(
+            user_id=user["user_id"],
+            session_id=session_id,
+            item_id=payload.item_id,
+            audio_ref=payload.audio_ref,
+            duration_sec=payload.duration_sec,
         )
         return success_payload(data=data, request_id=get_request_id(request))
 

@@ -8,8 +8,9 @@ import { StatusBanner } from "../components/StatusBanner";
 import { fetchYkiCertificate } from "../services/ykiService";
 
 function activeSectionLabel(runtime: any): string {
-  const section = runtime?.metadata?.timing?.active_section;
-  if (!section) {
+  const sections = Array.isArray(runtime?.sections) ? runtime.sections : [];
+  const section = sections.length ? sections[sections.length - 1]?.section_type : null;
+  if (!section || typeof section !== "string") {
     return "Completed";
   }
   return String(section)

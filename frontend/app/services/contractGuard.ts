@@ -108,12 +108,11 @@ export function isPersistedAuthSession(value: unknown): value is PersistedAuthSe
 export function isYkiRuntimeCache(value: unknown): value is YkiRuntimeCache {
   return (
     isRecord(value) &&
-    value.schema_version === "1" &&
+    value.schema_version === "4" &&
     isNonEmptyString(value.exam_session_id) &&
     (value.level_band === "A1_A2" || value.level_band === "B1_B2" || value.level_band === "C1_C2") &&
-    isNonEmptyString(value.current_screen_key) &&
     isNonEmptyString(value.runtime_contract_version) &&
-    isRecord(value.answers) &&
+    isNonEmptyString(value.current_item_id) &&
     isNonEmptyString(value.saved_at)
   );
 }

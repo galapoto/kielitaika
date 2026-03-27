@@ -28,7 +28,11 @@ def map_engine_error(*, response: EngineResponse) -> None:
 
 def store_yki_session(*, user_id: str, runtime: dict[str, Any]) -> None:
     session_id = str(runtime.get("session_id") or "").strip()
-    token = str((runtime.get("metadata") or {}).get("engine_session_token") or "").strip()
+    token = str(
+        runtime.get("engine_session_token")
+        or (runtime.get("metadata") or {}).get("engine_session_token")
+        or ""
+    ).strip()
     if not session_id:
         return
     with STORE.locked(("yki_sessions", session_id)):

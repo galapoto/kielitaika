@@ -1,9 +1,8 @@
 import { clearAuthSession, loadAuthSession, saveAuthSession } from "./storage";
 import { assertApiEnvelope, createClientErrorEnvelope } from "./contractGuard";
 import { logApiFailure } from "./debugLogger";
+import { API_URL } from "../config/env";
 import type { ApiEnvelope, PersistedAuthSession } from "../state/types";
-
-const API_BASE_URL = ((import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || "").replace(/\/+$/, "");
 
 function transportErrorEnvelope(message: string): ApiEnvelope<never> {
   return createClientErrorEnvelope("TRANSPORT_ERROR", message, true);
@@ -101,7 +100,7 @@ export async function apiRequest<T>(options: RequestOptions): Promise<ApiEnvelop
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${options.path}`, {
+    response = await fetch(`${API_URL}${options.path}`, {
       method: options.method,
       headers,
       body: options.formData ? options.formData : options.body ? JSON.stringify(options.body) : undefined,

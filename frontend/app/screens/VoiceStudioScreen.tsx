@@ -6,6 +6,7 @@ import { Field } from "../components/Field";
 import { Panel } from "../components/Panel";
 import { ScreenScaffold } from "../components/ScreenScaffold";
 import { StatusBanner } from "../components/StatusBanner";
+import AudioPlayer from "../exam_runtime/components/AudioPlayer";
 import { useRecorder } from "../hooks/useRecorder";
 import { analyzePronunciation, requestTts, uploadVoiceTranscription } from "../services/voiceService";
 
@@ -193,7 +194,7 @@ export function VoiceStudioScreen(props: { title?: string; subtitle?: string; mo
             <span className={`state-pill ${recorder.state}`}>{formatRecorderState(recorder.state)}</span>
             <span className="muted">{recorder.durationMs ? `${(recorder.durationMs / 1000).toFixed(1)}s captured` : "Record when you're ready, then upload the clip to continue."}</span>
           </div>
-          {recorder.audioUrl ? <audio className="audio-player" src={recorder.audioUrl} controls /> : null}
+          {recorder.audioUrl ? <AudioPlayer src={recorder.audioUrl} /> : null}
           {recorder.error ? <StatusBanner tone="error" title="Microphone error" message={recorder.error} /> : null}
           {error ? <StatusBanner tone="error" title="Voice practice error" message={error} /> : null}
         </div>
@@ -221,7 +222,7 @@ export function VoiceStudioScreen(props: { title?: string; subtitle?: string; mo
 
       <Panel title="Model audio" subtitle="Listen to a clean reference version of the same phrase." className="secondary-card">
         <Field label="Text" value={ttsText} onChange={(event) => setTtsText(event.target.value)} />
-        {modelAudioUrl ? <audio className="audio-player" src={modelAudioUrl} controls /> : <p className="muted">Generate model audio from the action area after pronunciation feedback is ready.</p>}
+        {modelAudioUrl ? <AudioPlayer src={modelAudioUrl} /> : <p className="muted">Generate model audio from the action area after pronunciation feedback is ready.</p>}
       </Panel>
     </ScreenScaffold>
   );

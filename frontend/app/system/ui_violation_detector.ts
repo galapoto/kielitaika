@@ -220,7 +220,7 @@ function validateRegressionScenarios(): Violation[] {
   const css = read(GLOBAL_CSS_FILE);
   const dashboard = read(path.join(APP_ROOT, "screens", "DashboardScreen.tsx"));
   const cards = read(CARDS_FILE);
-  const ykiExam = read(path.join(APP_ROOT, "screens", "YkiExamScreen.tsx"));
+  const ykiExam = read(path.join(APP_ROOT, "exam_runtime", "screens", "ExamRuntimeScreen.tsx"));
   const field = read(path.join(APP_ROOT, "components", "Field.tsx"));
   const statusBanner = read(path.join(APP_ROOT, "components", "StatusBanner.tsx"));
   const violations: Violation[] = [];
@@ -241,8 +241,11 @@ function validateRegressionScenarios(): Violation[] {
     violations.push({ file: relative(GLOBAL_CSS_FILE), reason: "Locked practice-card dimensions and bounded-home layout rules are missing." });
   }
 
-  if (!ykiExam.includes(`className="${UI_INVARIANTS.EXAM_SCROLL_CONTAINER_CLASS}"`) || !ykiExam.includes('contentClassName="exam-content-zone"')) {
-    violations.push({ file: relative(path.join(APP_ROOT, "screens", "YkiExamScreen.tsx")), reason: "YKI runtime must isolate scrolling inside the exam-content container." });
+  if (
+    !ykiExam.includes(`className="${UI_INVARIANTS.EXAM_SCROLL_CONTAINER_CLASS}"`) ||
+    !ykiExam.includes('className="screen-shell yki-flow-screen"')
+  ) {
+    violations.push({ file: relative(path.join(APP_ROOT, "exam_runtime", "screens", "ExamRuntimeScreen.tsx")), reason: "YKI runtime must isolate scrolling inside the exam-content container." });
   }
 
   if (!field.includes("field-label") || !field.includes("lucide-react")) {

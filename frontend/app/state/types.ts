@@ -82,12 +82,11 @@ export type RoleplaySessionCache = {
 };
 
 export type YkiRuntimeCache = {
-  schema_version: "1";
+  schema_version: "4";
   exam_session_id: string;
   level_band: "A1_A2" | "B1_B2" | "C1_C2";
-  current_screen_key: string;
   runtime_contract_version: string;
-  answers: Record<string, unknown>;
+  current_item_id: string;
   saved_at: string;
 };
 

@@ -96,7 +96,8 @@ class StartExamRequest(BaseModel):
 
 
 class ObjectiveAnswerRequest(BaseModel):
-    answer_id: str
+    item_id: str
+    question_id: str
     answer: int | bool | str
 
 
@@ -108,6 +109,12 @@ class WritingAnswerRequest(BaseModel):
 class AudioReferenceRequest(BaseModel):
     task_id: str
     audio_ref: str
+
+
+class SpeakingAnswerRequest(BaseModel):
+    item_id: str
+    audio_ref: str
+    duration_sec: float
 
 
 class StartConversationRequest(BaseModel):

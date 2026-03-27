@@ -39,3 +39,88 @@
   > $$
 
   
+
+## ▶️ Step A — Start backend
+
+Go to your backend folder:
+
+```
+cd backend
+```
+
+Run:
+
+```
+python3 app.py
+```
+
+or if you are using FastAPI + uvicorn:
+
+```
+uvicorn app:app --reload --port 8000
+```
+
+👉 What should happen:
+
+- Server starts (usually on `http://localhost:8000`)
+- No errors about missing `ELEVENLABS_API_KEY`
+
+------
+
+## ▶️ Step B — Start frontend
+
+In another terminal:
+
+```
+cd frontend
+npm install   # only if not already done
+npm run dev
+```
+
+👉 You’ll get something like:
+
+```
+http://localhost:5173
+```
+
+Open that in browser.
+
+------
+
+## 🔁 Step C — Check proxy (important)
+
+You said:
+
+> Vite proxies generation requests
+
+So confirm in:
+
+```
+frontend/vite.config.ts
+```
+
+You have something like:
+
+```
+server: {
+  proxy: {
+    '/tts': 'http://localhost:8000'
+  }
+}
+```
+
+👉 If this is wrong, TTS won’t work.
+
+------
+
+## 🧪 Step D — Test TTS quickly
+
+Open your app and:
+
+1. Create/load a document
+2. Trigger TTS generation (whatever UI action you built)
+3. Then check:
+
+```
+frontend/public/audio-cache/
+```

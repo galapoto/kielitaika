@@ -18,7 +18,10 @@ export async function fetchYkiSession(sessionId: string): Promise<ApiEnvelope<an
   });
 }
 
-export async function submitYkiAnswer(sessionId: string, payload: { answer_id: string; answer: string | boolean | number }): Promise<ApiEnvelope<any>> {
+export async function submitYkiAnswer(
+  sessionId: string,
+  payload: { item_id: string; question_id: string; answer: string | boolean | number },
+): Promise<ApiEnvelope<any>> {
   return apiRequest<any>({
     method: "POST",
     path: `/api/v1/yki/sessions/${sessionId}/answers`,
@@ -40,6 +43,18 @@ export async function submitYkiAudio(sessionId: string, payload: { task_id: stri
   return apiRequest<any>({
     method: "POST",
     path: `/api/v1/yki/sessions/${sessionId}/audio`,
+    auth: true,
+    body: payload,
+  });
+}
+
+export async function submitYkiSpeaking(
+  sessionId: string,
+  payload: { item_id: string; audio_ref: string; duration_sec: number },
+): Promise<ApiEnvelope<any>> {
+  return apiRequest<any>({
+    method: "POST",
+    path: `/api/v1/yki/sessions/${sessionId}/speaking`,
     auth: true,
     body: payload,
   });

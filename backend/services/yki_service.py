@@ -51,6 +51,22 @@ async def submit_yki_audio(*, user_id: str, session_id: str, task_id: str, audio
     return response.payload
 
 
+async def submit_yki_speaking(*, user_id: str, session_id: str, item_id: str, audio_ref: str, duration_sec: float) -> dict[str, Any]:
+    get_yki_session_record(user_id=user_id, session_id=session_id)
+    audio_file_path = resolve_voice_ref(audio_ref=audio_ref, expected_session_id=session_id, expected_task_id=item_id)
+    response = await engine_request(
+        method="POST",
+        path=f"/exam/{session_id}/speaking",
+        payload={
+            "item_id": item_id,
+            "audio_file_path": audio_file_path,
+            "duration_sec": duration_sec,
+        },
+    )
+    map_engine_error(response=response)
+    return response.payload
+
+
 async def start_yki_conversation(*, user_id: str, session_id: str, task_id: str) -> dict[str, Any]:
     record = get_yki_session_record(user_id=user_id, session_id=session_id)
     response = await engine_request(

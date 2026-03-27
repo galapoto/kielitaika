@@ -263,7 +263,8 @@ a {
   display: flex;
   flex-direction: column;
   width: 100%;
-  align-items: center;
+  height: 100%;
+  align-items: stretch;
   min-height: 0;
   padding: var(--space-3);
   overflow: hidden;
@@ -277,6 +278,7 @@ a {
 }
 
 .route-stage {
+  height: 100%;
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -288,11 +290,12 @@ a {
 
 .screen-shell {
   width: min(100%, 1120px);
+  height: 100%;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: var(--space-3);
   overflow: hidden;
 }
@@ -308,6 +311,7 @@ a {
 }
 
 .screen-content-zone {
+  height: 100%;
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
@@ -1398,8 +1402,10 @@ a {
 .exam-shell-panel {
   display: flex;
   flex: 1 1 auto;
+  height: 100%;
   min-height: 0;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .exam-content {
@@ -1412,10 +1418,66 @@ a {
   padding-right: var(--space-1);
 }
 
+.exam-shell-panel > *:first-child,
+.exam-shell-panel > *:last-child {
+  flex-shrink: 0;
+}
+
 .flow-header {
   display: flex;
   align-items: start;
   justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.exam-header,
+.exam-header-copy,
+.exam-header-meta,
+.exam-actions,
+.exam-banner-zone,
+.prompt-material {
+  display: flex;
+}
+
+.exam-header {
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.exam-header-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exam-header-copy .hero-title {
+  margin: 0;
+  font-size: 1.9rem;
+}
+
+.exam-header-meta {
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.exam-banner-zone {
+  padding: 0 var(--space-3);
+}
+
+.exam-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.prompt-material {
+  flex-direction: column;
   gap: var(--space-2);
 }
 

@@ -38,6 +38,15 @@ def transcribe_audio(
         task_id=task_id,
         turn_id=turn_id,
     )
+    if mode == "yki_exam":
+        return {
+            "ok": True,
+            "audio_ref": audio_ref,
+            "transcript": None,
+            "mode": mode,
+            "locale": locale,
+            "duration_ms": duration_ms,
+        }
     raise AppError(
         503,
         "VOICE_STT_UNAVAILABLE",
