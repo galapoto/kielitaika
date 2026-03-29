@@ -1,0 +1,11 @@
+{
+  "extends": "./apps/client/node_modules/expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ui/*": ["packages/ui/*"],
+      "@core/*": ["packages/core/*"]
+    }
+  }
+}
