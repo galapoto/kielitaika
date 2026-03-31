@@ -12,6 +12,8 @@ import {
   type LearningDebugState,
   type LearningModulesData,
 } from "../features/learning/services/learningService";
+import { useNetworkStore } from "./networkStore";
+import { persistLearningSession } from "./sessionPersistence";
 
 type LearningRuntimeState = {
   debugState: LearningDebugState | null;
@@ -25,6 +27,7 @@ type Props = {
 };
 
 export default function LearningRoute({ onBack }: Props) {
+  const isOffline = useNetworkStore((state) => state.isOffline);
   const [state, setState] = useState<LearningRuntimeState>({
     debugState: null,
     errorMessage: null,
@@ -45,6 +48,13 @@ export default function LearningRoute({ onBack }: Props) {
     ]);
 
     if (modulesResponse.ok && modulesResponse.data && debugResponse.ok && debugResponse.data) {
+      await persistLearningSession({
+        decisionVersion: debugResponse.data.decisionVersion,
+        governanceStatus: debugResponse.data.governanceStatus,
+        governanceVersion: debugResponse.data.governanceVersion,
+        policyVersion: debugResponse.data.policyVersion,
+      });
+
       setState({
         debugState: debugResponse.data,
         errorMessage: null,
@@ -313,8 +323,17 @@ export default function LearningRoute({ onBack }: Props) {
         })) ?? []
       }
       loading={state.loading}
+      offlineMessage={
+        isOffline
+          ? "Offline mode: learning is read-only until backend state can be revalidated."
+          : null
+      }
       onBack={onBack}
       onRefresh={() => {
+        if (isOffline) {
+          return;
+        }
+
         void load();
       }}
       policyConstraintLogs={policyConstraintLogs}

@@ -48,6 +48,7 @@ type Props = {
   latestResult: LatestResultView | null;
   loading: boolean;
   notice: string | null;
+  offlineMessage: string | null;
   policyVersion: string | null;
   sessionId: string | null;
   task: TaskView | null;
@@ -82,6 +83,7 @@ export default function YkiPracticeScreen({
   latestResult,
   loading,
   notice,
+  offlineMessage,
   policyVersion,
   sessionId,
   task,
@@ -131,9 +133,10 @@ export default function YkiPracticeScreen({
             <Stack gap="xs">
               <Text variant="title">YKI Practice</Text>
               <Text tone="muted">No active governed practice session.</Text>
+              {offlineMessage ? <Text tone="muted">{offlineMessage}</Text> : null}
             </Stack>
           </Card>
-          <Button label="Refresh Session" onPress={onRefresh} />
+          {!offlineMessage ? <Button label="Refresh Session" onPress={onRefresh} /> : null}
           <Button label="Back Home" onPress={onBack} tone="surface" />
         </Stack>
       </ScreenContainer>
@@ -150,6 +153,7 @@ export default function YkiPracticeScreen({
             <MetadataRow label="Policy version" value={policyVersion} />
             <MetadataRow label="Governance status" value={governanceStatus} />
             {changeReference ? <MetadataRow label="Change reference" value={changeReference} /> : null}
+            {offlineMessage ? <Text tone="muted">{offlineMessage}</Text> : null}
             {untrustedStateMessage ? <Text tone="error">{untrustedStateMessage}</Text> : null}
             {notice ? <Text tone="muted">{notice}</Text> : null}
           </Stack>
@@ -157,7 +161,7 @@ export default function YkiPracticeScreen({
 
         <Card>
           <Stack gap="xs">
-            <Button label="Refresh Session" onPress={onRefresh} />
+            {!offlineMessage ? <Button label="Refresh Session" onPress={onRefresh} /> : null}
             <Button label="Back Home" onPress={onBack} tone="surface" />
           </Stack>
         </Card>
@@ -170,16 +174,25 @@ export default function YkiPracticeScreen({
               <Text>{task.prompt}</Text>
               {task.question ? <Text>{task.question}</Text> : null}
               {task.guidance ? <Text tone="muted">{task.guidance}</Text> : null}
-              {task.options?.length ? (
+              {task.options?.length && !offlineMessage ? (
                 <Stack gap="xs">
                   {task.options.map((option) => (
                     <Button key={option} label={option} onPress={() => onAnswerChange(option)} tone="surface" />
                   ))}
                 </Stack>
               ) : null}
-              <Input multiline onChangeText={onAnswerChange} placeholder="Write your answer" value={answer} />
-              {!canAdvance ? <Button label="Submit Answer" onPress={onSubmit} /> : null}
-              {canAdvance ? <Button label="Continue Playback" onPress={onAdvance} /> : null}
+              {offlineMessage ? (
+                <Stack gap="xxs">
+                  <Text tone="muted">Playback is locked until connection resumes.</Text>
+                  <Text tone="muted">
+                    Current answer: {answer || "No submitted answer captured for this task."}
+                  </Text>
+                </Stack>
+              ) : (
+                <Input multiline onChangeText={onAnswerChange} placeholder="Write your answer" value={answer} />
+              )}
+              {!canAdvance && !offlineMessage ? <Button label="Submit Answer" onPress={onSubmit} /> : null}
+              {canAdvance && !offlineMessage ? <Button label="Continue Playback" onPress={onAdvance} /> : null}
             </Stack>
           </Card>
         ) : (

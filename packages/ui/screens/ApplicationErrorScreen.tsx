@@ -26,7 +26,7 @@ export default function ApplicationErrorScreen({
       <Stack gap="sm">
         <Card>
           <Stack gap="xs">
-            <Text variant="title">Navigation Blocked</Text>
+            <Text variant="title">Runtime Blocked</Text>
             <Text tone="error">{code}</Text>
             <Text>{message}</Text>
           </Stack>

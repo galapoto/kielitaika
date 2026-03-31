@@ -64,6 +64,7 @@ type Props = {
   governanceVersion: string;
   improvementTrends: ImprovementTrend[];
   loading: boolean;
+  offlineMessage: string | null;
   policyConstraintLogs: string[];
   policySummary: string[];
   policyVersion: string;
@@ -114,6 +115,7 @@ export default function LearningScreen({
   governanceVersion,
   improvementTrends,
   loading,
+  offlineMessage,
   policyConstraintLogs,
   policySummary,
   policyVersion,
@@ -170,13 +172,14 @@ export default function LearningScreen({
             {changeReference ? (
               <MetadataRow label="Change reference" value={changeReference} />
             ) : null}
+            {offlineMessage ? <Text tone="muted">{offlineMessage}</Text> : null}
             {untrustedStateMessage ? <Text tone="error">{untrustedStateMessage}</Text> : null}
           </Stack>
         </Card>
 
         <Card>
           <Stack gap="xs">
-            <Button label="Refresh Learning" onPress={onRefresh} />
+            {!offlineMessage ? <Button label="Refresh Learning" onPress={onRefresh} /> : null}
             <Button label="Back Home" onPress={onBack} tone="surface" />
           </Stack>
         </Card>

@@ -6,6 +6,7 @@ import {
   clearPracticeSession,
   resumePracticeSession,
   startPracticeSession,
+  type YkiPracticeSession,
 } from "../features/yki-practice/services/ykiPracticeService";
 import {
   getLearningDebugState,
@@ -21,12 +22,22 @@ import { useAppFlowStore } from "./appFlowStore";
 import AuthRoute from "./AuthRoute";
 import HomeRoute from "./HomeRoute";
 import LearningRoute from "./LearningRoute";
+import { useNetworkStore } from "./networkStore";
 import type {
   GuardedScreen,
+  NavigationErrorCode,
   NavigationErrorState,
   RequestedScreen,
 } from "./navigationModel";
-import { getPathForScreen } from "./navigationModel";
+import { getPathForScreen, getStackForScreen } from "./navigationModel";
+import {
+  clearPersistedLearningSession,
+  clearPersistedNavigationState,
+  loadPersistedLearningSession,
+  loadPersistedNavigationState,
+  loadPersistedYkiSession,
+  persistNavigationState,
+} from "./sessionPersistence";
 import YkiPracticeRoute from "./YkiPracticeRoute";
 import { useAuthStore } from "./authStore";
 
@@ -34,46 +45,67 @@ type Props = {
   requestedScreen?: RequestedScreen;
 };
 
-async function validateLearningGuard() {
+type LearningGuardResult =
+  | {
+      decisionVersion: string;
+      governanceStatus: "governed" | "legacy_uncontrolled";
+      governanceVersion: string;
+      ok: true;
+      policyVersion: string;
+    }
+  | {
+      code: string;
+      ok: false;
+    };
+
+type YkiSessionValidationResult =
+  | {
+      data: YkiPracticeSession;
+      ok: true;
+    }
+  | {
+      code: NavigationErrorCode;
+      message: string;
+      ok: false;
+    };
+
+function isTransportError(code?: string) {
+  return code === "TRANSPORT_ERROR";
+}
+
+function toRequestedScreen(screen: GuardedScreen | RequestedScreen): RequestedScreen {
+  return screen === "home" ? "root" : screen;
+}
+
+async function validateLearningGuard(): Promise<LearningGuardResult> {
   const [modulesResponse, debugResponse] = await Promise.all([
     getLearningModules(),
     getLearningDebugState(),
   ]);
 
-  return Boolean(
-    modulesResponse.ok &&
-      modulesResponse.data &&
-      debugResponse.ok &&
-      debugResponse.data &&
-      modulesResponse.data.governanceStatus === "governed" &&
-      debugResponse.data.governanceStatus === "governed",
-  );
-}
-
-async function validateExistingYkiSession() {
-  const response = await resumePracticeSession();
-
-  if (!response) {
+  if (!modulesResponse.ok || !modulesResponse.data || !debugResponse.ok || !debugResponse.data) {
     return {
+      code: modulesResponse.error?.code ?? debugResponse.error?.code ?? "CONTRACT_VIOLATION",
       ok: false,
-      reason: "YKI_SESSION_REQUIRED" as const,
-      sessionId: null,
     };
   }
 
-  if (!response.ok || !response.data) {
-    await clearPracticeSession();
+  if (
+    modulesResponse.data.governanceStatus !== "governed" ||
+    debugResponse.data.governanceStatus !== "governed"
+  ) {
     return {
+      code: "LEARNING_STATE_INVALID",
       ok: false,
-      reason: "YKI_SESSION_INVALID" as const,
-      sessionId: null,
     };
   }
 
   return {
+    decisionVersion: debugResponse.data.decisionVersion,
+    governanceStatus: debugResponse.data.governanceStatus,
+    governanceVersion: debugResponse.data.governanceVersion,
     ok: true,
-    reason: null,
-    sessionId: response.data.session_id,
+    policyVersion: debugResponse.data.policyVersion,
   };
 }
 
@@ -91,38 +123,332 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
   const clearNavigationError = useAppFlowStore((state) => state.clearNavigationError);
   const resolveScreen = useAppFlowStore((state) => state.resolveScreen);
   const setNavigationError = useAppFlowStore((state) => state.setNavigationError);
+  const isOffline = useNetworkStore((state) => state.isOffline);
+  const startMonitoring = useNetworkStore((state) => state.startMonitoring);
 
   useEffect(() => {
     void hydrateSession();
   }, [hydrateSession]);
 
-  async function blockNavigation(errorState: NavigationErrorState) {
+  useEffect(() => startMonitoring(), [startMonitoring]);
+
+  async function clearRuntimePersistence() {
+    await Promise.all([
+      clearPersistedLearningSession(),
+      clearPersistedNavigationState(),
+      clearPracticeSession(),
+    ]);
+  }
+
+  async function resolveAndPersist(
+    screen: GuardedScreen,
+    requested: GuardedScreen | RequestedScreen,
+    ykiSessionId: string | null = null,
+  ) {
+    resolveScreen(screen, ykiSessionId);
+    await persistNavigationState({
+      activeScreen: screen,
+      navigationStack: getStackForScreen(screen),
+      requestedScreen: toRequestedScreen(requested),
+      ykiSessionId,
+    });
+  }
+
+  async function blockNavigation(errorState: NavigationErrorState, clearStoredState = false) {
+    if (clearStoredState) {
+      await clearRuntimePersistence();
+    }
+
     setNavigationError(errorState);
+  }
+
+  async function validateExistingYkiSession(): Promise<YkiSessionValidationResult> {
+    const persistedSession = await loadPersistedYkiSession();
+
+    if (persistedSession.status === "invalid") {
+      await clearPracticeSession();
+      return {
+        code: persistedSession.reason === "corrupted" ? "SESSION_CORRUPTED" : "SESSION_OUTDATED",
+        message:
+          persistedSession.reason === "corrupted"
+            ? "Stored YKI session state is corrupted and cannot be trusted."
+            : "Stored YKI session state uses an outdated format and cannot be restored.",
+        ok: false,
+      };
+    }
+
+    if (persistedSession.status === "missing" || !persistedSession.value) {
+      return {
+        code: "YKI_SESSION_REQUIRED",
+        message: "YKI Practice requires an existing validated session before entry.",
+        ok: false,
+      };
+    }
+
+    const response = await resumePracticeSession();
+
+    if (!response || !response.ok || !response.data) {
+      if (response?.error?.code === "SESSION_CORRUPTED") {
+        await clearPracticeSession();
+        return {
+          code: "SESSION_CORRUPTED",
+          message: "Stored YKI session state is corrupted and cannot be trusted.",
+          ok: false,
+        };
+      }
+
+      if (response?.error?.code === "SESSION_OUTDATED") {
+        await clearPracticeSession();
+        return {
+          code: "SESSION_OUTDATED",
+          message: "Stored YKI session state is outdated and cannot be restored.",
+          ok: false,
+        };
+      }
+
+      if (isTransportError(response?.error?.code)) {
+        return {
+          code: "NAVIGATION_BLOCKED",
+          message: "YKI session validation requires a live backend connection.",
+          ok: false,
+        };
+      }
+
+      await clearPracticeSession();
+      return {
+        code: "YKI_SESSION_INVALID",
+        message: "YKI Practice navigation is blocked because the stored session is invalid.",
+        ok: false,
+      };
+    }
+
+    return {
+      data: response.data,
+      ok: true,
+    };
+  }
+
+  async function restoreLearningSession() {
+    const persistedLearning = await loadPersistedLearningSession();
+
+    if (persistedLearning.status === "invalid") {
+      await blockNavigation(
+        {
+          code: persistedLearning.reason === "corrupted" ? "SESSION_CORRUPTED" : "SESSION_OUTDATED",
+          message:
+            persistedLearning.reason === "corrupted"
+              ? "Stored learning session state is corrupted and cannot be trusted."
+              : "Stored learning session state is outdated and cannot be restored.",
+          requestedScreen: "learning",
+        },
+        true,
+      );
+      return;
+    }
+
+    if (persistedLearning.status === "missing" || !persistedLearning.value) {
+      await blockNavigation(
+        {
+          code: "SESSION_INVALID",
+          message: "Learning restore is blocked because no validated stored learning session exists.",
+          requestedScreen: "learning",
+        },
+        true,
+      );
+      return;
+    }
+
+    if (isOffline) {
+      await blockNavigation({
+        code: "NAVIGATION_BLOCKED",
+        message: "Learning restore requires backend revalidation and is blocked while offline.",
+        requestedScreen: "learning",
+      });
+      return;
+    }
+
+    const learningGuard = await validateLearningGuard();
+
+    if (!learningGuard.ok) {
+      await blockNavigation(
+        {
+          code: isTransportError(learningGuard.code) ? "NAVIGATION_BLOCKED" : "SESSION_INVALID",
+          message: isTransportError(learningGuard.code)
+            ? "Learning restore requires backend revalidation and is currently unavailable."
+            : "Learning restore is blocked because the current backend state does not validate.",
+          requestedScreen: "learning",
+        },
+        !isTransportError(learningGuard.code),
+      );
+      return;
+    }
+
+    if (
+      persistedLearning.value.decisionVersion !== learningGuard.decisionVersion ||
+      persistedLearning.value.policyVersion !== learningGuard.policyVersion ||
+      persistedLearning.value.governanceVersion !== learningGuard.governanceVersion ||
+      persistedLearning.value.governanceStatus !== learningGuard.governanceStatus
+    ) {
+      await blockNavigation(
+        {
+          code: "SESSION_OUTDATED",
+          message: "Learning restore was rejected because stored governed versions no longer match the backend.",
+          requestedScreen: "learning",
+        },
+        true,
+      );
+      return;
+    }
+
+    router.replace(getPathForScreen("learning"));
+    await resolveAndPersist("learning", "learning");
+  }
+
+  async function restoreYkiSession() {
+    const persistedYki = await loadPersistedYkiSession();
+
+    if (persistedYki.status === "invalid") {
+      await blockNavigation(
+        {
+          code: persistedYki.reason === "corrupted" ? "SESSION_CORRUPTED" : "SESSION_OUTDATED",
+          message:
+            persistedYki.reason === "corrupted"
+              ? "Stored YKI session state is corrupted and cannot be trusted."
+              : "Stored YKI session state is outdated and cannot be restored.",
+          requestedScreen: "yki-practice",
+        },
+        true,
+      );
+      return;
+    }
+
+    if (persistedYki.status === "missing" || !persistedYki.value) {
+      await blockNavigation(
+        {
+          code: "SESSION_INVALID",
+          message: "YKI restore is blocked because no validated stored session exists.",
+          requestedScreen: "yki-practice",
+        },
+        true,
+      );
+      return;
+    }
+
+    if (isOffline) {
+      await blockNavigation({
+        code: "NAVIGATION_BLOCKED",
+        message: "YKI restore requires backend revalidation and is blocked while offline.",
+        requestedScreen: "yki-practice",
+      });
+      return;
+    }
+
+    const ykiSession = await validateExistingYkiSession();
+
+    if (!ykiSession.ok) {
+      await blockNavigation(
+        {
+          code: ykiSession.code,
+          message: ykiSession.message,
+          requestedScreen: "yki-practice",
+        },
+        ykiSession.code !== "NAVIGATION_BLOCKED",
+      );
+      return;
+    }
+
+    if (
+      ykiSession.data.session_id !== persistedYki.value.sessionId ||
+      ykiSession.data.current_task_index !== persistedYki.value.currentTaskIndex ||
+      ykiSession.data.isComplete !== persistedYki.value.isComplete
+    ) {
+      await blockNavigation(
+        {
+          code: "SESSION_INVALID",
+          message:
+            "YKI restore was rejected because the stored step does not exactly match the backend session state.",
+          requestedScreen: "yki-practice",
+        },
+        true,
+      );
+      return;
+    }
+
+    if (
+      ykiSession.data.decisionVersion !== persistedYki.value.decisionVersion ||
+      ykiSession.data.policyVersion !== persistedYki.value.policyVersion ||
+      ykiSession.data.governanceVersion !== persistedYki.value.governanceVersion
+    ) {
+      await blockNavigation(
+        {
+          code: "SESSION_OUTDATED",
+          message: "YKI restore was rejected because stored governed versions no longer match the backend.",
+          requestedScreen: "yki-practice",
+        },
+        true,
+      );
+      return;
+    }
+
+    router.replace(getPathForScreen("yki-practice"));
+    await resolveAndPersist("yki-practice", "yki-practice", ykiSession.data.session_id);
+  }
+
+  async function restoreFromNavigationState() {
+    const persistedNavigation = await loadPersistedNavigationState();
+
+    if (persistedNavigation.status === "invalid") {
+      await blockNavigation(
+        {
+          code:
+            persistedNavigation.reason === "corrupted" ? "SESSION_CORRUPTED" : "SESSION_OUTDATED",
+          message:
+            persistedNavigation.reason === "corrupted"
+              ? "Stored navigation state is corrupted and cannot be trusted."
+              : "Stored navigation state is outdated and cannot be restored.",
+          requestedScreen: "root",
+        },
+        true,
+      );
+      return;
+    }
+
+    if (persistedNavigation.status === "missing" || !persistedNavigation.value) {
+      await resolveAndPersist("home", "root");
+      return;
+    }
+
+    if (persistedNavigation.value.activeScreen === "home") {
+      router.replace(getPathForScreen("home"));
+      await resolveAndPersist("home", persistedNavigation.value.requestedScreen);
+      return;
+    }
+
+    if (persistedNavigation.value.activeScreen === "learning") {
+      await restoreLearningSession();
+      return;
+    }
+
+    if (persistedNavigation.value.activeScreen === "yki-practice") {
+      await restoreYkiSession();
+      return;
+    }
+
+    router.replace(getPathForScreen("home"));
+    await resolveAndPersist("home", "root");
   }
 
   async function resolveRequestedRoute(target: RequestedScreen) {
     beginNavigationCheck(target);
 
-    if (target === "root") {
-      if (!user) {
+    if (!user) {
+      if (target === "auth" || target === "root") {
         router.replace(getPathForScreen("auth"));
-      }
-      resolveScreen(user ? "home" : "auth");
-      return;
-    }
-
-    if (target === "auth") {
-      if (user) {
-        router.replace(getPathForScreen("home"));
-        resolveScreen("home");
+        await clearRuntimePersistence();
+        await resolveAndPersist("auth", "auth");
         return;
       }
 
-      resolveScreen("auth");
-      return;
-    }
-
-    if (!user) {
       await blockNavigation({
         code: "AUTH_REQUIRED",
         message: `Access to ${target} requires an authenticated session.`,
@@ -131,10 +457,30 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       return;
     }
 
+    if (target === "root") {
+      await restoreFromNavigationState();
+      return;
+    }
+
+    if (target === "auth") {
+      router.replace(getPathForScreen("home"));
+      await resolveAndPersist("home", "root");
+      return;
+    }
+
     if (target === "learning") {
+      if (isOffline) {
+        await blockNavigation({
+          code: "NAVIGATION_BLOCKED",
+          message: "Learning navigation requires backend validation and is blocked while offline.",
+          requestedScreen: target,
+        });
+        return;
+      }
+
       const learningReady = await validateLearningGuard();
 
-      if (!learningReady) {
+      if (!learningReady.ok) {
         await blockNavigation({
           code: "LEARNING_STATE_INVALID",
           message: "Learning navigation is blocked because validated governed learning state is unavailable.",
@@ -143,25 +489,34 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
         return;
       }
 
-      resolveScreen("learning");
+      await resolveAndPersist("learning", target);
+      return;
+    }
+
+    if (isOffline) {
+      await blockNavigation({
+        code: "NAVIGATION_BLOCKED",
+        message: "YKI navigation requires backend validation and is blocked while offline.",
+        requestedScreen: target,
+      });
       return;
     }
 
     const ykiSession = await validateExistingYkiSession();
 
     if (!ykiSession.ok) {
-      await blockNavigation({
-        code: ykiSession.reason ?? "YKI_SESSION_INVALID",
-        message:
-          ykiSession.reason === "YKI_SESSION_REQUIRED"
-            ? "YKI Practice requires an existing validated session before entry."
-            : "YKI Practice navigation is blocked because the stored session is invalid.",
-        requestedScreen: target,
-      });
+      await blockNavigation(
+        {
+          code: ykiSession.code,
+          message: ykiSession.message,
+          requestedScreen: target,
+        },
+        ykiSession.code !== "NAVIGATION_BLOCKED",
+      );
       return;
     }
 
-    resolveScreen("yki-practice", ykiSession.sessionId);
+    await resolveAndPersist("yki-practice", target, ykiSession.data.session_id);
   }
 
   useEffect(() => {
@@ -177,7 +532,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
 
     if (screen === "auth") {
       router.replace(getPathForScreen("auth"));
-      resolveScreen("auth");
+      await resolveAndPersist("auth", "auth");
       return;
     }
 
@@ -193,14 +548,23 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     if (screen === "home") {
       clearNavigationError();
       router.replace(getPathForScreen("home"));
-      resolveScreen("home");
+      await resolveAndPersist("home", "root");
       return;
     }
 
     if (screen === "learning") {
+      if (isOffline) {
+        await blockNavigation({
+          code: "NAVIGATION_BLOCKED",
+          message: "Learning navigation requires backend validation and is blocked while offline.",
+          requestedScreen: screen,
+        });
+        return;
+      }
+
       const learningReady = await validateLearningGuard();
 
-      if (!learningReady) {
+      if (!learningReady.ok) {
         await blockNavigation({
           code: "LEARNING_STATE_INVALID",
           message: "Learning navigation is blocked because validated governed learning state is unavailable.",
@@ -210,7 +574,16 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       }
 
       router.replace(getPathForScreen("learning"));
-      resolveScreen("learning");
+      await resolveAndPersist("learning", screen);
+      return;
+    }
+
+    if (isOffline) {
+      await blockNavigation({
+        code: "NAVIGATION_BLOCKED",
+        message: "YKI navigation requires backend validation and is blocked while offline.",
+        requestedScreen: screen,
+      });
       return;
     }
 
@@ -218,7 +591,22 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
 
     if (resumedSession.ok) {
       router.replace(getPathForScreen("yki-practice"));
-      resolveScreen("yki-practice", resumedSession.sessionId);
+      await resolveAndPersist("yki-practice", screen, resumedSession.data.session_id);
+      return;
+    }
+
+    if (
+      resumedSession.code !== "YKI_SESSION_REQUIRED" &&
+      resumedSession.code !== "YKI_SESSION_INVALID"
+    ) {
+      await blockNavigation(
+        {
+          code: resumedSession.code,
+          message: resumedSession.message,
+          requestedScreen: screen,
+        },
+        resumedSession.code !== "NAVIGATION_BLOCKED",
+      );
       return;
     }
 
@@ -234,14 +622,15 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     }
 
     router.replace(getPathForScreen("yki-practice"));
-    resolveScreen("yki-practice", startedSession.data.session_id);
+    await resolveAndPersist("yki-practice", screen, startedSession.data.session_id);
   }
 
   async function handleLogout() {
     await logout();
+    await clearRuntimePersistence();
     setAuthToken(null);
     router.replace(getPathForScreen("auth"));
-    resolveScreen("auth");
+    await resolveAndPersist("auth", "auth");
   }
 
   function navigateBack() {

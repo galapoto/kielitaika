@@ -7,12 +7,14 @@ import Text from "@ui/primitives/Text";
 import YkiPracticeScreen from "@ui/screens/YkiPracticeScreen";
 
 import useYkiPractice from "../features/yki-practice/hooks/useYkiPractice";
+import { useNetworkStore } from "./networkStore";
 
 type Props = {
   onBack: () => void;
 };
 
 export default function YkiPracticeRoute({ onBack }: Props) {
+  const isOffline = useNetworkStore((state) => state.isOffline);
   const {
     data,
     error,
@@ -113,16 +115,37 @@ export default function YkiPracticeRoute({ onBack }: Props) {
           : null
       }
       loading={loading}
-      notice={notice}
+      notice={
+        isOffline
+          ? "Offline mode: YKI playback is read-only until the session can be revalidated."
+          : notice
+      }
+      offlineMessage={
+        isOffline
+          ? "Offline mode: YKI playback is read-only until the session can be revalidated."
+          : null
+      }
       onAdvance={() => {
+        if (isOffline) {
+          return;
+        }
+
         void advanceTask();
       }}
       onAnswerChange={setAnswer}
       onBack={onBack}
       onRefresh={() => {
+        if (isOffline) {
+          return;
+        }
+
         void refreshSession();
       }}
       onSubmit={() => {
+        if (isOffline) {
+          return;
+        }
+
         void submitAnswer(answer);
       }}
       policyVersion={data?.policyVersion ?? null}

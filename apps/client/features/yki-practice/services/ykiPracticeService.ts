@@ -3,9 +3,11 @@ import {
   ControlledUiValidationError,
   validateYkiPracticeSessionPayload,
 } from "@core/api/governedResponseValidation";
-import { storageService } from "@core/services/storageService";
-
-const YKI_PRACTICE_SESSION_STORAGE_KEY = "yki_practice_session_id";
+import {
+  clearPersistedYkiSession,
+  loadPersistedYkiSession,
+  persistYkiSession,
+} from "../../../state/sessionPersistence";
 
 type ApiError = {
   code?: string;
@@ -207,6 +209,18 @@ export type YkiPracticeSession = {
   };
 };
 
+type PersistedSessionFailure = {
+  ok: false;
+  reason: "corrupted" | "outdated";
+  sessionId: null;
+};
+
+type PersistedSessionSuccess = {
+  ok: true;
+  reason: null;
+  sessionId: string;
+};
+
 function normalizeError(error: ApiError | null): ApiError {
   if (!error) {
     return { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION" };
@@ -270,12 +284,48 @@ async function withSessionValidation(
   }
 }
 
+async function persistSessionFromResponse(data: YkiPracticeSession) {
+  await persistYkiSession({
+    currentTaskIndex: data.current_task_index,
+    decisionVersion: data.decisionVersion,
+    governanceVersion: data.governanceVersion,
+    isComplete: data.isComplete,
+    policyVersion: data.policyVersion,
+    sessionId: data.session_id,
+  });
+}
+
+export async function getStoredPracticeSessionState(): Promise<
+  PersistedSessionFailure | PersistedSessionSuccess | null
+> {
+  const persisted = await loadPersistedYkiSession();
+
+  if (persisted.status === "invalid") {
+    return {
+      ok: false,
+      reason: persisted.reason,
+      sessionId: null,
+    };
+  }
+
+  if (persisted.status === "missing" || !persisted.value) {
+    return null;
+  }
+
+  return {
+    ok: true,
+    reason: null,
+    sessionId: persisted.value.sessionId,
+  };
+}
+
 export async function getStoredPracticeSessionId() {
-  return storageService.get(YKI_PRACTICE_SESSION_STORAGE_KEY);
+  const persisted = await getStoredPracticeSessionState();
+  return persisted?.ok ? persisted.sessionId : null;
 }
 
 export async function clearPracticeSession() {
-  await storageService.remove(YKI_PRACTICE_SESSION_STORAGE_KEY);
+  await clearPersistedYkiSession();
 }
 
 export async function startPracticeSession() {
@@ -284,20 +334,37 @@ export async function startPracticeSession() {
   });
 
   if (res.ok && res.data?.session_id) {
-    await storageService.set(YKI_PRACTICE_SESSION_STORAGE_KEY, res.data.session_id);
+    await persistSessionFromResponse(res.data);
   }
 
   return res;
 }
 
 export async function resumePracticeSession() {
-  const sessionId = await getStoredPracticeSessionId();
+  const persisted = await getStoredPracticeSessionState();
 
-  if (!sessionId) {
+  if (!persisted) {
     return null;
   }
 
-  return withSessionValidation(`/api/v1/yki-practice/${sessionId}`);
+  if (!persisted.ok) {
+    return {
+      ok: false,
+      data: null,
+      error: {
+        code: persisted.reason === "corrupted" ? "SESSION_CORRUPTED" : "SESSION_OUTDATED",
+        message: persisted.reason === "corrupted" ? "SESSION_CORRUPTED" : "SESSION_OUTDATED",
+      },
+    } satisfies ApiResponse<YkiPracticeSession>;
+  }
+
+  const response = await withSessionValidation(`/api/v1/yki-practice/${persisted.sessionId}`);
+
+  if (response.ok && response.data) {
+    await persistSessionFromResponse(response.data);
+  }
+
+  return response;
 }
 
 export async function submitPracticeTask(
@@ -314,7 +381,7 @@ export async function submitPracticeTask(
     } satisfies ApiResponse<null>;
   }
 
-  return withSessionValidation(`/api/v1/yki-practice/${sessionId}/submit`, {
+  const response = await withSessionValidation(`/api/v1/yki-practice/${sessionId}/submit`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -324,4 +391,10 @@ export async function submitPracticeTask(
       answer,
     }),
   });
+
+  if (response.ok && response.data) {
+    await persistSessionFromResponse(response.data);
+  }
+
+  return response;
 }
