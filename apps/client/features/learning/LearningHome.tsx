@@ -34,6 +34,7 @@ export default function LearningHome() {
           Weak patterns: {data.weakPatterns.length ? data.weakPatterns.join(", ") : "None yet"}
         </Text>
         <Button label="Recommended Practice" onPress={() => router.push("/practice")} />
+        <Button label="YKI Practice Mode" onPress={() => router.push("/yki-practice")} />
       </View>
 
       <View style={styles.section}>

@@ -80,6 +80,7 @@ export default function YkiFeature() {
         <Text size="lg">No active session</Text>
         {notice ? <Text>{notice}</Text> : null}
         <Button label="Start New Session" onPress={startNewSession} />
+        <Button label="Open YKI Practice Mode" onPress={() => router.push("/yki-practice")} />
         <Button label="Open Learning" onPress={() => router.push("/learning")} />
       </Center>
     );
@@ -113,6 +114,7 @@ export default function YkiFeature() {
 
   return (
     <View style={styles.featureRoot}>
+      <Button label="Open YKI Practice Mode" onPress={() => router.push("/yki-practice")} />
       <Button label="Open Learning" onPress={() => router.push("/learning")} />
       <TimerCard
         remainingSeconds={remainingSeconds}

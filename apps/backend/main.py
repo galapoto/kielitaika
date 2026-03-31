@@ -25,6 +25,7 @@ from yki.adapter import (
     resume_exam,
     start_exam,
 )
+from yki_practice.adapter import get_yki_practice, start_yki_practice, submit_yki_practice
 
 app = FastAPI()
 
@@ -152,6 +153,33 @@ def learning_progress_module(module_id: str):
 @app.get("/api/v1/yki")
 def yki():
     return success({"status": "YKI placeholder"})
+
+
+@app.post("/api/v1/yki-practice/start")
+def yki_practice_start():
+    return success(start_yki_practice())
+
+
+@app.get("/api/v1/yki-practice/{session_id}")
+def yki_practice_get(session_id: str):
+    session = get_yki_practice(session_id)
+
+    if not session:
+        return failure("SESSION_NOT_FOUND")
+
+    return success(session)
+
+
+@app.post("/api/v1/yki-practice/{session_id}/submit")
+def yki_practice_submit(session_id: str, body: dict):
+    answer = body.get("answer")
+    action = body.get("action", "submit_and_next")
+    session = submit_yki_practice(session_id, answer, action)
+
+    if not session:
+        return failure("SESSION_NOT_FOUND")
+
+    return success(session)
 
 
 @app.post("/api/v1/yki/start")
