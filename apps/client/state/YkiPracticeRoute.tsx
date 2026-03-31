@@ -94,16 +94,17 @@ export default function YkiPracticeRoute({ onBack }: Props) {
   }, [data]);
 
   if (
-    error?.message === "SESSION_CORRUPTED" ||
-    error?.message === "SESSION_OUTDATED" ||
-    error?.message === "CONTRACT_VIOLATION"
+    error?.code === "SESSION_CORRUPTED" ||
+    error?.code === "SESSION_OUTDATED" ||
+    error?.code === "CONTRACT_VIOLATION"
   ) {
     return (
       <ApplicationErrorScreen
-        code={error.message}
+        code={error.code ?? error.message}
         message="YKI runtime integrity validation failed. The session has been blocked."
         onPrimaryAction={onBack}
         primaryLabel="Return Home"
+        traceReference={error.traceReference ?? null}
       />
     );
   }

@@ -1,16 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from api_contract import failure, record_contract_action, success
-
+from api_contract import failure, record_contract_action, resolve_trace_id, success
+from audit.audit_logger import next_event_id
 from learning.adapter import (
     get_learning_debug_state,
     get_learning_due_review,
-    get_learning_modules,
     get_learning_module_progress,
+    get_learning_modules,
     get_learning_practice,
-    get_learning_unit_progress,
     get_learning_unit,
+    get_learning_unit_progress,
     get_recommended_learning_practice,
     get_related_learning_units,
     submit_learning_progress,
@@ -19,15 +19,16 @@ from yki.adapter import (
     advance_task,
     answer_audio,
     answer_task,
-    get_exam_certificate,
     get_exam,
-    get_user_progress_history,
+    get_exam_certificate,
     get_task,
+    get_user_progress_history,
     next_section,
     play_current_listening_prompt,
     resume_exam,
     start_exam,
 )
+from yki.session_store import DEFAULT_USER_ID
 from yki_practice.adapter import get_yki_practice, start_yki_practice, submit_yki_practice
 
 app = FastAPI()
@@ -40,290 +41,639 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+def _trace_id(request: Request):
+    return resolve_trace_id(request.headers.get("x-trace-id"))
+
+
+def _success_response(
+    request: Request,
+    data,
+    *,
+    event_type: str,
+    request_payload: dict | None = None,
+    session_id: str | None = None,
+    user_id: str | None = DEFAULT_USER_ID,
+):
+    trace_id = _trace_id(request)
+    event_id = next_event_id()
+    response = success(data, trace_id=trace_id, event_id=event_id)
+    record_contract_action(
+        event_type,
+        session_id,
+        request_payload or {},
+        response,
+        trace_id=trace_id,
+        event_id=event_id,
+        user_id=user_id,
+    )
+    return response
+
+
+def _failure_response(
+    request: Request,
+    code: str,
+    *,
+    event_type: str,
+    request_payload: dict | None = None,
+    session_id: str | None = None,
+    user_id: str | None = DEFAULT_USER_ID,
+    message: str | None = None,
+    retryable: bool = False,
+):
+    trace_id = _trace_id(request)
+    event_id = next_event_id()
+    response = failure(
+        code,
+        message=message,
+        retryable=retryable,
+        trace_id=trace_id,
+        event_id=event_id,
+    )
+    record_contract_action(
+        event_type,
+        session_id,
+        request_payload or {},
+        response,
+        trace_id=trace_id,
+        event_id=event_id,
+        user_id=user_id,
+    )
+    return response
+
+
 @app.get("/api/v1/auth/status")
-def auth_status():
-    return success({"isAuthenticated": False})
+def auth_status(request: Request):
+    return _success_response(
+        request,
+        {"isAuthenticated": False},
+        event_type="AUTH_STATUS_LOADED",
+        user_id=None,
+    )
 
 
 @app.get("/api/v1/home")
-def home():
-    return success({"message": "Home data loaded"})
+def home(request: Request):
+    return _success_response(
+        request,
+        {"message": "Home data loaded"},
+        event_type="HOME_LOADED",
+        user_id=None,
+    )
 
 
 @app.get("/api/v1/learning/modules")
-def learning_modules():
-    return success(get_learning_modules())
+def learning_modules(request: Request):
+    return _success_response(
+        request,
+        get_learning_modules(),
+        event_type="LEARNING_MODULES_LOADED",
+    )
 
 
 @app.get("/api/v1/learning/unit/{unit_id}")
-def learning_unit(unit_id: str):
+def learning_unit(unit_id: str, request: Request):
     unit = get_learning_unit(unit_id)
 
     if not unit:
-        return failure("UNIT_NOT_FOUND")
+        return _failure_response(
+            request,
+            "UNIT_NOT_FOUND",
+            event_type="LEARNING_UNIT_LOADED",
+            request_payload={"unit_id": unit_id},
+        )
 
-    return success(unit)
+    return _success_response(
+        request,
+        unit,
+        event_type="LEARNING_UNIT_LOADED",
+        request_payload={"unit_id": unit_id},
+    )
 
 
 @app.get("/api/v1/learning/related/{unit_id}")
-def learning_related(unit_id: str):
+def learning_related(unit_id: str, request: Request):
     related = get_related_learning_units(unit_id)
 
     if not related:
-        return failure("UNIT_NOT_FOUND")
+        return _failure_response(
+            request,
+            "UNIT_NOT_FOUND",
+            event_type="LEARNING_RELATED_UNITS_LOADED",
+            request_payload={"unit_id": unit_id},
+        )
 
-    return success(related)
+    return _success_response(
+        request,
+        related,
+        event_type="LEARNING_RELATED_UNITS_LOADED",
+        request_payload={"unit_id": unit_id},
+    )
 
 
 @app.get("/api/v1/learning/practice/module/{module_id}")
-def learning_practice_module(module_id: str):
+def learning_practice_module(module_id: str, request: Request):
     practice = get_learning_practice(module_id)
 
     if not practice:
-        return failure("MODULE_NOT_FOUND")
+        return _failure_response(
+            request,
+            "MODULE_NOT_FOUND",
+            event_type="LEARNING_PRACTICE_LOADED",
+            request_payload={"module_id": module_id},
+        )
 
-    return success(practice)
+    return _success_response(
+        request,
+        practice,
+        event_type="LEARNING_PRACTICE_LOADED",
+        request_payload={"module_id": module_id},
+    )
 
 
 @app.get("/api/v1/learning/practice/recommended")
-def learning_practice_recommended():
+def learning_practice_recommended(request: Request):
     practice = get_recommended_learning_practice()
 
     if not practice:
-        return failure("PRACTICE_NOT_AVAILABLE")
+        return _failure_response(
+            request,
+            "PRACTICE_NOT_AVAILABLE",
+            event_type="LEARNING_RECOMMENDED_PRACTICE_LOADED",
+        )
 
-    return success(practice)
+    return _success_response(
+        request,
+        practice,
+        event_type="LEARNING_RECOMMENDED_PRACTICE_LOADED",
+    )
 
 
 @app.get("/api/v1/learning/review/due")
-def learning_review_due():
-    return success({"units": get_learning_due_review()})
+def learning_review_due(request: Request):
+    return _success_response(
+        request,
+        {"units": get_learning_due_review()},
+        event_type="LEARNING_DUE_REVIEW_LOADED",
+    )
 
 
 @app.post("/api/v1/learning/progress/submit")
-def learning_progress_submit(body: dict):
+def learning_progress_submit(body: dict, request: Request):
     exercise = body.get("exercise")
     is_correct = body.get("isCorrect")
 
     if not exercise or not isinstance(is_correct, bool):
-        return failure("INVALID_PROGRESS_SUBMISSION")
+        return _failure_response(
+            request,
+            "INVALID_PROGRESS_SUBMISSION",
+            event_type="LEARNING_PROGRESS_SUBMITTED",
+            request_payload=body,
+        )
 
     progress = submit_learning_progress(exercise, is_correct)
 
     if not progress:
-        return failure("PROGRESS_SUBMISSION_FAILED")
+        return _failure_response(
+            request,
+            "PROGRESS_SUBMISSION_FAILED",
+            event_type="LEARNING_PROGRESS_SUBMITTED",
+            request_payload=body,
+        )
 
-    return success(progress)
+    return _success_response(
+        request,
+        progress,
+        event_type="LEARNING_PROGRESS_SUBMITTED",
+        request_payload=body,
+    )
 
 
 @app.get("/api/v1/learning/progress/unit/{unit_id}")
-def learning_progress_unit(unit_id: str):
+def learning_progress_unit(unit_id: str, request: Request):
     progress = get_learning_unit_progress(unit_id)
 
     if not progress:
-        return failure("UNIT_NOT_FOUND")
+        return _failure_response(
+            request,
+            "UNIT_NOT_FOUND",
+            event_type="LEARNING_UNIT_PROGRESS_LOADED",
+            request_payload={"unit_id": unit_id},
+        )
 
-    return success(progress)
+    return _success_response(
+        request,
+        progress,
+        event_type="LEARNING_UNIT_PROGRESS_LOADED",
+        request_payload={"unit_id": unit_id},
+    )
 
 
 @app.get("/api/v1/learning/progress/module/{module_id}")
-def learning_progress_module(module_id: str):
+def learning_progress_module(module_id: str, request: Request):
     progress = get_learning_module_progress(module_id)
 
     if not progress:
-        return failure("MODULE_NOT_FOUND")
+        return _failure_response(
+            request,
+            "MODULE_NOT_FOUND",
+            event_type="LEARNING_MODULE_PROGRESS_LOADED",
+            request_payload={"module_id": module_id},
+        )
 
-    return success(progress)
+    return _success_response(
+        request,
+        progress,
+        event_type="LEARNING_MODULE_PROGRESS_LOADED",
+        request_payload={"module_id": module_id},
+    )
 
 
 @app.get("/api/v1/debug/user-learning-state")
-def debug_user_learning_state():
-    return success(get_learning_debug_state())
+def debug_user_learning_state(request: Request):
+    return _success_response(
+        request,
+        get_learning_debug_state(),
+        event_type="LEARNING_DEBUG_STATE_LOADED",
+    )
 
 
 @app.get("/api/v1/yki")
-def yki():
-    return success({"status": "YKI placeholder"})
+def yki(request: Request):
+    return _success_response(
+        request,
+        {"status": "YKI placeholder"},
+        event_type="YKI_STATUS_LOADED",
+    )
 
 
 @app.post("/api/v1/yki-practice/start")
-def yki_practice_start():
-    response = success(start_yki_practice())
-    record_contract_action("YKI_PRACTICE_START", response["data"]["session_id"], {}, response)
-    return response
+def yki_practice_start(request: Request):
+    session = start_yki_practice()
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_PRACTICE_SESSION_STARTED",
+        session_id=session["session_id"],
+        user_id=session.get("user_id"),
+    )
 
 
 @app.get("/api/v1/yki-practice/{session_id}")
-def yki_practice_get(session_id: str):
+def yki_practice_get(session_id: str, request: Request):
     session = get_yki_practice(session_id)
 
     if not session:
-        return failure("SESSION_NOT_FOUND")
+        return _failure_response(
+            request,
+            "SESSION_NOT_FOUND",
+            event_type="YKI_PRACTICE_SESSION_RESUMED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
 
-    response = success(session)
-    record_contract_action("YKI_PRACTICE_FETCH", session_id, {"session_id": session_id}, response)
-    return response
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_PRACTICE_SESSION_RESUMED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+        user_id=session.get("user_id"),
+    )
 
 
 @app.post("/api/v1/yki-practice/{session_id}/submit")
-def yki_practice_submit(session_id: str, body: dict):
+def yki_practice_submit(session_id: str, body: dict, request: Request):
     answer = body.get("answer")
-    action = body.get("action", "submit_and_next")
+    action = body.get("action", "submit_only")
     session = submit_yki_practice(session_id, answer, action)
 
+    request_payload = {
+        "action": action,
+        "answer": answer,
+        "session_id": session_id,
+    }
+
     if not session:
-        return failure("SESSION_NOT_FOUND")
+        return _failure_response(
+            request,
+            "SESSION_NOT_FOUND",
+            event_type="YKI_PRACTICE_SUBMITTED",
+            request_payload=request_payload,
+            session_id=session_id,
+        )
 
     if isinstance(session, dict) and "error" in session:
-        return failure(session["error"])
+        return _failure_response(
+            request,
+            session["error"],
+            event_type="YKI_PRACTICE_SUBMITTED",
+            request_payload=request_payload,
+            session_id=session_id,
+        )
 
-    response = success(session)
-    record_contract_action(
-        "YKI_PRACTICE_SUBMIT",
-        session_id,
-        {
-            "action": action,
-            "answer": answer,
-            "session_id": session_id,
-        },
-        response,
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_PRACTICE_SUBMITTED",
+        request_payload=request_payload,
+        session_id=session_id,
+        user_id=session.get("user_id"),
     )
-    return response
 
 
 @app.post("/api/v1/yki/start")
-def yki_start():
-    return success(start_exam())
+def yki_start(request: Request):
+    session = start_exam()
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_EXAM_SESSION_STARTED",
+        session_id=session.get("session_id") if isinstance(session, dict) else None,
+    )
 
 
 @app.get("/api/v1/yki/resume/{session_id}")
-def yki_resume(session_id: str):
+def yki_resume(session_id: str, request: Request):
     session = resume_exam(session_id)
 
     if isinstance(session, dict) and "error" in session:
-        return failure(session["error"])
+        return _failure_response(
+            request,
+            session["error"],
+            event_type="YKI_EXAM_SESSION_RESUMED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
 
-    response = success(session)
-    record_contract_action("YKI_SESSION_RESUME", session_id, {"session_id": session_id}, response)
-    return response
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_EXAM_SESSION_RESUMED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
 
 
 @app.get("/api/v1/yki/history")
-def yki_history():
-    return success(get_user_progress_history())
+def yki_history(request: Request):
+    return _success_response(
+        request,
+        get_user_progress_history(),
+        event_type="YKI_HISTORY_LOADED",
+    )
 
 
 @app.get("/api/v1/yki/{session_id}")
-def yki_get(session_id: str):
+def yki_get(session_id: str, request: Request):
     session = get_exam(session_id)
 
     if not session:
-        return failure("SESSION_NOT_FOUND")
+        return _failure_response(
+            request,
+            "SESSION_NOT_FOUND",
+            event_type="YKI_EXAM_SESSION_LOADED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
     if isinstance(session, dict) and "error" in session:
-        return failure(session["error"])
+        return _failure_response(
+            request,
+            session["error"],
+            event_type="YKI_EXAM_SESSION_LOADED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
 
-    response = success(session)
-    record_contract_action("YKI_SESSION_FETCH", session_id, {"session_id": session_id}, response)
-    return response
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_EXAM_SESSION_LOADED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
 
 
 @app.get("/api/v1/yki/{session_id}/certificate")
-def yki_certificate(session_id: str):
+def yki_certificate(session_id: str, request: Request):
     certificate = get_exam_certificate(session_id)
 
     if not certificate:
-        return failure("EXAM_NOT_FINISHED")
+        return _failure_response(
+            request,
+            "EXAM_NOT_FINISHED",
+            event_type="YKI_CERTIFICATE_LOADED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
     if isinstance(certificate, dict) and "error" in certificate:
-        return failure(certificate["error"])
+        return _failure_response(
+            request,
+            certificate["error"],
+            event_type="YKI_CERTIFICATE_LOADED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
 
-    return success(certificate)
+    return _success_response(
+        request,
+        certificate,
+        event_type="YKI_CERTIFICATE_LOADED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
 
 
 @app.post("/api/v1/yki/{session_id}/next")
-def yki_next(session_id: str):
+def yki_next(session_id: str, request: Request):
     session = next_section(session_id)
 
     if not session:
-        return failure("SESSION_NOT_FOUND")
+        return _failure_response(
+            request,
+            "SESSION_NOT_FOUND",
+            event_type="YKI_EXAM_SECTION_ADVANCED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
     if isinstance(session, dict) and "error" in session:
-        return failure(session["error"])
+        return _failure_response(
+            request,
+            session["error"],
+            event_type="YKI_EXAM_SECTION_ADVANCED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
 
-    response = success(session)
-    record_contract_action("YKI_SESSION_ADVANCE", session_id, {"session_id": session_id}, response)
-    return response
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_EXAM_SECTION_ADVANCED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
 
 
 @app.get("/api/v1/yki/{session_id}/task")
-def yki_task(session_id: str):
+def yki_task(session_id: str, request: Request):
     task = get_task(session_id)
 
     if not task:
-        return failure("NO_TASK_AVAILABLE")
+        return _failure_response(
+            request,
+            "NO_TASK_AVAILABLE",
+            event_type="YKI_EXAM_TASK_LOADED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
     if isinstance(task, dict) and "error" in task:
-        return failure(task["error"])
+        return _failure_response(
+            request,
+            task["error"],
+            event_type="YKI_EXAM_TASK_LOADED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
 
-    return success(task)
+    return _success_response(
+        request,
+        task,
+        event_type="YKI_EXAM_TASK_LOADED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
 
 
 @app.post("/api/v1/yki/{session_id}/task/next")
-def yki_next_task(session_id: str):
+def yki_next_task(session_id: str, request: Request):
     session = advance_task(session_id)
 
     if not session:
-        return failure("SESSION_NOT_FOUND")
+        return _failure_response(
+            request,
+            "SESSION_NOT_FOUND",
+            event_type="YKI_EXAM_TASK_ADVANCED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
     if isinstance(session, dict) and "error" in session:
-        return failure(session["error"])
+        return _failure_response(
+            request,
+            session["error"],
+            event_type="YKI_EXAM_TASK_ADVANCED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
 
-    response = success(session)
-    _record_contract_action("YKI_TASK_ADVANCE", session_id, {"session_id": session_id}, response)
-    return response
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_EXAM_TASK_ADVANCED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
 
 
 @app.post("/api/v1/yki/{session_id}/task/answer")
-def yki_answer(session_id: str, body: dict):
+def yki_answer(session_id: str, body: dict, request: Request):
     answer = body.get("answer")
     result = answer_task(session_id, answer)
 
-    if not result:
-        return failure("ANSWER_SUBMISSION_FAILED")
-    if isinstance(result, dict) and "error" in result:
-        return failure(result["error"])
+    request_payload = {"answer": answer, "session_id": session_id}
 
-    response = success(result)
-    record_contract_action(
-        "YKI_TASK_SUBMIT",
-        session_id,
-        {"answer": answer, "session_id": session_id},
-        response,
+    if not result:
+        return _failure_response(
+            request,
+            "ANSWER_SUBMISSION_FAILED",
+            event_type="YKI_EXAM_TASK_ANSWERED",
+            request_payload=request_payload,
+            session_id=session_id,
+        )
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_TASK_ANSWERED",
+            request_payload=request_payload,
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_TASK_ANSWERED",
+        request_payload=request_payload,
+        session_id=session_id,
     )
-    return response
 
 
 @app.post("/api/v1/yki/{session_id}/task/audio")
-def yki_audio(session_id: str, body: dict):
+def yki_audio(session_id: str, body: dict, request: Request):
     audio_ref = body.get("audio")
     result = answer_audio(session_id, audio_ref)
 
-    if not result:
-        return failure("AUDIO_SUBMISSION_FAILED")
-    if isinstance(result, dict) and "error" in result:
-        return failure(result["error"])
+    request_payload = {"audio": audio_ref, "session_id": session_id}
 
-    return success(result)
+    if not result:
+        return _failure_response(
+            request,
+            "AUDIO_SUBMISSION_FAILED",
+            event_type="YKI_EXAM_AUDIO_ANSWERED",
+            request_payload=request_payload,
+            session_id=session_id,
+        )
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_AUDIO_ANSWERED",
+            request_payload=request_payload,
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_AUDIO_ANSWERED",
+        request_payload=request_payload,
+        session_id=session_id,
+    )
 
 
 @app.post("/api/v1/yki/{session_id}/task/play")
-def yki_play_task(session_id: str):
+def yki_play_task(session_id: str, request: Request):
     result = play_current_listening_prompt(session_id)
 
     if not result:
-        return failure("PLAYBACK_FAILED")
+        return _failure_response(
+            request,
+            "PLAYBACK_FAILED",
+            event_type="YKI_EXAM_TASK_PLAYED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
     if isinstance(result, dict) and "error" in result:
-        return failure(result["error"])
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_TASK_PLAYED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
 
-    return success(result)
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_TASK_PLAYED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
 
 
 @app.get("/api/v1/practice")
-def practice():
-    return success({"status": "Practice placeholder"})
+def practice(request: Request):
+    return _success_response(
+        request,
+        {"status": "Practice placeholder"},
+        event_type="PRACTICE_STATUS_LOADED",
+    )

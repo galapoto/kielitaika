@@ -19,16 +19,19 @@ type ContractViolationCode = "CONTRACT_VIOLATION" | "GOVERNANCE_MISSING";
 
 type AuditTrailEntry = {
   actionType: string;
+  eventId: string | null;
   path: string;
   requestPayloadHash: string;
   responsePayloadHash: string;
   sessionId: string | null;
   timestamp: string;
+  traceId: string;
 };
 
 let authToken: string | null = null;
 let expectedDecisionVersion: string | null = null;
 let expectedYkiPracticeSessionId: string | null = null;
+let traceCounter = 0;
 
 const contractViolations: Array<{
   code: ContractViolationCode;
@@ -106,8 +109,9 @@ function inferActionType(path: string, method: string) {
 async function recordContractAuditEntry(
   path: string,
   options: RequestInit,
-  responsePayload: unknown,
+  responsePayload: Record<string, unknown>,
   sessionId: string | null,
+  traceId: string,
 ) {
   const actionType = inferActionType(path, options.method ?? "GET");
 
@@ -117,11 +121,20 @@ async function recordContractAuditEntry(
 
   contractAuditTrail.push({
     actionType,
+    eventId:
+      typeof responsePayload.meta === "object" &&
+      responsePayload.meta &&
+      "event_id" in responsePayload.meta &&
+      (responsePayload.meta as { event_id?: unknown }).event_id &&
+      typeof (responsePayload.meta as { event_id?: unknown }).event_id === "string"
+        ? ((responsePayload.meta as { event_id: string }).event_id ?? null)
+        : null,
     path,
     requestPayloadHash: await hashValue(options.body ?? null),
     responsePayloadHash: await hashValue(responsePayload),
     sessionId,
     timestamp: new Date().toISOString(),
+    traceId,
   });
 
   if (contractAuditTrail.length > 30) {
@@ -284,16 +297,26 @@ function normalizeContractError(error: unknown, path: string): ContractViolation
   return new ContractViolationError(path, "CONTRACT_VIOLATION", "CONTRACT_VIOLATION");
 }
 
+function nextTraceId(path: string, method: string) {
+  traceCounter += 1;
+  const sanitizedPath = path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+  return `${method.toLowerCase()}-${sanitizedPath || "root"}-${traceCounter.toString().padStart(6, "0")}`;
+}
+
 export async function apiClient<T>(
   path: string,
   options: RequestInit = {},
   contract: ApiClientContractOptions<T> = {},
 ): Promise<ApiResponse<T>> {
   const headers = new Headers(options.headers ?? {});
+  const method = options.method ?? "GET";
+  const traceId = headers.get("x-trace-id") ?? nextTraceId(path, method);
 
   if (!headers.has("Content-Type") && options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
+
+  headers.set("x-trace-id", traceId);
 
   if (authToken) {
     headers.set("Authorization", `Bearer ${authToken}`);
@@ -328,7 +351,13 @@ export async function apiClient<T>(
 
     if (payload.ok) {
       validateResponseContract(path, payload.data, contract.sessionId);
-      await recordContractAuditEntry(path, options, payload.data, contract.sessionId ?? null);
+      await recordContractAuditEntry(
+        path,
+        { ...options, method, headers },
+        payload as unknown as Record<string, unknown>,
+        contract.sessionId ?? null,
+        traceId,
+      );
     }
 
     return payload as ApiResponse<T>;
@@ -346,11 +375,15 @@ export async function apiClient<T>(
         code: "TRANSPORT_ERROR",
         message: "TRANSPORT_ERROR",
         retryable: true,
+        trace_id: traceId,
+        event_id: null,
       },
       meta: {
         version: REQUIRED_BACKEND_VERSION,
         contract_version: REQUIRED_CONTRACT_VERSION,
         timestamp: new Date().toISOString(),
+        trace_id: traceId,
+        event_id: null,
       },
     };
   }

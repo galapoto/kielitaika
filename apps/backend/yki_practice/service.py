@@ -1,6 +1,5 @@
 from dataclasses import asdict
 from hashlib import sha256
-import json
 
 from audit.audit_service import get_session_events, record_event
 from audit.replay_engine import replay_session, verify_replay_consistency
@@ -8,6 +7,7 @@ from learning.decision_version import get_decision_metadata
 from learning.policy_engine import is_exam_mode_locked
 from learning.progress_service import record_practice_result
 from learning.repository import repository
+from utils.hash_utils import deterministic_hash
 from yki.session_store import DEFAULT_USER_ID
 from yki_practice.generator import build_adaptive_context, build_practice_tasks
 from yki_practice.session_models import PracticeSession
@@ -34,19 +34,8 @@ def _checksum_text(value: str):
     return sha256((value or "").encode("utf-8")).hexdigest()[:12]
 
 
-def _stable_value(value):
-    if isinstance(value, dict):
-        return {key: _stable_value(value[key]) for key in sorted(value)}
-
-    if isinstance(value, list):
-        return [_stable_value(item) for item in value]
-
-    return value
-
-
 def _runtime_hash(value):
-    serialized = json.dumps(_stable_value(value), separators=(",", ":"), sort_keys=True)
-    return sha256(serialized.encode("utf-8")).hexdigest()
+    return deterministic_hash(value)
 
 
 def _runtime_metadata():
@@ -366,6 +355,8 @@ def _record_task_presented(session: PracticeSession, trigger: str):
             "user_id": session.user_id,
             "session_id": session.session_id,
             "event_type": "YKI_TASK_PRESENTED",
+            "session_hash": _session_hash(session),
+            "task_sequence_hash": _task_sequence_hash(session),
             "decision_version": metadata["decision_version"],
             "policy_version": metadata["policy_version"],
             "governance_version": metadata["governance_version"],
@@ -381,6 +372,8 @@ def _record_task_presented(session: PracticeSession, trigger: str):
                 "related_learning_unit_id": task["relatedLearningUnitId"],
                 "difficulty_level": task.get("difficultyLevel"),
                 "task_selection_reason": task["taskSelectionReason"],
+                "session_hash": _session_hash(session),
+                "task_sequence_hash": _task_sequence_hash(session),
             },
             "constraint_metadata": {
                 "decision_policy_version": metadata["decision_policy_version"],
@@ -405,6 +398,8 @@ def _record_session_completed_if_needed(session: PracticeSession, trigger: str):
             "user_id": session.user_id,
             "session_id": session.session_id,
             "event_type": "YKI_SESSION_COMPLETED",
+            "session_hash": _session_hash(session),
+            "task_sequence_hash": _task_sequence_hash(session),
             "decision_version": metadata["decision_version"],
             "policy_version": metadata["policy_version"],
             "governance_version": metadata["governance_version"],
@@ -418,6 +413,8 @@ def _record_session_completed_if_needed(session: PracticeSession, trigger: str):
                 "average_score": summary["averageScore"],
                 "recommended_focus": summary["recommended_focus"],
                 "improvement_trend": summary["improvement_trend"],
+                "session_hash": _session_hash(session),
+                "task_sequence_hash": _task_sequence_hash(session),
             },
             "constraint_metadata": {
                 "exam_mode": session.exam_mode,
@@ -460,6 +457,8 @@ def start_practice_session(user_id: str = DEFAULT_USER_ID):
             "user_id": user_id,
             "session_id": session.session_id,
             "event_type": "YKI_SESSION_STARTED",
+            "session_hash": _session_hash(session),
+            "task_sequence_hash": _task_sequence_hash(session),
             "decision_version": metadata["decision_version"],
             "policy_version": metadata["policy_version"],
             "governance_version": metadata["governance_version"],
@@ -481,6 +480,8 @@ def start_practice_session(user_id: str = DEFAULT_USER_ID):
                     }
                     for task in tasks
                 ],
+                "session_hash": _session_hash(session),
+                "task_sequence_hash": _task_sequence_hash(session),
             },
             "constraint_metadata": {
                 "decision_policy_version": metadata["decision_policy_version"],
@@ -549,6 +550,8 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
             "user_id": session.user_id,
             "session_id": session.session_id,
             "event_type": "YKI_RESPONSE_SUBMITTED",
+            "session_hash": _session_hash(session),
+            "task_sequence_hash": _task_sequence_hash(session),
             "decision_version": metadata["decision_version"],
             "policy_version": metadata["policy_version"],
             "governance_version": metadata["governance_version"],
@@ -566,6 +569,8 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
                 "max_score": evaluation["maxScore"],
                 "is_correct": evaluation["isCorrect"],
                 "related_learning_unit_id": current_task["relatedLearningUnitId"],
+                "session_hash": _session_hash(session),
+                "task_sequence_hash": _task_sequence_hash(session),
             },
             "constraint_metadata": {
                 "exam_mode": session.exam_mode,

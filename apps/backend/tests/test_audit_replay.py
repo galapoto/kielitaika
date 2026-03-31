@@ -1,17 +1,20 @@
 from copy import deepcopy
+import json
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from audit.audit_logger import AUDIT_LOG_PATH, read_events
+from audit.audit_integrity import compute_event_hash, verify_audit_integrity
 from audit.audit_service import get_session_events, get_user_events, reset_audit_store
-from audit.audit_integrity import verify_audit_integrity
 from audit.replay_engine import replay_session, verify_replay_consistency
 from learning.graph_service import list_modules_for_user
 from learning.policy_engine import reset_policy_governance
 from learning.practice_service import generate_practice
 from learning.progress_service import record_practice_result, reset_progress_store
+from utils.hash_utils import deterministic_hash
 from yki.storage import _history
 from yki_practice.adapter import start_yki_practice, submit_yki_practice
 from yki_practice.service import reset_practice_sessions
@@ -76,6 +79,46 @@ class AuditReplayTests(unittest.TestCase):
         )
         self.assertTrue(all(event["event_hash"] for event in events))
         self.assertEqual(verification["integrity"]["integrityStatus"], "valid")
+        self.assertTrue(replay["responseSequence"])
+        self.assertEqual(replay["finalTaskSequenceHash"], events[-1]["task_sequence_hash"])
+
+    def test_audit_log_is_written_as_jsonl_for_replay(self):
+        session = start_yki_practice("audit-jsonl")
+
+        self.assertTrue(AUDIT_LOG_PATH.exists())
+        lines = AUDIT_LOG_PATH.read_text(encoding="utf-8").strip().splitlines()
+        self.assertGreaterEqual(len(lines), 2)
+
+        parsed = [json.loads(line) for line in lines]
+        self.assertEqual(parsed[0]["session_id"], session["session_id"])
+        self.assertEqual(parsed[0]["event_id"], "audit-000001")
+        self.assertEqual(read_events(session_id=session["session_id"])[0]["event_id"], "audit-000001")
+
+    def test_replay_detects_response_hash_mismatch(self):
+        session = start_yki_practice("audit-replay-mismatch")
+        events = get_session_events(session["session_id"])
+        tampered_events = deepcopy(events)
+        replay_event = next(
+            event
+            for event in tampered_events
+            if isinstance(event.get("output_snapshot"), dict)
+            and "session_hash" in event["output_snapshot"]
+        )
+        replay_event["output_snapshot"]["session_hash"] = "tampered-session-hash"
+        replay_event["response_payload_hash"] = deterministic_hash(replay_event["output_snapshot"])
+
+        previous_hash = None
+        for event in tampered_events:
+            event["previous_event_hash"] = previous_hash
+            event["event_hash"] = compute_event_hash(event, previous_hash)
+            previous_hash = event["event_hash"]
+
+        verification = verify_replay_consistency(tampered_events)
+
+        self.assertFalse(verification["ok"])
+        self.assertTrue(
+            any("REPLAY_MISMATCH" in issue for issue in verification["issues"]),
+        )
 
     def test_yki_session_is_replayable_and_consistent(self):
         user_id = "audit-yki"

@@ -12,7 +12,7 @@ import {
 type HookState = {
   data: YkiPracticeSession | null;
   loading: boolean;
-  error: { message: string } | null;
+  error: { code?: string; message: string; traceReference?: string | null } | null;
   notice: string | null;
 };
 

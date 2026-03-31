@@ -2,6 +2,7 @@ from collections import Counter
 
 from audit.audit_service import get_session_events, get_user_events
 from audit.audit_integrity import verify_audit_integrity
+from utils.hash_utils import deterministic_hash
 
 
 def _sort_events(events: list[dict]):
@@ -17,6 +18,7 @@ def replay_session(events: list[dict]):
     decisions_made = []
     decision_versions = []
     policy_versions = []
+    response_sequence = []
 
     if not integrity["ok"] and integrity["integrityStatus"] == "invalid":
         return {
@@ -30,9 +32,15 @@ def replay_session(events: list[dict]):
             "ykiTaskFlow": [],
             "unitProgressFlow": [],
             "decisionsMade": [],
+            "responseSequence": [],
+            "finalSessionHash": None,
+            "finalTaskSequenceHash": None,
             "trusted": False,
             "integrity": integrity,
         }
+
+    final_session_hash = None
+    final_task_sequence_hash = None
 
     for event in ordered_events:
         decision_versions.append(event["decision_version"])
@@ -47,6 +55,23 @@ def replay_session(events: list[dict]):
                 "constraints": event["constraint_metadata"],
             }
         )
+        if event.get("request_payload_hash") and event.get("response_payload_hash"):
+            response_sequence.append(
+                {
+                    "eventId": event["event_id"],
+                    "eventType": event["event_type"],
+                    "traceId": event.get("trace_id"),
+                    "requestHash": event["request_payload_hash"],
+                    "responseHash": event["response_payload_hash"],
+                    "request": event["input_snapshot"],
+                    "response": event["output_snapshot"],
+                }
+            )
+
+        if event.get("session_hash"):
+            final_session_hash = event["session_hash"]
+        if event.get("task_sequence_hash"):
+            final_task_sequence_hash = event["task_sequence_hash"]
 
         if event["event_type"] == "RECOMMENDATION_GENERATED":
             recommendation_sequence.append(
@@ -122,6 +147,9 @@ def replay_session(events: list[dict]):
         "ykiTaskFlow": yki_task_flow,
         "unitProgressFlow": unit_progress_flow,
         "decisionsMade": decisions_made,
+        "responseSequence": response_sequence,
+        "finalSessionHash": final_session_hash,
+        "finalTaskSequenceHash": final_task_sequence_hash,
         "trusted": integrity["ok"],
         "integrity": integrity,
     }
@@ -166,6 +194,39 @@ def verify_replay_consistency(events: list[dict]):
     policy_versions = {event["policy_version"] for event in ordered_events}
     if len(policy_versions) > 1:
         issues.append("Policy version inconsistency detected in replay events.")
+
+    for event in ordered_events:
+        request_hash = event.get("request_payload_hash")
+        response_hash = event.get("response_payload_hash")
+
+        if request_hash and request_hash != deterministic_hash(event.get("input_snapshot") or {}):
+            issues.append(f"REPLAY_MISMATCH: request hash drift at {event['event_id']}.")
+
+        if response_hash and response_hash != deterministic_hash(event.get("output_snapshot") or {}):
+            issues.append(f"REPLAY_MISMATCH: response hash drift at {event['event_id']}.")
+
+        output_snapshot = event.get("output_snapshot") or {}
+        response_data = output_snapshot.get("data") if isinstance(output_snapshot, dict) else None
+        if isinstance(response_data, dict) or isinstance(output_snapshot, dict):
+            response_session_hash = (
+                response_data.get("session_hash")
+                if isinstance(response_data, dict)
+                else output_snapshot.get("session_hash")
+            )
+            response_task_sequence_hash = (
+                response_data.get("task_sequence_hash")
+                if isinstance(response_data, dict)
+                else output_snapshot.get("task_sequence_hash")
+            )
+
+            if event.get("session_hash") and response_session_hash != event["session_hash"]:
+                issues.append(f"REPLAY_MISMATCH: session hash drift at {event['event_id']}.")
+
+            if (
+                event.get("task_sequence_hash")
+                and response_task_sequence_hash != event["task_sequence_hash"]
+            ):
+                issues.append(f"REPLAY_MISMATCH: task sequence hash drift at {event['event_id']}.")
 
     generated_events = [
         event for event in ordered_events if event["event_type"] == "RECOMMENDATION_GENERATED"

@@ -62,6 +62,16 @@ const metaSchema = objectSchema({
   version: stringSchema,
   contract_version: stringSchema,
   timestamp: stringSchema,
+  trace_id: stringSchema,
+  event_id: nullableSchema(stringSchema),
+});
+
+const apiErrorSchema = objectSchema({
+  code: stringSchema,
+  message: stringSchema,
+  retryable: booleanSchema,
+  trace_id: nullableSchema(stringSchema),
+  event_id: nullableSchema(stringSchema),
 });
 
 export class ControlledUiValidationError extends Error {
@@ -611,6 +621,12 @@ const learningDebugStateSchema = objectSchema(
         user_id: stringSchema,
         session_id: nullableSchema(stringSchema),
         event_type: stringSchema,
+        trace_id: nullableSchema(stringSchema),
+        request_payload_hash: stringSchema,
+        response_payload_hash: stringSchema,
+        contract_version: stringSchema,
+        session_hash: nullableSchema(stringSchema),
+        task_sequence_hash: nullableSchema(stringSchema),
         decision_version: stringSchema,
         policy_version: stringSchema,
         governance_version: stringSchema,
@@ -633,6 +649,9 @@ const learningDebugStateSchema = objectSchema(
       ykiTaskFlow: arraySchema(unknownRecordSchema()),
       unitProgressFlow: arraySchema(unknownRecordSchema()),
       decisionsMade: arraySchema(unknownRecordSchema()),
+      responseSequence: arraySchema(unknownRecordSchema()),
+      finalSessionHash: nullableSchema(stringSchema),
+      finalTaskSequenceHash: nullableSchema(stringSchema),
       trusted: booleanSchema,
       integrity: objectSchema({
         ok: booleanSchema,
@@ -865,7 +884,15 @@ const ykiPracticeSessionSchema = objectSchema(
       objectSchema({
         event_id: stringSchema,
         timestamp: stringSchema,
+        user_id: nullableSchema(stringSchema),
+        session_id: nullableSchema(stringSchema),
         event_type: stringSchema,
+        trace_id: nullableSchema(stringSchema),
+        request_payload_hash: stringSchema,
+        response_payload_hash: stringSchema,
+        contract_version: stringSchema,
+        session_hash: nullableSchema(stringSchema),
+        task_sequence_hash: nullableSchema(stringSchema),
         decision_version: stringSchema,
         policy_version: stringSchema,
         governance_version: stringSchema,
@@ -881,6 +908,9 @@ const ykiPracticeSessionSchema = objectSchema(
       orderedEventIds: arraySchema(stringSchema),
       eventCounts: recordSchema(numberSchema),
       ykiTaskFlow: arraySchema(unknownRecordSchema()),
+      responseSequence: arraySchema(unknownRecordSchema()),
+      finalSessionHash: nullableSchema(stringSchema),
+      finalTaskSequenceHash: nullableSchema(stringSchema),
       trusted: booleanSchema,
       integrity: objectSchema({
         ok: booleanSchema,
@@ -932,11 +962,15 @@ type ApiEnvelope<TOutput> = {
     code: string;
     message: string;
     retryable: boolean;
+    trace_id: string | null;
+    event_id: string | null;
   } | null;
   meta: {
     version: string;
     contract_version: string;
     timestamp: string;
+    trace_id: string;
+    event_id: string | null;
   };
 };
 
@@ -978,13 +1012,7 @@ export function validateApiEnvelope<TOutput>(
     objectSchema({
       ok: booleanSchema,
       data: nullableSchema(unknownRecordSchema()),
-      error: nullableSchema(
-        objectSchema({
-          code: stringSchema,
-          message: stringSchema,
-          retryable: booleanSchema,
-        }),
-      ),
+      error: nullableSchema(apiErrorSchema),
       meta: metaSchema,
     }),
     path,

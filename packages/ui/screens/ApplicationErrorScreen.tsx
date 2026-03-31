@@ -11,6 +11,7 @@ type Props = {
   onSecondaryAction?: () => void;
   primaryLabel: string;
   secondaryLabel?: string;
+  traceReference?: string | null;
 };
 
 export default function ApplicationErrorScreen({
@@ -20,6 +21,7 @@ export default function ApplicationErrorScreen({
   onSecondaryAction,
   primaryLabel,
   secondaryLabel,
+  traceReference,
 }: Props) {
   return (
     <ScreenContainer center>
@@ -29,6 +31,7 @@ export default function ApplicationErrorScreen({
             <Text variant="title">Runtime Blocked</Text>
             <Text tone="error">{code}</Text>
             <Text>{message}</Text>
+            {traceReference ? <Text tone="muted">{traceReference}</Text> : null}
           </Stack>
         </Card>
         <Button label={primaryLabel} onPress={onPrimaryAction} />

@@ -1,23 +1,37 @@
 from copy import deepcopy
 from datetime import UTC, datetime
 
+from audit.audit_logger import append_event, next_event_id, read_events, reset_audit_log
 from audit.audit_integrity import compute_event_hash, get_event_stream_key
 from audit.audit_models import AUDIT_EVENT_TYPES, AuditEvent, serialize_event
 from learning.decision_version import get_decision_metadata
+from utils.hash_utils import deterministic_hash
 
-_audit_store: list[AuditEvent] = []
 _audit_enabled = True
-_event_counter = 0
 
 
 def _current_timestamp():
     return datetime.now(UTC).isoformat()
 
 
-def _next_event_id():
-    global _event_counter
-    _event_counter += 1
-    return f"audit-{_event_counter:06d}"
+def _current_contract_version():
+    from api_contract import CONTRACT_VERSION
+
+    return CONTRACT_VERSION
+
+
+def _extract_runtime_hash(snapshot: dict, key: str):
+    value = snapshot.get(key)
+    if isinstance(value, str):
+        return value
+
+    data = snapshot.get("data")
+    if isinstance(data, dict):
+        nested_value = data.get(key)
+        if isinstance(nested_value, str):
+            return nested_value
+
+    return None
 
 
 def _coerce_event(event: AuditEvent | dict):
@@ -25,11 +39,17 @@ def _coerce_event(event: AuditEvent | dict):
 
     if isinstance(event, AuditEvent):
         return AuditEvent(
-            event_id=event.event_id or _next_event_id(),
+            event_id=event.event_id or next_event_id(),
             timestamp=event.timestamp or _current_timestamp(),
             user_id=event.user_id,
             session_id=event.session_id,
             event_type=event.event_type,
+            trace_id=event.trace_id,
+            request_payload_hash=event.request_payload_hash,
+            response_payload_hash=event.response_payload_hash,
+            contract_version=event.contract_version,
+            session_hash=event.session_hash,
+            task_sequence_hash=event.task_sequence_hash,
             decision_version=event.decision_version or runtime_metadata["decision_version"],
             policy_version=event.policy_version or runtime_metadata["policy_version"],
             governance_version=event.governance_version or runtime_metadata["governance_version"],
@@ -42,21 +62,32 @@ def _coerce_event(event: AuditEvent | dict):
         )
 
     event_type = event["event_type"]
-    if event_type not in AUDIT_EVENT_TYPES:
+    if not isinstance(event_type, str) or not event_type.strip():
         raise ValueError(f"Unsupported audit event type: {event_type}")
 
+    input_snapshot = deepcopy(event.get("input_snapshot") or {})
+    output_snapshot = deepcopy(event.get("output_snapshot") or {})
+
     return AuditEvent(
-        event_id=event.get("event_id") or _next_event_id(),
+        event_id=event.get("event_id") or next_event_id(),
         timestamp=event.get("timestamp") or _current_timestamp(),
-        user_id=event["user_id"],
+        user_id=event.get("user_id"),
         session_id=event.get("session_id"),
         event_type=event_type,
+        trace_id=event.get("trace_id"),
+        request_payload_hash=event.get("request_payload_hash") or deterministic_hash(input_snapshot),
+        response_payload_hash=event.get("response_payload_hash")
+        or deterministic_hash(output_snapshot),
+        contract_version=event.get("contract_version") or _current_contract_version(),
+        session_hash=event.get("session_hash") or _extract_runtime_hash(output_snapshot, "session_hash"),
+        task_sequence_hash=event.get("task_sequence_hash")
+        or _extract_runtime_hash(output_snapshot, "task_sequence_hash"),
         decision_version=event.get("decision_version") or runtime_metadata["decision_version"],
         policy_version=event.get("policy_version") or runtime_metadata["policy_version"],
         governance_version=event.get("governance_version") or runtime_metadata["governance_version"],
         change_reference=event.get("change_reference") or runtime_metadata["change_reference"],
-        input_snapshot=deepcopy(event.get("input_snapshot") or {}),
-        output_snapshot=deepcopy(event.get("output_snapshot") or {}),
+        input_snapshot=input_snapshot,
+        output_snapshot=output_snapshot,
         constraint_metadata=deepcopy(event.get("constraint_metadata") or {}),
         previous_event_hash=event.get("previous_event_hash"),
         event_hash=event.get("event_hash"),
@@ -69,7 +100,9 @@ def _sorted_events(events: list[AuditEvent]):
 
 def _get_last_event_for_stream(stream_key: str):
     stream_events = [
-        event for event in _audit_store if get_event_stream_key(serialize_event(event)) == stream_key
+        event
+        for event in (AuditEvent(**item) for item in read_events())
+        if get_event_stream_key(serialize_event(event)) == stream_key
     ]
     if not stream_events:
         return None
@@ -101,6 +134,12 @@ def record_event(event: AuditEvent | dict):
         user_id=normalized_event.user_id,
         session_id=normalized_event.session_id,
         event_type=normalized_event.event_type,
+        trace_id=normalized_event.trace_id,
+        request_payload_hash=normalized_event.request_payload_hash,
+        response_payload_hash=normalized_event.response_payload_hash,
+        contract_version=normalized_event.contract_version,
+        session_hash=normalized_event.session_hash,
+        task_sequence_hash=normalized_event.task_sequence_hash,
         decision_version=normalized_event.decision_version,
         policy_version=normalized_event.policy_version,
         governance_version=normalized_event.governance_version,
@@ -111,33 +150,22 @@ def record_event(event: AuditEvent | dict):
         previous_event_hash=previous_event_hash,
         event_hash=event_hash,
     )
-    _audit_store.append(normalized_event)
-    return serialize_event(normalized_event)
+    serialized = serialize_event(normalized_event)
+    append_event(serialized)
+    return serialized
 
 
 def get_session_events(session_id: str):
-    return [
-        serialize_event(event)
-        for event in _sorted_events(
-            [event for event in _audit_store if event.session_id == session_id]
-        )
-    ]
+    return read_events(session_id=session_id)
 
 
 def get_user_events(user_id: str):
-    return [
-        serialize_event(event)
-        for event in _sorted_events(
-            [event for event in _audit_store if event.user_id == user_id]
-        )
-    ]
+    return read_events(user_id=user_id)
 
 
 def get_all_events():
-    return [serialize_event(event) for event in _sorted_events(list(_audit_store))]
+    return read_events()
 
 
 def reset_audit_store():
-    global _event_counter
-    _audit_store.clear()
-    _event_counter = 0
+    reset_audit_log()

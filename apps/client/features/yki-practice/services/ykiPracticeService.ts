@@ -11,6 +11,9 @@ import {
 type ApiError = {
   code?: string;
   message: string;
+  event_id?: string | null;
+  traceReference?: string | null;
+  trace_id?: string | null;
 };
 
 type ApiResponse<T> = {
@@ -172,7 +175,15 @@ export type YkiPracticeSession = {
   auditTimeline?: Array<{
     event_id: string;
     timestamp: string;
+    user_id: string | null;
+    session_id: string | null;
     event_type: string;
+    trace_id: string | null;
+    request_payload_hash: string;
+    response_payload_hash: string;
+    contract_version: string;
+    session_hash: string | null;
+    task_sequence_hash: string | null;
     decision_version: string;
     policy_version: string;
     governance_version: string;
@@ -187,6 +198,9 @@ export type YkiPracticeSession = {
     orderedEventIds: string[];
     eventCounts: Record<string, number>;
     ykiTaskFlow: Array<Record<string, unknown>>;
+    responseSequence: Array<Record<string, unknown>>;
+    finalSessionHash: string | null;
+    finalTaskSequenceHash: string | null;
     trusted: boolean;
     integrity: {
       ok: boolean;
@@ -232,12 +246,20 @@ type PersistedSessionSuccess = {
 
 function normalizeError(error: ApiError | null): ApiError {
   if (!error) {
-    return { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION" };
+    return { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION", traceReference: null };
   }
+
+  const traceReference =
+    error.trace_id || error.event_id
+      ? `Trace ${error.trace_id ?? "none"}${error.event_id ? ` | Event ${error.event_id}` : ""}`
+      : null;
 
   return {
     code: error.code ?? "CONTRACT_VIOLATION",
+    event_id: error.event_id ?? null,
     message: error.message || error.code || "CONTRACT_VIOLATION",
+    traceReference,
+    trace_id: error.trace_id ?? null,
   };
 }
 
@@ -266,6 +288,7 @@ async function withSessionValidation(
         error: {
           code: error.code,
           message: error.code,
+          traceReference: null,
         },
       };
     }
@@ -441,6 +464,7 @@ export async function resumePracticeSession() {
       error: {
         code: persisted.reason === "corrupted" ? "SESSION_CORRUPTED" : "SESSION_OUTDATED",
         message: persisted.reason === "corrupted" ? "SESSION_CORRUPTED" : "SESSION_OUTDATED",
+        traceReference: null,
       },
     } satisfies ApiResponse<YkiPracticeSession>;
   }
@@ -459,6 +483,7 @@ export async function resumePracticeSession() {
         error: {
           code: "SESSION_CORRUPTED",
           message: "SESSION_CORRUPTED",
+          traceReference: null,
         },
       } satisfies ApiResponse<YkiPracticeSession>;
     }
@@ -479,7 +504,7 @@ export async function submitPracticeTask(
     return {
       ok: false,
       data: null,
-      error: { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION" },
+      error: { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION", traceReference: null },
     } satisfies ApiResponse<null>;
   }
 

@@ -18,6 +18,7 @@ import { persistLearningSession } from "./sessionPersistence";
 type LearningRuntimeState = {
   debugState: LearningDebugState | null;
   errorMessage: string | null;
+  errorTraceReference: string | null;
   loading: boolean;
   modulesData: LearningModulesData | null;
 };
@@ -31,6 +32,7 @@ export default function LearningRoute({ onBack }: Props) {
   const [state, setState] = useState<LearningRuntimeState>({
     debugState: null,
     errorMessage: null,
+    errorTraceReference: null,
     loading: true,
     modulesData: null,
   });
@@ -39,6 +41,7 @@ export default function LearningRoute({ onBack }: Props) {
     setState((current) => ({
       ...current,
       errorMessage: null,
+      errorTraceReference: null,
       loading: true,
     }));
 
@@ -58,6 +61,7 @@ export default function LearningRoute({ onBack }: Props) {
       setState({
         debugState: debugResponse.data,
         errorMessage: null,
+        errorTraceReference: null,
         loading: false,
         modulesData: modulesResponse.data,
       });
@@ -70,6 +74,10 @@ export default function LearningRoute({ onBack }: Props) {
         modulesResponse.error?.message ??
         debugResponse.error?.message ??
         "CONTRACT_VIOLATION",
+      errorTraceReference:
+        modulesResponse.error?.traceReference ??
+        debugResponse.error?.traceReference ??
+        null,
       loading: false,
       modulesData: null,
     });
@@ -311,6 +319,7 @@ export default function LearningRoute({ onBack }: Props) {
       contractViolations={contractViolations}
       decisionVersion={debugState?.decisionVersion ?? modulesData?.decisionVersion ?? ""}
       errorMessage={state.errorMessage}
+      errorTraceReference={state.errorTraceReference}
       factorContributionSummary={factorContributionSummary}
       governanceStatus={debugState?.governanceStatus ?? modulesData?.governanceStatus ?? "governed"}
       governanceVersion={debugState?.governanceVersion ?? modulesData?.governanceVersion ?? ""}

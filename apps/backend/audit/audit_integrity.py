@@ -1,23 +1,19 @@
-import json
-from hashlib import sha256
-
-
-def _stable_serialize(value):
-    return json.dumps(
-        value,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=True,
-    )
+from utils.hash_utils import deterministic_hash
 
 
 def compute_event_hash(event: dict, previous_hash: str | None):
     payload = {
         "event_id": event.get("event_id"),
         "timestamp": event.get("timestamp"),
+        "trace_id": event.get("trace_id"),
         "user_id": event.get("user_id"),
         "session_id": event.get("session_id"),
         "event_type": event.get("event_type"),
+        "request_payload_hash": event.get("request_payload_hash"),
+        "response_payload_hash": event.get("response_payload_hash"),
+        "contract_version": event.get("contract_version"),
+        "session_hash": event.get("session_hash"),
+        "task_sequence_hash": event.get("task_sequence_hash"),
         "decision_version": event.get("decision_version"),
         "policy_version": event.get("policy_version"),
         "governance_version": event.get("governance_version"),
@@ -27,13 +23,15 @@ def compute_event_hash(event: dict, previous_hash: str | None):
         "constraint_metadata": event.get("constraint_metadata") or {},
         "previous_event_hash": previous_hash,
     }
-    return sha256(_stable_serialize(payload).encode("utf-8")).hexdigest()
+    return deterministic_hash(payload)
 
 
 def get_event_stream_key(event: dict):
     if event.get("session_id"):
         return f"session:{event['session_id']}"
-    return f"user:{event['user_id']}"
+    if event.get("user_id"):
+        return f"user:{event['user_id']}"
+    return "global:runtime"
 
 
 def verify_audit_integrity(events: list[dict]):

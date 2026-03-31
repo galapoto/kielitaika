@@ -59,6 +59,7 @@ type Props = {
   contractViolations: string[];
   decisionVersion: string;
   errorMessage: string | null;
+  errorTraceReference: string | null;
   factorContributionSummary: string[];
   governanceStatus: "governed" | "legacy_uncontrolled";
   governanceVersion: string;
@@ -110,6 +111,7 @@ export default function LearningScreen({
   contractViolations,
   decisionVersion,
   errorMessage,
+  errorTraceReference,
   factorContributionSummary,
   governanceStatus,
   governanceVersion,
@@ -150,6 +152,7 @@ export default function LearningScreen({
             <Stack gap="xs">
               <Text variant="title">Learning</Text>
               <Text tone="error">{errorMessage}</Text>
+              {errorTraceReference ? <Text tone="muted">{errorTraceReference}</Text> : null}
             </Stack>
           </Card>
           <Button label="Retry" onPress={onRefresh} />

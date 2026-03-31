@@ -1,20 +1,11 @@
 from dataclasses import asdict, dataclass, field
-from typing import Literal
 
-AuditEventType = Literal[
-    "RECOMMENDATION_GENERATED",
-    "RECOMMENDATION_SERVED",
-    "UNIT_ATTEMPTED",
-    "UNIT_COMPLETED",
-    "STAGNATION_DETECTED",
-    "POLICY_APPLIED",
-    "YKI_SESSION_STARTED",
-    "YKI_TASK_PRESENTED",
-    "YKI_RESPONSE_SUBMITTED",
-    "YKI_SESSION_COMPLETED",
-]
+AuditEventType = str
 
 AUDIT_EVENT_TYPES: tuple[AuditEventType, ...] = (
+    "LEARNING_MODULES_LOADED",
+    "LEARNING_UNIT_LOADED",
+    "LEARNING_PROGRESS_SUBMITTED",
     "RECOMMENDATION_GENERATED",
     "RECOMMENDATION_SERVED",
     "UNIT_ATTEMPTED",
@@ -22,7 +13,9 @@ AUDIT_EVENT_TYPES: tuple[AuditEventType, ...] = (
     "STAGNATION_DETECTED",
     "POLICY_APPLIED",
     "YKI_SESSION_STARTED",
+    "YKI_SESSION_RESUMED",
     "YKI_TASK_PRESENTED",
+    "YKI_TASK_ADVANCED",
     "YKI_RESPONSE_SUBMITTED",
     "YKI_SESSION_COMPLETED",
 )
@@ -32,9 +25,15 @@ AUDIT_EVENT_TYPES: tuple[AuditEventType, ...] = (
 class AuditEvent:
     event_id: str
     timestamp: str
-    user_id: str
+    user_id: str | None
     session_id: str | None
     event_type: AuditEventType
+    trace_id: str | None
+    request_payload_hash: str
+    response_payload_hash: str
+    contract_version: str
+    session_hash: str | None
+    task_sequence_hash: str | None
     decision_version: str
     policy_version: str
     governance_version: str
