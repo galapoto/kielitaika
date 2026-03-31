@@ -35,9 +35,37 @@ export type PracticeBundle = {
     weakPatterns: string[];
     currentLevel: string | null;
     matchedWeaknesses: string[];
+    prioritizedUnitIds: string[];
   } | null;
   exerciseCount: number;
   exercises: PracticeExercise[];
+};
+
+export type UnitProgress = {
+  user_id: string;
+  unit_id: string;
+  attempts: number;
+  correct_attempts: number;
+  last_attempt_at: string | null;
+  mastery_score: number;
+  mastery_level: "weak" | "improving" | "mastered";
+};
+
+export type ModuleProgress = {
+  user_id: string;
+  module_id: string;
+  completion_percentage: number;
+  mastery_score: number;
+  mastery_level: "weak" | "improving" | "mastered";
+  mastered_unit_count: number;
+  total_unit_count: number;
+  low_mastery_unit_ids: string[];
+  unit_progress: UnitProgress[];
+};
+
+export type PracticeProgressSubmission = {
+  unitProgress: UnitProgress;
+  moduleProgress: ModuleProgress;
 };
 
 export async function getModulePractice(moduleId: string) {
@@ -50,4 +78,29 @@ export async function getRecommendedPractice() {
   return (await apiClient(
     "/api/v1/learning/practice/recommended",
   )) as ApiResponse<PracticeBundle>;
+}
+
+export async function submitPracticeResult(exercise: PracticeExercise, isCorrect: boolean) {
+  return (await apiClient("/api/v1/learning/progress/submit", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      exercise,
+      isCorrect,
+    }),
+  })) as ApiResponse<PracticeProgressSubmission>;
+}
+
+export async function getUnitProgress(unitId: string) {
+  return (await apiClient(
+    `/api/v1/learning/progress/unit/${unitId}`,
+  )) as ApiResponse<UnitProgress>;
+}
+
+export async function getModuleProgress(moduleId: string) {
+  return (await apiClient(
+    `/api/v1/learning/progress/module/${moduleId}`,
+  )) as ApiResponse<ModuleProgress>;
 }

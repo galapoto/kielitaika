@@ -20,6 +20,8 @@ export default function PracticeView({ moduleId }: Props) {
     answer,
     submitted,
     feedback,
+    moduleProgress,
+    unitProgress,
     setAnswer,
     submitAnswer,
     nextExercise,
@@ -74,6 +76,40 @@ export default function PracticeView({ moduleId }: Props) {
               : "None"}
           </Text>
           <Text>Current level: {data.recommendation.currentLevel ?? "Not available yet"}</Text>
+          <Text>
+            Prioritized units:{" "}
+            {data.recommendation.prioritizedUnitIds.length
+              ? data.recommendation.prioritizedUnitIds.length
+              : "None"}
+          </Text>
+        </View>
+      ) : null}
+
+      {moduleProgress ? (
+        <View style={styles.card}>
+          <Text size="lg">Module Progress</Text>
+          <Text>
+            Completion: {formatPercentage(moduleProgress.completion_percentage)} ({moduleProgress.mastered_unit_count}/
+            {moduleProgress.total_unit_count} units mastered)
+          </Text>
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${Math.max(0, Math.min(moduleProgress.completion_percentage, 100))}%` },
+              ]}
+            />
+          </View>
+          <Text>Module mastery: {formatMasteryLevel(moduleProgress.mastery_level)}</Text>
+          <View style={styles.masteryList}>
+            {moduleProgress.unit_progress.map((progress) => (
+              <View key={progress.unit_id} style={styles.masteryPill}>
+                <Text>
+                  {progress.unit_id}: {formatMasteryLevel(progress.mastery_level)}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
       ) : null}
 
@@ -81,6 +117,14 @@ export default function PracticeView({ moduleId }: Props) {
         <Text size="lg">{formatExerciseType(currentExercise.type)}</Text>
         <Text>{currentExercise.question}</Text>
         <Text>Unit type: {currentExercise.unit_kind}</Text>
+        {unitProgress ? (
+          <View style={styles.unitProgressCard}>
+            <Text>Unit mastery: {formatMasteryLevel(unitProgress.mastery_level)}</Text>
+            <Text>
+              Attempts: {unitProgress.attempts} | Correct: {unitProgress.correct_attempts}
+            </Text>
+          </View>
+        ) : null}
         {currentExercise.input_mode === "choice" ? (
           <ChoiceOptions
             options={currentExercise.options}
@@ -158,6 +202,14 @@ function formatExerciseType(value: string) {
     .join(" ");
 }
 
+function formatMasteryLevel(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatPercentage(value: number) {
+  return `${value.toFixed(0)}%`;
+}
+
 const styles = StyleSheet.create({
   root: {
     width: "100%",
@@ -195,6 +247,34 @@ const styles = StyleSheet.create({
   },
   choiceOptionSelected: {
     backgroundColor: colors.primary,
+  },
+  progressTrack: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    height: 12,
+    overflow: "hidden",
+    width: "100%",
+  },
+  progressFill: {
+    backgroundColor: colors.primary,
+    height: "100%",
+  },
+  masteryList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  masteryPill: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  unitProgressCard: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    gap: spacing.xs,
+    padding: spacing.sm,
   },
   feedbackCard: {
     backgroundColor: colors.background,

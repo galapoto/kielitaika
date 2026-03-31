@@ -272,5 +272,6 @@ def generate_practice_from_weakness(user_id: str = DEFAULT_USER_ID):
         "weakPatterns": modules_data.get("weakPatterns", []),
         "currentLevel": modules_data.get("currentLevel"),
         "matchedWeaknesses": selected_module.get("matchedWeaknesses", []),
+        "prioritizedUnitIds": selected_module.get("lowMasteryUnitIds", []),
     }
     return practice

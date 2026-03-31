@@ -3,10 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from learning.adapter import (
     get_learning_modules,
+    get_learning_module_progress,
     get_learning_practice,
+    get_learning_unit_progress,
     get_learning_unit,
     get_recommended_learning_practice,
     get_related_learning_units,
+    submit_learning_progress,
 )
 from yki.adapter import (
     advance_task,
@@ -102,6 +105,42 @@ def learning_practice_recommended():
         return failure("PRACTICE_NOT_AVAILABLE")
 
     return success(practice)
+
+
+@app.post("/api/v1/learning/progress/submit")
+def learning_progress_submit(body: dict):
+    exercise = body.get("exercise")
+    is_correct = body.get("isCorrect")
+
+    if not exercise or not isinstance(is_correct, bool):
+        return failure("INVALID_PROGRESS_SUBMISSION")
+
+    progress = submit_learning_progress(exercise, is_correct)
+
+    if not progress:
+        return failure("PROGRESS_SUBMISSION_FAILED")
+
+    return success(progress)
+
+
+@app.get("/api/v1/learning/progress/unit/{unit_id}")
+def learning_progress_unit(unit_id: str):
+    progress = get_learning_unit_progress(unit_id)
+
+    if not progress:
+        return failure("UNIT_NOT_FOUND")
+
+    return success(progress)
+
+
+@app.get("/api/v1/learning/progress/module/{module_id}")
+def learning_progress_module(module_id: str):
+    progress = get_learning_module_progress(module_id)
+
+    if not progress:
+        return failure("MODULE_NOT_FOUND")
+
+    return success(progress)
 
 
 @app.get("/api/v1/yki")

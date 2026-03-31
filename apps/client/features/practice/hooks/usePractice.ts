@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 
 import {
+  getModuleProgress,
   getModulePractice,
   getRecommendedPractice,
+  getUnitProgress,
   type PracticeBundle,
+  submitPracticeResult,
+  type ModuleProgress,
+  type UnitProgress,
 } from "../services/practiceService";
 
 type PracticeFeedback = {
@@ -27,6 +32,18 @@ export default function usePractice(moduleId: string | null) {
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState<PracticeFeedback | null>(null);
+  const [moduleProgress, setModuleProgress] = useState<ModuleProgress | null>(null);
+  const [unitProgress, setUnitProgress] = useState<UnitProgress | null>(null);
+
+  async function hydrateProgress(data: PracticeBundle) {
+    const [moduleProgressRes, unitProgressRes] = await Promise.all([
+      getModuleProgress(data.module.id),
+      data.exercises[0] ? getUnitProgress(data.exercises[0].unit_id) : Promise.resolve(null),
+    ]);
+
+    setModuleProgress(moduleProgressRes?.ok && moduleProgressRes.data ? moduleProgressRes.data : null);
+    setUnitProgress(unitProgressRes?.ok && unitProgressRes.data ? unitProgressRes.data : null);
+  }
 
   async function loadPractice(activeModuleId: string | null) {
     setState((current) => ({ ...current, loading: true }));
@@ -41,6 +58,7 @@ export default function usePractice(moduleId: string | null) {
       setAnswer("");
       setSubmitted(false);
       setFeedback(null);
+      await hydrateProgress(res.data);
       return;
     }
 
@@ -49,6 +67,8 @@ export default function usePractice(moduleId: string | null) {
       loading: false,
       error: res.error ?? { message: "PRACTICE_NOT_AVAILABLE" },
     });
+    setModuleProgress(null);
+    setUnitProgress(null);
   }
 
   useEffect(() => {
@@ -65,6 +85,7 @@ export default function usePractice(moduleId: string | null) {
         setAnswer("");
         setSubmitted(false);
         setFeedback(null);
+        await hydrateProgress(res.data);
         return;
       }
 
@@ -73,6 +94,8 @@ export default function usePractice(moduleId: string | null) {
         loading: false,
         error: res.error ?? { message: "PRACTICE_NOT_AVAILABLE" },
       });
+      setModuleProgress(null);
+      setUnitProgress(null);
     }
 
     load();
@@ -80,7 +103,21 @@ export default function usePractice(moduleId: string | null) {
 
   const currentExercise = state.data?.exercises[currentIndex] ?? null;
 
-  function submitAnswer() {
+  useEffect(() => {
+    async function loadCurrentUnitProgress() {
+      if (!currentExercise) {
+        setUnitProgress(null);
+        return;
+      }
+
+      const res = await getUnitProgress(currentExercise.unit_id);
+      setUnitProgress(res.ok && res.data ? res.data : null);
+    }
+
+    loadCurrentUnitProgress();
+  }, [currentExercise?.id, currentExercise?.unit_id]);
+
+  async function submitAnswer() {
     if (!currentExercise || submitted) {
       return;
     }
@@ -94,6 +131,12 @@ export default function usePractice(moduleId: string | null) {
       submittedAnswer: answer.trim(),
     });
     setSubmitted(true);
+
+    const res = await submitPracticeResult(currentExercise, isCorrect);
+    if (res.ok && res.data) {
+      setUnitProgress(res.data.unitProgress);
+      setModuleProgress(res.data.moduleProgress);
+    }
   }
 
   function nextExercise() {
@@ -121,6 +164,8 @@ export default function usePractice(moduleId: string | null) {
     answer,
     submitted,
     feedback,
+    moduleProgress,
+    unitProgress,
     setAnswer,
     submitAnswer,
     nextExercise,
