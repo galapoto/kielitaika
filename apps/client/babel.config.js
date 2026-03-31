@@ -9,9 +9,10 @@ module.exports = function (api) {
       [
         "module-resolver",
         {
+          root: [path.resolve(__dirname)],
           alias: {
-            "@core": path.resolve(__dirname, "../../packages/core"),
-            "@ui": path.resolve(__dirname, "../../packages/ui"),
+            "@core": "../../packages/core",
+            "@ui": "../../packages/ui",
           },
         },
       ],

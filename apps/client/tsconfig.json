@@ -1,3 +1,17 @@
 {
-  "extends": "../../tsconfig.json"
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": [
+        "../../packages/core/*"
+      ],
+      "@ui/*": [
+        "../../packages/ui/*"
+      ]
+    }
+  },
+  "include": [
+    "app/**/*"
+  ]
 }
