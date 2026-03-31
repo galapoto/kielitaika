@@ -6,8 +6,9 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from learning.decision_version import DECISION_VERSION
+from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
 from learning.graph_service import get_user_learning_debug_state, list_modules_for_user
+from learning.policy_engine import clamp_adaptive_weights
 from learning.practice_service import generate_practice, generate_practice_from_weakness
 from learning.progress_service import (
     get_due_review_units,
@@ -251,6 +252,7 @@ class ProgressServiceTests(unittest.TestCase):
         self.assertIn("mastery_score_used", traced_module["whyThisWasSelected"])
         self.assertIn("scoreBreakdown", traced_module)
         self.assertIn("adaptive_weight_modifier", traced_module["whyThisWasSelected"])
+        self.assertEqual(traced_module["whyThisWasSelected"]["policy_version"], POLICY_VERSION)
         self.assertEqual(debug_state["decisionVersion"], DECISION_VERSION)
 
     def test_same_inputs_keep_recommendation_scores_stable(self):
@@ -465,6 +467,59 @@ class ProgressServiceTests(unittest.TestCase):
         self.assertEqual(unit_progress["yki_influence_count"], 1)
         self.assertEqual(yki_logs[0]["signal_source"], "yki_practice")
         self.assertTrue(debug_state["ykiInfluenceLogs"])
+
+    def test_policy_clamps_extreme_adaptive_weight_changes(self):
+        base_weights = {
+            "weak_pattern": 0.3,
+            "low_mastery": 0.25,
+            "due_review": 0.2,
+            "regression": 0.15,
+            "difficulty_alignment": 0.1,
+        }
+        extreme_adjustments = {
+            "weak_pattern": 0.4,
+            "low_mastery": -0.4,
+            "due_review": 0.3,
+            "regression": 0.0,
+            "difficulty_alignment": 0.0,
+        }
+
+        constrained = clamp_adaptive_weights(
+            base_weights,
+            extreme_adjustments,
+            yki_influence_bonus=0.4,
+        )
+
+        self.assertEqual(constrained["policy_version"], POLICY_VERSION)
+        self.assertTrue(constrained["clamped_values"])
+        self.assertTrue(constrained["rejected_changes"])
+        self.assertLessEqual(constrained["yki_influence_bonus"], 0.03)
+
+    def test_recommendation_order_is_deterministic_with_policy_signature(self):
+        user_id = "progress-test-deterministic-order"
+
+        first = list_modules_for_user(user_id)
+        second = list_modules_for_user(user_id)
+
+        first_order = [
+            (
+                module["id"],
+                module["suggestionScore"],
+                module["whyThisWasSelected"]["decision_policy_version"],
+            )
+            for module in first["modules"]
+        ]
+        second_order = [
+            (
+                module["id"],
+                module["suggestionScore"],
+                module["whyThisWasSelected"]["decision_policy_version"],
+            )
+            for module in second["modules"]
+        ]
+
+        self.assertEqual(first_order, second_order)
+        self.assertEqual(first["decisionPolicyVersion"], DECISION_POLICY_VERSION)
 
 
 if __name__ == "__main__":

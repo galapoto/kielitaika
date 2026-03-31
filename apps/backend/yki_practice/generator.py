@@ -1,3 +1,5 @@
+from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
+from learning.policy_engine import build_deterministic_seed, deterministic_order_key
 from learning.repository import repository
 from learning.progress_service import get_due_review_units, get_low_mastery_unit_ids
 from yki.session_store import DEFAULT_USER_ID, get_progress_history
@@ -88,8 +90,14 @@ def _build_fallback_units(practice_level: str):
     return candidates
 
 
-def select_practice_units(user_id: str = DEFAULT_USER_ID):
+def select_practice_units(user_id: str = DEFAULT_USER_ID, session_id: str | None = None):
     context = build_adaptive_context(user_id)
+    deterministic_seed = build_deterministic_seed(
+        "yki-practice-plan",
+        user_id,
+        session_id or "preview",
+        DECISION_POLICY_VERSION,
+    )
     prioritized_ids = context["dueReviewUnitIds"] + [
         unit_id
         for unit_id in context["lowMasteryUnitIds"]
@@ -109,6 +117,7 @@ def select_practice_units(user_id: str = DEFAULT_USER_ID):
         _build_fallback_units(context["practiceLevel"]),
         key=lambda unit: (
             abs(get_difficulty_rank(unit.get("difficultyLevel")) - get_difficulty_rank(context["preferredDifficulty"])),
+            deterministic_order_key(deterministic_seed, "fallback", unit["id"]),
             unit["id"],
         ),
     )
@@ -128,6 +137,9 @@ def select_practice_units(user_id: str = DEFAULT_USER_ID):
             if len(selected_units) >= len(SECTION_SEQUENCE):
                 break
 
+    context["deterministicSeed"] = deterministic_seed
+    context["policyVersion"] = POLICY_VERSION
+    context["decisionVersion"] = DECISION_VERSION
     return context, selected_units[: len(SECTION_SEQUENCE)]
 
 
@@ -237,8 +249,8 @@ def _build_speaking_task(unit: dict, index: int):
     }
 
 
-def build_practice_tasks(user_id: str = DEFAULT_USER_ID):
-    context, units = select_practice_units(user_id)
+def build_practice_tasks(user_id: str = DEFAULT_USER_ID, session_id: str | None = None):
+    context, units = select_practice_units(user_id, session_id)
     builders = [
         _build_reading_task,
         _build_listening_task,

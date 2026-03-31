@@ -6,11 +6,12 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from learning.decision_version import DECISION_VERSION
+from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
 from learning.practice_service import generate_practice
 from learning.progress_service import get_unit_progress, record_practice_result, reset_progress_store
 from yki.storage import _history
 from yki_practice.adapter import get_yki_practice, start_yki_practice, submit_yki_practice
+from yki_practice.generator import build_practice_tasks
 from yki_practice.service import reset_practice_sessions
 
 
@@ -136,6 +137,7 @@ class YkiPracticeModeTests(unittest.TestCase):
         first_trace = session["sessionTrace"]["tasks"][0]
 
         self.assertEqual(session["sessionTrace"]["decision_version"], DECISION_VERSION)
+        self.assertEqual(session["sessionTrace"]["policy_version"], POLICY_VERSION)
         self.assertTrue(first_trace["task_selection_reason"])
         self.assertIsNotNone(first_trace["difficulty_level"])
         self.assertIsNone(first_trace["user_performance"])
@@ -172,6 +174,34 @@ class YkiPracticeModeTests(unittest.TestCase):
         self.assertEqual(latest_result["learningSignal"]["signal_source"], "yki_practice")
         self.assertEqual(latest_result["learningSignal"]["task_section"], current_task["section"])
         self.assertIsNotNone(latest_result["learningProgress"])
+
+    def test_precomputed_exam_plan_stays_locked_during_session(self):
+        user_id = "practice-exam-mode"
+        session = start_yki_practice(user_id)
+        planned_task_ids = session["precomputedPlan"]["task_ids"]
+
+        self.assertTrue(session["examMode"])
+        self.assertEqual(session["policyVersion"], POLICY_VERSION)
+        self.assertEqual(session["precomputedPlan"]["decision_policy_version"], DECISION_POLICY_VERSION)
+        self.assertEqual(planned_task_ids, [task["id"] for task in session["tasks"]])
+
+        updated = submit_yki_practice(session["session_id"], "wrong answer", "submit_only")
+        refreshed = get_yki_practice(session["session_id"])
+
+        self.assertEqual(planned_task_ids, refreshed["precomputedPlan"]["task_ids"])
+        self.assertEqual(planned_task_ids, [task["id"] for task in updated["tasks"]])
+
+    def test_same_seed_rebuilds_identical_yki_plan(self):
+        user_id = "practice-deterministic-seed"
+
+        first_context, first_tasks = build_practice_tasks(user_id, "seeded-session-1")
+        second_context, second_tasks = build_practice_tasks(user_id, "seeded-session-1")
+
+        self.assertEqual(first_context["deterministicSeed"], second_context["deterministicSeed"])
+        self.assertEqual(
+            [task["relatedLearningUnitId"] for task in first_tasks],
+            [task["relatedLearningUnitId"] for task in second_tasks],
+        )
 
 
 if __name__ == "__main__":

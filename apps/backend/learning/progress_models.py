@@ -43,6 +43,7 @@ class RecommendationOutcome:
     unit_id: str
     decision_version: str
     recommended_at: str
+    policy_version: str = "1.0.0"
     baseline_mastery_score: float = 0.0
     subsequent_attempts: int = 0
     improvement_delta: float = 0.0
@@ -52,6 +53,9 @@ class RecommendationOutcome:
     factors_used: list[str] = field(default_factory=list)
     weights_used: dict[str, float] = field(default_factory=dict)
     attempt_history: list[dict] = field(default_factory=list)
+    retry_count: int = 0
+    policy_stage: str = "retry_current_unit"
+    policy_trace: dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.recommended_at = _normalize_timestamp(self.recommended_at) or _now_isoformat()
@@ -60,6 +64,7 @@ class RecommendationOutcome:
         self.improvement_delta = _normalize_delta(self.improvement_delta)
         self.effectiveness_score = _clamp_score(self.effectiveness_score)
         self.subsequent_attempts = max(0, int(self.subsequent_attempts))
+        self.retry_count = max(0, int(self.retry_count))
         normalized_weights = {}
         for key, value in self.weights_used.items():
             try:
@@ -87,6 +92,8 @@ class UserUnitProgress:
     stagnated: bool = False
     stagnation_reason: str | None = None
     stagnation_detected_at: str | None = None
+    stagnation_retry_count: int = 0
+    stagnation_stage: str = "retry_current_unit"
     yki_influence_count: int = 0
     signal_history: list[dict] = field(default_factory=list)
     post_recommendation_performance: list[dict] | None = None
@@ -96,6 +103,7 @@ class UserUnitProgress:
         self.correct_attempts = max(0, min(int(self.correct_attempts), self.attempts))
         self.review_interval_days = max(1, int(self.review_interval_days))
         self.streak_correct = max(0, int(self.streak_correct))
+        self.stagnation_retry_count = max(0, int(self.stagnation_retry_count))
         self.yki_influence_count = max(0, int(self.yki_influence_count))
         self.previous_mastery_score = _clamp_score(self.previous_mastery_score)
         self.mastery_score = _clamp_score(self.mastery_score)

@@ -45,6 +45,8 @@ type StagnatedUnit = {
   stagnationReason: string | null;
   retrySuggestion: string;
   alternativeUnitTitle: string | null;
+  retryCount: number;
+  policyStage: string;
   switchDifficultyTo: "easy" | "medium" | "hard";
 };
 
@@ -57,6 +59,9 @@ type Props = {
   factorContributionSummary: string[];
   improvementTrends: ImprovementTrend[];
   loading: boolean;
+  policyConstraintLogs: string[];
+  policySummary: string[];
+  policyVersion: string;
   recommendationRejections: string[];
   rawRecommendationOutcomes: RecommendationOutcome[];
   recommendedUnits: RecommendedUnit[];
@@ -83,6 +88,9 @@ export default function LearningScreen({
   factorContributionSummary,
   improvementTrends,
   loading,
+  policyConstraintLogs,
+  policySummary,
+  policyVersion,
   recommendationRejections,
   rawRecommendationOutcomes,
   recommendedUnits,
@@ -129,8 +137,21 @@ export default function LearningScreen({
         <Section>
           <Text variant="title">Learning</Text>
           <Text>Decision version: {decisionVersion}</Text>
+          <Text>Policy version: {policyVersion}</Text>
           <Button label="Refresh Learning" onPress={onRefresh} />
           <Button label="Back Home" onPress={onBack} />
+        </Section>
+
+        <Section>
+          <Text variant="title">Policy Controls</Text>
+          {policySummary.map((item) => (
+            <Text key={item}>{item}</Text>
+          ))}
+          {policyConstraintLogs.length ? (
+            policyConstraintLogs.map((item) => <Text key={item}>{item}</Text>)
+          ) : (
+            <Text tone="secondary">No policy clamps were needed for the current recommendations.</Text>
+          )}
         </Section>
 
         <Section>
@@ -171,6 +192,9 @@ export default function LearningScreen({
             <Text>{selectedStagnatedUnit.title}</Text>
             <Text tone="secondary">
               Attempts: {selectedStagnatedUnit.attempts}, mastery {selectedStagnatedUnit.masteryScore.toFixed(2)}
+            </Text>
+            <Text tone="secondary">
+              Policy stage: {selectedStagnatedUnit.policyStage}, retry count {selectedStagnatedUnit.retryCount}
             </Text>
             <Text tone="secondary">
               {selectedStagnatedUnit.stagnationReason ?? selectedStagnatedUnit.retrySuggestion}

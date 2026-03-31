@@ -1,6 +1,7 @@
 from dataclasses import asdict
 
-from learning.decision_version import DECISION_VERSION
+from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
+from learning.policy_engine import is_exam_mode_locked
 from learning.progress_service import record_practice_result
 from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID
@@ -166,6 +167,9 @@ def _record_completed_session_summary(session: PracticeSession):
 def _build_session_trace(context: dict, tasks: list[dict]):
     return {
         "decision_version": DECISION_VERSION,
+        "policy_version": POLICY_VERSION,
+        "decision_policy_version": DECISION_POLICY_VERSION,
+        "exam_mode": is_exam_mode_locked(),
         "adaptiveContext": context,
         "tasks": [
             {
@@ -207,6 +211,13 @@ def _update_session_trace(session: PracticeSession, task: dict, evaluation: dict
 
 
 def _serialize_session(session: PracticeSession):
+    if session.precomputed_plan is None:
+        session.precomputed_plan = {
+            "task_ids": [task["id"] for task in session.tasks],
+            "decision_version": session.decision_version,
+            "policy_version": session.policy_version,
+            "exam_mode": session.exam_mode,
+        }
     session_summary = _build_session_summary(session)
     session.session_summary = session_summary
     is_complete = sum(1 for task in session.tasks if task.get("evaluation")) == len(session.tasks)
@@ -226,6 +237,10 @@ def _serialize_session(session: PracticeSession):
         "isComplete": is_complete,
         "sessionSummary": session_summary,
         "sessionTrace": session.session_trace,
+        "examMode": session.exam_mode,
+        "policyVersion": session.policy_version,
+        "decisionVersion": session.decision_version,
+        "precomputedPlan": session.precomputed_plan,
     }
 
 
@@ -239,13 +254,25 @@ def _reset_task_state(task: dict):
 
 
 def start_practice_session(user_id: str = DEFAULT_USER_ID):
-    context, tasks = build_practice_tasks(user_id)
+    session_id = _next_session_id()
+    context, tasks = build_practice_tasks(user_id, session_id)
     session = PracticeSession(
-        session_id=_next_session_id(),
+        session_id=session_id,
         user_id=user_id,
         level=context["practiceLevel"],
         focus_areas=context["focusAreas"],
         tasks=tasks,
+        exam_mode=is_exam_mode_locked(),
+        policy_version=POLICY_VERSION,
+        decision_version=DECISION_VERSION,
+        precomputed_plan={
+            "task_ids": [task["id"] for task in tasks],
+            "decision_version": DECISION_VERSION,
+            "policy_version": POLICY_VERSION,
+            "decision_policy_version": DECISION_POLICY_VERSION,
+            "exam_mode": is_exam_mode_locked(),
+            "deterministic_seed": context.get("deterministicSeed"),
+        },
         results=[],
         session_trace=_build_session_trace(context, tasks),
     )

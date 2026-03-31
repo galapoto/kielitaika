@@ -95,6 +95,17 @@ export type YkiPracticeSession = {
   user_id: string;
   level: string;
   focus_areas: string[];
+  examMode?: boolean;
+  policyVersion?: string;
+  decisionVersion?: string;
+  precomputedPlan?: {
+    task_ids: string[];
+    decision_version: string;
+    policy_version: string;
+    decision_policy_version: string;
+    exam_mode: boolean;
+    deterministic_seed: string;
+  };
   tasks: YkiPracticeTask[];
   current_task_index: number;
   results: YkiPracticeResult[];
@@ -104,6 +115,9 @@ export type YkiPracticeSession = {
   sessionSummary: YkiPracticeSessionSummary;
   sessionTrace?: {
     decision_version: string;
+    policy_version?: string;
+    decision_policy_version?: string;
+    exam_mode?: boolean;
     adaptiveContext: Record<string, unknown>;
     tasks: Array<{
       taskId: string;

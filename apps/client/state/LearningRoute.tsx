@@ -164,6 +164,22 @@ export default function LearningRoute() {
     );
   }, [state.debugState]);
 
+  const policySummary = useMemo(() => {
+    if (!state.debugState) {
+      return [];
+    }
+
+    const adaptationRules = state.debugState.policyConfig.rules.adaptation;
+    const stagnationRules = state.debugState.policyConfig.rules.stagnation;
+    const ykiRules = state.debugState.policyConfig.rules.yki;
+
+    return [
+      `Policy ${state.debugState.policyVersion}: weight multipliers ${adaptationRules.weight_multiplier_min.toFixed(2)}-${adaptationRules.weight_multiplier_max.toFixed(2)}, max adjustment ${adaptationRules.max_weight_adjustment.toFixed(2)}`,
+      `Stagnation threshold ${stagnationRules.threshold_attempts} attempts, retry limit ${stagnationRules.retry_limit}, path ${stagnationRules.escalation_path.join(" -> ")}`,
+      `YKI exam mode locked ${ykiRules.exam_mode_locked ? "yes" : "no"}, max influence ${ykiRules.max_influence_contribution.toFixed(2)}`,
+    ];
+  }, [state.debugState]);
+
   const recommendationTrace = useMemo(() => {
     if (!state.debugState) {
       return [];
@@ -211,12 +227,17 @@ export default function LearningRoute() {
           .filter(([, value]) => value !== 0)
           .map(([key, value]) => `${key} ${value >= 0 ? "+" : ""}${value.toFixed(2)}`);
 
-        if (!changedFactors.length && !adaptive.reasoning.length) {
+        if (
+          !changedFactors.length &&
+          !adaptive.reasoning.length &&
+          !adaptive.clampedValues.length &&
+          !adaptive.appliedConstraints.length
+        ) {
           return [];
         }
 
         return [
-          `${item.title}: ${changedFactors.join(", ") || "no factor delta"}${adaptive.reasoning.length ? ` | ${adaptive.reasoning.join(" ")}` : ""}`,
+          `${item.title}: ${changedFactors.join(", ") || "no factor delta"}${adaptive.reasoning.length ? ` | ${adaptive.reasoning.join(" ")}` : ""}${adaptive.clampedValues.length ? ` | clamped ${adaptive.clampedValues.join(" ")}` : ""}${adaptive.appliedConstraints.length ? ` | policy ${adaptive.appliedConstraints.join(" ")}` : ""}`,
         ];
       })
       .slice(0, 6);
@@ -234,6 +255,30 @@ export default function LearningRoute() {
           (reason) => `${item.title}: ${reason}`,
         ),
       )
+      .slice(0, 8);
+  }, [state.debugState]);
+
+  const policyConstraintLogs = useMemo(() => {
+    if (!state.debugState) {
+      return [];
+    }
+
+    return state.debugState.recommendationReasoning
+      .flatMap((item) => {
+        const adaptive = item.whyThisWasSelected?.adaptive_weight_modifier;
+        if (!adaptive) {
+          return [];
+        }
+
+        return [
+          ...adaptive.appliedConstraints.map(
+            (entry) => `${item.title}: ${entry}`,
+          ),
+          ...adaptive.clampedValues.map(
+            (entry) => `${item.title}: ${entry}`,
+          ),
+        ];
+      })
       .slice(0, 8);
   }, [state.debugState]);
 
@@ -343,6 +388,9 @@ export default function LearningRoute() {
       onSwitchDifficulty={handleSwitchDifficulty}
       onTryAlternativeUnit={handleTryAlternativeUnit}
       onUseRetrySuggestion={handleUseRetrySuggestion}
+      policyConstraintLogs={policyConstraintLogs}
+      policySummary={policySummary}
+      policyVersion={state.debugState?.policyVersion ?? state.modulesData?.policyVersion ?? "unknown"}
       recommendationRejections={recommendationRejections}
       rawRecommendationOutcomes={state.debugState?.recommendationOutcomes.slice(0, 5).map((item) => ({
         effectivenessScore: item.effectiveness_score,
@@ -362,6 +410,8 @@ export default function LearningRoute() {
               masteryScore: selectedStagnatedUnit.masteryScore,
               stagnationReason: selectedStagnatedUnit.stagnationReason,
               retrySuggestion: selectedStagnatedUnit.retrySuggestion,
+              policyStage: selectedStagnatedUnit.policyStage,
+              retryCount: selectedStagnatedUnit.retryCount,
               switchDifficultyTo: selectedStagnatedUnit.switchDifficultyTo,
               title: selectedStagnatedUnit.title,
               unitId: selectedStagnatedUnit.unitId,

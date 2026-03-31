@@ -62,6 +62,7 @@ export type LearningUnitProgressSummary = {
     stagnated: boolean;
     impact_label: string;
   }>;
+  policy_version: string;
 };
 
 export type LearningModule = {
@@ -84,6 +85,8 @@ export type LearningModule = {
   recommendationRejectedBecause?: string[];
   whyThisWasSelected?: {
     decision_version: string;
+    policy_version: string;
+    decision_policy_version: string;
     weak_patterns_used: string[];
     mastery_score_used: {
       module_mastery_score: number;
@@ -119,7 +122,15 @@ export type LearningModule = {
         improvementDelta: number;
       }>;
       ykiInfluenceCount: number;
+      policyVersion: string;
+      appliedConstraints: string[];
+      clampedValues: string[];
+      rejectedAdaptiveChanges: string[];
+      ykiInfluenceBonus: number;
     };
+    policy_constraints: string[];
+    clamped_values: string[];
+    rejected_adaptive_changes: string[];
   };
   scoreBreakdown?: {
     weak_pattern: {
@@ -168,10 +179,14 @@ export type LearningModulesData = {
   stagnatedUnitIds: string[];
   weightsUsed: Record<string, number>;
   decisionVersion: string;
+  policyVersion: string;
+  decisionPolicyVersion: string;
 };
 
 export type LearningDebugState = {
   decisionVersion: string;
+  policyVersion: string;
+  decisionPolicyVersion: string;
   currentLevel: string | null;
   weakPatterns: string[];
   unitMastery: Array<{
@@ -182,6 +197,32 @@ export type LearningDebugState = {
   stagnationConfig: {
     attemptThreshold: number;
     improvementEpsilon: number;
+    retryLimit: number;
+    policyVersion: string;
+    escalationPath: string[];
+  };
+  policyConfig: {
+    policy_version: string;
+    decision_version: string;
+    decision_policy_version: string;
+    rules: {
+      adaptation: {
+        weight_multiplier_min: number;
+        weight_multiplier_max: number;
+        max_weight_adjustment: number;
+        yki_influence_max_bonus: number;
+      };
+      stagnation: {
+        threshold_attempts: number;
+        improvement_epsilon: number;
+        retry_limit: number;
+        escalation_path: string[];
+      };
+      yki: {
+        exam_mode_locked: boolean;
+        max_influence_contribution: number;
+      };
+    };
   };
   stagnatedUnits: Array<{
     unitId: string;
@@ -192,6 +233,9 @@ export type LearningDebugState = {
     retrySuggestion: string;
     alternativeUnit: LearningUnit | null;
     switchDifficultyTo: "easy" | "medium" | "hard";
+    retryCount: number;
+    policyStage: string;
+    policyVersion: string;
   }>;
   regressionFlags: Array<{
     unitId: string;
@@ -214,6 +258,7 @@ export type LearningDebugState = {
     module_id: string;
     unit_id: string;
     decision_version: string;
+    policy_version: string;
     recommended_at: string;
     baseline_mastery_score: number;
     subsequent_attempts: number;
@@ -223,6 +268,15 @@ export type LearningDebugState = {
     status: string;
     factors_used: string[];
     weights_used: Record<string, number>;
+    retry_count: number;
+    policy_stage: string;
+    policy_trace: {
+      policy_version: string;
+      retry_limit: number;
+      retry_count: number;
+      policy_stage: string;
+      signal_source: string;
+    };
     attempt_history: Array<{
       attempt_number: number;
       mastery_score: number;

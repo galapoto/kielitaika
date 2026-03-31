@@ -1,5 +1,11 @@
-from learning.decision_version import DECISION_VERSION
+from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
 from learning.decision_weights import get_decision_weights
+from learning.policy_engine import (
+    build_deterministic_seed,
+    clamp_adaptive_weights,
+    deterministic_order_key,
+    get_policy_config,
+)
 from learning.progress_service import (
     get_due_review_units,
     get_learning_signal_logs,
@@ -15,6 +21,7 @@ from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID, get_progress_history
 
 LEVEL_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"]
+POLICY_CONFIG = get_policy_config()
 
 
 def get_level_rank(level: str | None):
@@ -229,6 +236,17 @@ def adaptive_weight_modifier(
     rejection_reasons = []
     retry_logic = None
     variation_unit_ids = []
+    yki_influence_bonus = min(
+        POLICY_CONFIG["rules"]["yki"]["max_influence_contribution"],
+        _round_score(
+            sum(
+                item["yki_influence_count"]
+                for item in module_progress["unit_progress"]
+                if item["unit_id"] in module["unitIds"]
+            )
+            * 0.01
+        ),
+    )
 
     if average_effectiveness >= 0.15:
         factor_adjustments["low_mastery"] += 0.06
@@ -258,21 +276,19 @@ def adaptive_weight_modifier(
         factor_adjustments["difficulty_alignment"] += 0.03
         rejection_reasons.append("Repeated low-gain attempts suggest the current pattern is saturated.")
 
-    effective_weights = _normalize_weights(
-        {
-            factor: base_weights[factor] + factor_adjustments[factor]
-            for factor in base_weights
-        }
+    constrained_policy = clamp_adaptive_weights(
+        base_weights,
+        factor_adjustments,
+        yki_influence_bonus=yki_influence_bonus,
     )
-    normalized_adjustments = {
-        factor: _round_score(effective_weights[factor] - base_weights[factor])
-        for factor in base_weights
-    }
+    effective_weights = constrained_policy["weights"]
+    normalized_adjustments = constrained_policy["adjustments"]
 
     return {
+        "policyVersion": POLICY_VERSION,
         "weights": effective_weights,
         "adjustments": normalized_adjustments,
-        "rawAdjustments": factor_adjustments,
+        "rawAdjustments": constrained_policy["raw_adjustments"],
         "averageEffectiveness": average_effectiveness,
         "averageImprovementDelta": average_improvement_delta,
         "attemptHistoryDepth": attempt_history_depth,
@@ -282,6 +298,9 @@ def adaptive_weight_modifier(
         "variationUnitIds": variation_unit_ids,
         "rejectionReasons": rejection_reasons,
         "reasoning": reasons,
+        "appliedConstraints": constrained_policy["applied_constraints"],
+        "clampedValues": constrained_policy["clamped_values"],
+        "rejectedAdaptiveChanges": constrained_policy["rejected_changes"],
         "moduleOutcomeStatuses": [
             {
                 "unitId": outcome["unit_id"],
@@ -296,6 +315,7 @@ def adaptive_weight_modifier(
             for item in module_progress["unit_progress"]
             if item["unit_id"] in module["unitIds"]
         ),
+        "ykiInfluenceBonus": constrained_policy["yki_influence_bonus"],
     }
 
 
@@ -393,6 +413,8 @@ def score_module(
     )
     why_this_was_selected = {
         "decision_version": DECISION_VERSION,
+        "policy_version": POLICY_VERSION,
+        "decision_policy_version": DECISION_POLICY_VERSION,
         "weak_patterns_used": matched_weaknesses,
         "mastery_score_used": {
             "module_mastery_score": module_progress["mastery_score"],
@@ -409,6 +431,9 @@ def score_module(
         "weights_used": weights,
         "base_weights": base_weights,
         "adaptive_weight_modifier": adaptive_feedback,
+        "policy_constraints": adaptive_feedback["appliedConstraints"],
+        "clamped_values": adaptive_feedback["clampedValues"],
+        "rejected_adaptive_changes": adaptive_feedback["rejectedAdaptiveChanges"],
     }
 
     return {
@@ -455,6 +480,13 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
         item["unit"]["id"] for item in get_due_review_units(user_id)
     }
     stagnated_units = get_stagnated_units(user_id)
+    ranking_seed = build_deterministic_seed(
+        "learning-recommendations",
+        user_id,
+        DECISION_POLICY_VERSION,
+        current_level or "none",
+        ",".join(sorted(weak_patterns)),
+    )
     scored_modules = [
         score_module(
             module,
@@ -471,7 +503,8 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
         key=lambda module: (
             -module["suggestionScore"],
             get_level_rank(module["level"]) if get_level_rank(module["level"]) is not None else 99,
-            module["title"],
+            deterministic_order_key(ranking_seed, module["id"], module["title"]),
+            module["id"],
         )
     )
     suggested_modules = [module for module in scored_modules if module["suggested"]][:3]
@@ -481,6 +514,7 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
             module["id"],
             get_recommended_unit_ids(module),
             DECISION_VERSION,
+            POLICY_VERSION,
             [
                 factor_name
                 for factor_name, values in module["scoreBreakdown"].items()
@@ -494,11 +528,13 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
         "suggestedModules": suggested_modules,
         "currentLevel": current_level,
         "weakPatterns": weak_patterns,
-        "lowMasteryUnitIds": list(low_mastery_unit_ids),
-        "dueReviewUnitIds": list(due_review_unit_ids),
+        "lowMasteryUnitIds": sorted(low_mastery_unit_ids),
+        "dueReviewUnitIds": sorted(due_review_unit_ids),
         "stagnatedUnitIds": [item["unitId"] for item in stagnated_units],
         "weightsUsed": get_decision_weights(weight_overrides),
         "decisionVersion": DECISION_VERSION,
+        "policyVersion": POLICY_VERSION,
+        "decisionPolicyVersion": DECISION_POLICY_VERSION,
     }
 
 
@@ -553,11 +589,14 @@ def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID, weight_overrid
 
     return {
         "decisionVersion": DECISION_VERSION,
+        "policyVersion": POLICY_VERSION,
+        "decisionPolicyVersion": DECISION_POLICY_VERSION,
         "currentLevel": module_listing["currentLevel"],
         "weakPatterns": module_listing["weakPatterns"],
         "unitMastery": unit_progress,
         "dueReviewUnits": due_review_units,
         "stagnationConfig": get_stagnation_config(),
+        "policyConfig": POLICY_CONFIG,
         "stagnatedUnits": stagnated_units,
         "regressionFlags": regression_flags,
         "recommendationReasoning": recommendation_reasoning,

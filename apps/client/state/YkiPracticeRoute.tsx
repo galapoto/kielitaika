@@ -55,6 +55,9 @@ export default function YkiPracticeRoute() {
 
     return {
       decisionVersion: data.sessionTrace.decision_version,
+      examMode: data.examMode ?? data.sessionTrace.exam_mode ?? false,
+      policyVersion: data.sessionTrace.policy_version ?? "legacy",
+      precomputedPlanSummary: data.precomputedPlan?.task_ids.join(", ") ?? "legacy session plan",
       tasks: data.sessionTrace.tasks.slice(0, 5).map((item) => ({
         difficultyLevel: item.difficulty_level,
         reason: item.task_selection_reason,

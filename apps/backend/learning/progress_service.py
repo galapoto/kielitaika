@@ -1,6 +1,13 @@
 from dataclasses import asdict
 from datetime import datetime, timedelta, UTC
 
+from learning.decision_version import POLICY_VERSION
+from learning.policy_engine import (
+    clamp_retry_count,
+    get_policy_config,
+    get_stagnation_policy,
+    resolve_stagnation_stage,
+)
 from learning.progress_models import RecommendationOutcome, UserModuleProgress, UserUnitProgress
 from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID
@@ -11,8 +18,11 @@ _recommendation_outcome_store: list[RecommendationOutcome] = []
 _learning_signal_log_store: list[dict] = []
 MAX_REVIEW_INTERVAL_DAYS = 7
 RECENT_MASTERY_WEIGHTS = [0.2, 0.3, 0.6]
-STAGNATION_ATTEMPT_THRESHOLD = 3
-STAGNATION_IMPROVEMENT_EPSILON = 0.05
+_POLICY_CONFIG = get_policy_config()
+_STAGNATION_POLICY = get_stagnation_policy()
+STAGNATION_ATTEMPT_THRESHOLD = _STAGNATION_POLICY["threshold_attempts"]
+STAGNATION_IMPROVEMENT_EPSILON = _STAGNATION_POLICY["improvement_epsilon"]
+STAGNATION_RETRY_LIMIT = _STAGNATION_POLICY["retry_limit"]
 MAX_SIGNAL_HISTORY = 8
 
 
@@ -57,6 +67,9 @@ def get_stagnation_config():
     return {
         "attemptThreshold": STAGNATION_ATTEMPT_THRESHOLD,
         "improvementEpsilon": STAGNATION_IMPROVEMENT_EPSILON,
+        "retryLimit": STAGNATION_RETRY_LIMIT,
+        "policyVersion": POLICY_VERSION,
+        "escalationPath": _STAGNATION_POLICY["escalation_path"],
     }
 
 
@@ -195,7 +208,7 @@ def _record_learning_signal(
 def _resolve_stagnation_reason(outcome: RecommendationOutcome):
     return (
         f"No meaningful mastery change after {outcome.subsequent_attempts} attempts "
-        f"since recommendation {outcome.recommended_at}."
+        f"since recommendation {outcome.recommended_at}. Policy stage: {outcome.policy_stage}."
     )
 
 
@@ -215,6 +228,8 @@ def _sync_unit_stagnation(user_id: str, unit_id: str):
         progress.stagnated = False
         progress.stagnation_reason = None
         progress.stagnation_detected_at = None
+        progress.stagnation_retry_count = 0
+        progress.stagnation_stage = resolve_stagnation_stage(0)
         return
 
     progress.stagnated = True
@@ -224,6 +239,8 @@ def _sync_unit_stagnation(user_id: str, unit_id: str):
         if latest_outcome.attempt_history
         else latest_outcome.recommended_at
     )
+    progress.stagnation_retry_count = latest_outcome.retry_count
+    progress.stagnation_stage = latest_outcome.policy_stage
 
 
 def _serialize_unit_progress(progress: UserUnitProgress):
@@ -235,6 +252,7 @@ def _serialize_unit_progress(progress: UserUnitProgress):
     return {
         **asdict(progress),
         "signal_history": _get_recent_signal_history(progress),
+        "policy_version": POLICY_VERSION,
         "mastery_level": get_mastery_label(progress.mastery_score),
         **_build_review_metadata(progress, now),
     }
@@ -305,6 +323,7 @@ def _recalculate_module_progress(user_id: str, module_id: str):
 def _serialize_recommendation_outcome(outcome: RecommendationOutcome):
     return {
         **asdict(outcome),
+        "policy_version": outcome.policy_version,
         "impact_label": _get_effectiveness_impact_label(
             outcome.effectiveness_score,
             improvement_delta=outcome.improvement_delta,
@@ -347,6 +366,7 @@ def register_recommendation_outcomes(
     module_id: str,
     unit_ids: list[str],
     decision_version: str,
+    policy_version: str,
     factors_used: list[str],
     weights_used: dict[str, float],
 ):
@@ -362,6 +382,7 @@ def register_recommendation_outcomes(
                 and outcome.module_id == module_id
                 and outcome.unit_id == unit_id
                 and outcome.decision_version == decision_version
+                and outcome.policy_version == policy_version
                 and outcome.status == "active"
             ),
             None,
@@ -376,11 +397,16 @@ def register_recommendation_outcomes(
                 unit_id=unit_id,
                 decision_version=decision_version,
                 recommended_at=now,
+                policy_version=policy_version,
                 baseline_mastery_score=progress.mastery_score,
                 latest_mastery_score=progress.mastery_score,
                 factors_used=factors_used,
                 weights_used=weights_used,
                 attempt_history=[],
+                policy_trace={
+                    "policy_version": policy_version,
+                    "stagnation_retry_limit": STAGNATION_RETRY_LIMIT,
+                },
             )
         )
         progress.post_recommendation_performance = get_post_recommendation_performance(user_id, unit_id)
@@ -424,10 +450,28 @@ def _update_recommendation_outcomes(
             and abs(outcome.improvement_delta) <= STAGNATION_IMPROVEMENT_EPSILON
         ):
             outcome.status = "stagnated"
+            outcome.retry_count = clamp_retry_count(outcome.retry_count + 1)
+            outcome.policy_stage = resolve_stagnation_stage(outcome.retry_count)
         elif outcome.improvement_delta >= 0.2:
             outcome.status = "completed"
+            outcome.retry_count = 0
+            outcome.policy_stage = resolve_stagnation_stage(0)
         elif outcome.subsequent_attempts >= STAGNATION_ATTEMPT_THRESHOLD and outcome.improvement_delta < 0:
             outcome.status = "completed"
+            outcome.retry_count = clamp_retry_count(outcome.retry_count + 1)
+            if outcome.retry_count >= STAGNATION_RETRY_LIMIT:
+                outcome.policy_stage = resolve_stagnation_stage(STAGNATION_RETRY_LIMIT + 1)
+            else:
+                outcome.policy_stage = resolve_stagnation_stage(outcome.retry_count)
+        if outcome.status == "stagnated" and outcome.retry_count >= STAGNATION_RETRY_LIMIT:
+            outcome.policy_stage = resolve_stagnation_stage(STAGNATION_RETRY_LIMIT + 1)
+        outcome.policy_trace = {
+            "policy_version": outcome.policy_version,
+            "retry_limit": STAGNATION_RETRY_LIMIT,
+            "retry_count": outcome.retry_count,
+            "policy_stage": outcome.policy_stage,
+            "signal_source": signal_source,
+        }
         updated = True
 
     if updated:
@@ -484,6 +528,13 @@ def get_stagnated_units(user_id: str = DEFAULT_USER_ID):
             "medium": "easy",
             "hard": "medium",
         }.get(difficulty_level, "medium")
+        policy_stage = progress.stagnation_stage
+        retry_suggestion = {
+            "retry_current_unit": "Retry this unit again before escalating.",
+            "alternative_unit": "Switch to a related support unit before retrying.",
+            "switch_difficulty": "Retry this unit with a safer difficulty level.",
+            "forced_progression": "Stop retrying this unit and move forward to the alternative path.",
+        }.get(policy_stage, "Retry this unit with an easier variation and a related support unit.")
 
         stagnated_units.append(
             {
@@ -492,9 +543,12 @@ def get_stagnated_units(user_id: str = DEFAULT_USER_ID):
                 "attempts": progress.attempts,
                 "masteryScore": progress.mastery_score,
                 "stagnationReason": progress.stagnation_reason,
-                "retrySuggestion": "Retry this unit with an easier variation and a related support unit.",
+                "retrySuggestion": retry_suggestion,
                 "alternativeUnit": alternative_unit,
                 "switchDifficultyTo": switch_difficulty_to,
+                "retryCount": progress.stagnation_retry_count,
+                "policyStage": progress.stagnation_stage,
+                "policyVersion": POLICY_VERSION,
             }
         )
 
