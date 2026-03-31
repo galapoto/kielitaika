@@ -1,5 +1,5 @@
 import { env } from "../config/env";
-import { apiClient } from "../api/apiClient";
+import { apiClient, ContractViolationError } from "../api/apiClient";
 
 export type AuthUser = {
   email: string;
@@ -41,10 +41,22 @@ export async function mockLogin(email?: string): Promise<LoginResponse> {
 
 export const authService = {
   async login(email: string, password: string) {
-    const response = await apiClient<LoginResponse>("/api/v1/auth/login", {
-      body: JSON.stringify({ email, password }),
-      method: "POST",
-    });
+    let response;
+
+    try {
+      response = await apiClient<LoginResponse>("/api/v1/auth/login", {
+        body: JSON.stringify({ email, password }),
+        method: "POST",
+      }, {
+        validateData: (payload) => payload as LoginResponse,
+      });
+    } catch (error) {
+      if (error instanceof ContractViolationError) {
+        throw new Error(error.code);
+      }
+
+      throw error;
+    }
 
     if (!response.ok || !response.data) {
       const isFallbackEligible =

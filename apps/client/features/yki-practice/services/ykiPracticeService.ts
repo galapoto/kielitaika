@@ -1,6 +1,5 @@
-import { apiClient, recordApiContractIssue } from "@core/api/apiClient";
+import { apiClient, ContractViolationError } from "@core/api/apiClient";
 import {
-  ControlledUiValidationError,
   validateYkiPracticeSessionPayload,
 } from "@core/api/governedResponseValidation";
 import {
@@ -103,6 +102,14 @@ export type YkiPracticeSession = {
   level: string;
   focus_areas: string[];
   examMode: boolean;
+  next_allowed_action: "advance" | "complete" | "submit_only";
+  completion_state: {
+    completed_task_count: number;
+    status: "active" | "awaiting_advance" | "completed";
+    total_task_count: number;
+  };
+  session_hash: string;
+  task_sequence_hash: string;
   policyVersion: string;
   decisionVersion: string;
   governanceVersion: string;
@@ -218,7 +225,9 @@ type PersistedSessionFailure = {
 type PersistedSessionSuccess = {
   ok: true;
   reason: null;
+  sessionHash: string;
   sessionId: string;
+  taskSequenceHash: string;
 };
 
 function normalizeError(error: ApiError | null): ApiError {
@@ -226,27 +235,9 @@ function normalizeError(error: ApiError | null): ApiError {
     return { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION" };
   }
 
-  if (error.code === "TRANSPORT_ERROR") {
-    return { code: "TRANSPORT_ERROR", message: "TRANSPORT_ERROR" };
-  }
-
-  if (error.code === "GOVERNANCE_MISSING") {
-    return { code: "GOVERNANCE_MISSING", message: "GOVERNANCE_MISSING" };
-  }
-
-  return { code: "CONTRACT_VIOLATION", message: error.message || "CONTRACT_VIOLATION" };
-}
-
-function validationFailure<T>(path: string, error: ControlledUiValidationError): ApiResponse<T> {
-  recordApiContractIssue(path, error.code, error.message);
-
   return {
-    ok: false,
-    data: null,
-    error: {
-      code: error.code,
-      message: error.code,
-    },
+    code: error.code ?? "CONTRACT_VIOLATION",
+    message: error.message || error.code || "CONTRACT_VIOLATION",
   };
 }
 
@@ -254,7 +245,33 @@ async function withSessionValidation(
   path: string,
   options?: RequestInit,
 ): Promise<ApiResponse<YkiPracticeSession>> {
-  const response = (await apiClient(path, options)) as ApiResponse<YkiPracticeSession>;
+  let response: ApiResponse<YkiPracticeSession>;
+
+  try {
+    response = (await apiClient(path, options, {
+      sessionId: await getStoredPracticeSessionId(),
+      validateData: (payload) =>
+        validateYkiPracticeSessionPayload(
+          payload as Record<string, unknown> & {
+            precomputedPlan: Record<string, unknown>;
+            sessionTrace: Record<string, unknown>;
+          },
+        ) as YkiPracticeSession,
+    })) as ApiResponse<YkiPracticeSession>;
+  } catch (error) {
+    if (error instanceof ContractViolationError) {
+      return {
+        ok: false,
+        data: null,
+        error: {
+          code: error.code,
+          message: error.code,
+        },
+      };
+    }
+
+    throw error;
+  }
 
   if (!response.ok || !response.data) {
     return {
@@ -264,24 +281,11 @@ async function withSessionValidation(
     };
   }
 
-  try {
-    return {
-      ok: true,
-      data: validateYkiPracticeSessionPayload(
-        response.data as unknown as Record<string, unknown> & {
-          precomputedPlan: Record<string, unknown>;
-          sessionTrace: Record<string, unknown>;
-        },
-      ) as YkiPracticeSession,
-      error: null,
-    };
-  } catch (error) {
-    if (error instanceof ControlledUiValidationError) {
-      return validationFailure(path, error);
-    }
-
-    throw error;
-  }
+  return {
+    ok: true,
+    data: response.data,
+    error: null,
+  };
 }
 
 async function persistSessionFromResponse(data: YkiPracticeSession) {
@@ -292,7 +296,87 @@ async function persistSessionFromResponse(data: YkiPracticeSession) {
     isComplete: data.isComplete,
     policyVersion: data.policyVersion,
     sessionId: data.session_id,
+    sessionHash: data.session_hash,
+    taskSequenceHash: data.task_sequence_hash,
   });
+}
+
+function validateRuntimeTransition(
+  previous: YkiPracticeSession | null,
+  next: YkiPracticeSession,
+  action: "advance" | "resume" | "start" | "submit_only",
+) {
+  if (!previous) {
+    return;
+  }
+
+  if (previous.session_id !== next.session_id) {
+    throw new ContractViolationError(
+      `/api/v1/yki-practice/${next.session_id}`,
+      "CONTRACT_VIOLATION",
+      "SESSION_CORRUPTED",
+    );
+  }
+
+  if (previous.task_sequence_hash !== next.task_sequence_hash) {
+    throw new ContractViolationError(
+      `/api/v1/yki-practice/${next.session_id}`,
+      "CONTRACT_VIOLATION",
+      "SESSION_CORRUPTED",
+    );
+  }
+
+  if (action === "submit_only") {
+    if (previous.next_allowed_action !== "submit_only") {
+      throw new ContractViolationError(
+        `/api/v1/yki-practice/${next.session_id}`,
+        "CONTRACT_VIOLATION",
+        "SESSION_CORRUPTED",
+      );
+    }
+
+    if (next.current_task_index !== previous.current_task_index) {
+      throw new ContractViolationError(
+        `/api/v1/yki-practice/${next.session_id}`,
+        "CONTRACT_VIOLATION",
+        "SESSION_CORRUPTED",
+      );
+    }
+  }
+
+  if (action === "advance") {
+    if (previous.next_allowed_action !== "advance") {
+      throw new ContractViolationError(
+        `/api/v1/yki-practice/${next.session_id}`,
+        "CONTRACT_VIOLATION",
+        "SESSION_CORRUPTED",
+      );
+    }
+
+    if (next.current_task_index !== previous.current_task_index + 1) {
+      throw new ContractViolationError(
+        `/api/v1/yki-practice/${next.session_id}`,
+        "CONTRACT_VIOLATION",
+        "SESSION_CORRUPTED",
+      );
+    }
+  }
+
+  if (action === "resume" && next.current_task_index < previous.current_task_index) {
+    throw new ContractViolationError(
+      `/api/v1/yki-practice/${next.session_id}`,
+      "CONTRACT_VIOLATION",
+      "SESSION_CORRUPTED",
+    );
+  }
+
+  if (next.current_task_index > previous.current_task_index + 1) {
+    throw new ContractViolationError(
+      `/api/v1/yki-practice/${next.session_id}`,
+      "CONTRACT_VIOLATION",
+      "SESSION_CORRUPTED",
+    );
+  }
 }
 
 export async function getStoredPracticeSessionState(): Promise<
@@ -315,7 +399,9 @@ export async function getStoredPracticeSessionState(): Promise<
   return {
     ok: true,
     reason: null,
+    sessionHash: persisted.value.sessionHash,
     sessionId: persisted.value.sessionId,
+    taskSequenceHash: persisted.value.taskSequenceHash,
   };
 }
 
@@ -334,6 +420,7 @@ export async function startPracticeSession() {
   });
 
   if (res.ok && res.data?.session_id) {
+    validateRuntimeTransition(null, res.data, "start");
     await persistSessionFromResponse(res.data);
   }
 
@@ -361,6 +448,21 @@ export async function resumePracticeSession() {
   const response = await withSessionValidation(`/api/v1/yki-practice/${persisted.sessionId}`);
 
   if (response.ok && response.data) {
+    if (
+      response.data.session_hash !== persisted.sessionHash ||
+      response.data.task_sequence_hash !== persisted.taskSequenceHash
+    ) {
+      await clearPracticeSession();
+      return {
+        ok: false,
+        data: null,
+        error: {
+          code: "SESSION_CORRUPTED",
+          message: "SESSION_CORRUPTED",
+        },
+      } satisfies ApiResponse<YkiPracticeSession>;
+    }
+
     await persistSessionFromResponse(response.data);
   }
 
@@ -368,7 +470,7 @@ export async function resumePracticeSession() {
 }
 
 export async function submitPracticeTask(
-  action: "submit_only" | "advance" | "retry_task" | "retry_section" | "submit_and_next",
+  action: "submit_only" | "advance",
   answer?: string,
 ) {
   const sessionId = await getStoredPracticeSessionId();
@@ -380,6 +482,13 @@ export async function submitPracticeTask(
       error: { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION" },
     } satisfies ApiResponse<null>;
   }
+
+  const previousSessionResponse = await withSessionValidation(`/api/v1/yki-practice/${sessionId}`);
+  if (!previousSessionResponse.ok || !previousSessionResponse.data) {
+    return previousSessionResponse;
+  }
+
+  const previousSession = previousSessionResponse.data;
 
   const response = await withSessionValidation(`/api/v1/yki-practice/${sessionId}/submit`, {
     method: "POST",
@@ -393,6 +502,11 @@ export async function submitPracticeTask(
   });
 
   if (response.ok && response.data) {
+    validateRuntimeTransition(
+      previousSession,
+      response.data,
+      action === "advance" ? "advance" : "submit_only",
+    );
     await persistSessionFromResponse(response.data);
   }
 

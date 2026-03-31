@@ -360,7 +360,9 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     if (
       ykiSession.data.session_id !== persistedYki.value.sessionId ||
       ykiSession.data.current_task_index !== persistedYki.value.currentTaskIndex ||
-      ykiSession.data.isComplete !== persistedYki.value.isComplete
+      ykiSession.data.isComplete !== persistedYki.value.isComplete ||
+      ykiSession.data.session_hash !== persistedYki.value.sessionHash ||
+      ykiSession.data.task_sequence_hash !== persistedYki.value.taskSequenceHash
     ) {
       await blockNavigation(
         {

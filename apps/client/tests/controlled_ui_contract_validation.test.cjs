@@ -84,6 +84,14 @@ function createYkiSessionPayload() {
     level: "B1",
     focus_areas: ["grammar"],
     examMode: true,
+    next_allowed_action: "submit_only",
+    completion_state: {
+      completed_task_count: 0,
+      status: "active",
+      total_task_count: 1,
+    },
+    session_hash: "session-hash-1",
+    task_sequence_hash: "task-sequence-hash-1",
     policyVersion: "policy-v1",
     decisionVersion: "decision-v1",
     governanceVersion: "governance-v1",
@@ -152,12 +160,47 @@ function createYkiSessionPayload() {
         },
       ],
     },
+    auditTimeline: [],
+    auditReplay: {
+      orderedEventIds: [],
+      eventCounts: {},
+      ykiTaskFlow: [],
+      trusted: true,
+      integrity: {
+        ok: true,
+        integrityStatus: "valid",
+        chainLength: 0,
+        failureIndex: null,
+        failureEventId: null,
+        failureReason: null,
+        legacyEventCount: 0,
+        streamKey: "session-1",
+      },
+    },
+    auditVerification: {
+      ok: true,
+      issues: [],
+      trusted: true,
+      integrity: {
+        ok: true,
+        integrityStatus: "valid",
+        chainLength: 0,
+        failureIndex: null,
+        failureEventId: null,
+        failureReason: null,
+        legacyEventCount: 0,
+        streamKey: "session-1",
+      },
+    },
   };
 }
 
 function run() {
   const {
     ControlledUiValidationError,
+    REQUIRED_BACKEND_VERSION,
+    REQUIRED_CONTRACT_VERSION,
+    validateApiEnvelope,
     validateLearningModulesPayload,
     validateYkiPracticeSessionPayload,
   } = loadValidatorModule();
@@ -177,7 +220,7 @@ function run() {
       }),
     (error) => {
       assert.ok(error instanceof ControlledUiValidationError);
-      assert.equal(error.code, "GOVERNANCE_MISSING");
+      assert.equal(error.code, "CONTRACT_VIOLATION");
       return true;
     },
   );
@@ -191,7 +234,56 @@ function run() {
       }),
     (error) => {
       assert.ok(error instanceof ControlledUiValidationError);
-      assert.equal(error.code, "GOVERNANCE_MISSING");
+      assert.equal(error.code, "CONTRACT_VIOLATION");
+      return true;
+    },
+  );
+
+  const validatedEnvelope = validateApiEnvelope(
+    {
+      ok: true,
+      data: createYkiSessionPayload(),
+      error: null,
+      meta: {
+        version: REQUIRED_BACKEND_VERSION,
+        contract_version: REQUIRED_CONTRACT_VERSION,
+        timestamp: "2026-04-01T00:00:00+00:00",
+      },
+    },
+    "/api/v1/yki-practice/start",
+    {
+      validateData: (payload) =>
+        validateYkiPracticeSessionPayload(payload, {
+          allowLegacyUncontrolled: false,
+        }),
+    },
+  );
+  assert.equal(validatedEnvelope.meta.version, REQUIRED_BACKEND_VERSION);
+
+  assert.throws(
+    () =>
+      validateApiEnvelope(
+        {
+          ok: true,
+          data: createYkiSessionPayload(),
+          error: null,
+          meta: {
+            version: "wrong-version",
+            contract_version: REQUIRED_CONTRACT_VERSION,
+            timestamp: "2026-04-01T00:00:00+00:00",
+          },
+        },
+        "/api/v1/yki-practice/start",
+        {
+          validateData: (payload) =>
+            validateYkiPracticeSessionPayload(payload, {
+              allowLegacyUncontrolled: false,
+            }),
+        },
+      ),
+    (error) => {
+      assert.ok(error instanceof ControlledUiValidationError);
+      assert.equal(error.code, "CONTRACT_VIOLATION");
       return true;
     },
   );

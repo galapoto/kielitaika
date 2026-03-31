@@ -1,6 +1,5 @@
-import { apiClient, recordApiContractIssue } from "@core/api/apiClient";
+import { apiClient, ContractViolationError } from "@core/api/apiClient";
 import {
-  ControlledUiValidationError,
   validateDueReviewUnitsPayload,
   validateLearningDebugStatePayload,
   validateLearningModulesPayload,
@@ -458,27 +457,9 @@ function normalizeError(error: ApiError | null): ApiError {
     return { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION" };
   }
 
-  if (error.code === "TRANSPORT_ERROR") {
-    return { code: "TRANSPORT_ERROR", message: "TRANSPORT_ERROR" };
-  }
-
-  if (error.code === "GOVERNANCE_MISSING") {
-    return { code: "GOVERNANCE_MISSING", message: "GOVERNANCE_MISSING" };
-  }
-
-  return { code: "CONTRACT_VIOLATION", message: error.message || "CONTRACT_VIOLATION" };
-}
-
-function validationFailure<T>(path: string, error: ControlledUiValidationError): ApiResponse<T> {
-  recordApiContractIssue(path, error.code, error.message);
-
   return {
-    ok: false,
-    data: null,
-    error: {
-      code: error.code,
-      message: error.code,
-    },
+    code: error.code ?? "CONTRACT_VIOLATION",
+    message: error.message || error.code || "CONTRACT_VIOLATION",
   };
 }
 
@@ -486,7 +467,26 @@ async function withLearningValidation<TInput, TOutput>(
   path: string,
   validate: (payload: TInput) => TOutput,
 ): Promise<ApiResponse<TOutput>> {
-  const response = (await apiClient(path)) as ApiResponse<TInput>;
+  let response: ApiResponse<TOutput>;
+
+  try {
+    response = (await apiClient(path, {}, {
+      validateData: (payload) => validate(payload as TInput),
+    })) as ApiResponse<TOutput>;
+  } catch (error) {
+    if (error instanceof ContractViolationError) {
+      return {
+        ok: false,
+        data: null,
+        error: {
+          code: error.code,
+          message: error.code,
+        },
+      };
+    }
+
+    throw error;
+  }
 
   if (!response.ok || !response.data) {
     return {
@@ -496,19 +496,11 @@ async function withLearningValidation<TInput, TOutput>(
     };
   }
 
-  try {
-    return {
-      ok: true,
-      data: validate(response.data),
-      error: null,
-    };
-  } catch (error) {
-    if (error instanceof ControlledUiValidationError) {
-      return validationFailure(path, error);
-    }
-
-    throw error;
-  }
+  return {
+    ok: true,
+    data: response.data,
+    error: null,
+  };
 }
 
 export async function getLearningModules() {

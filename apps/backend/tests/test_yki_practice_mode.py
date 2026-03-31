@@ -115,6 +115,10 @@ class YkiPracticeModeTests(unittest.TestCase):
 
         active_session = submitted
         while not active_session["isComplete"]:
+            if active_session["next_allowed_action"] == "advance":
+                active_session = submit_yki_practice(session["session_id"], None, "advance")
+                continue
+
             current_task = active_session["currentTask"]
             if current_task is None:
                 break
@@ -127,7 +131,7 @@ class YkiPracticeModeTests(unittest.TestCase):
             active_session = submit_yki_practice(
                 session["session_id"],
                 answer,
-                "submit_and_next",
+                "submit_only",
             )
 
         self.assertTrue(active_session["sessionSummary"]["strengths"])
@@ -153,18 +157,16 @@ class YkiPracticeModeTests(unittest.TestCase):
         self.assertIn("whyWrong", updated_trace["feedback_generated"])
         self.assertEqual(updated_trace["learning_influence"]["signal_source"], "yki_practice")
 
-    def test_retry_section_resets_progress_without_exam_locking(self):
+    def test_invalid_retry_actions_are_rejected_under_runtime_lock(self):
         user_id = "practice-retry"
 
         session = start_yki_practice(user_id)
         first_task = session["currentTask"]
         updated = submit_yki_practice(session["session_id"], first_task["correctAnswer"], "submit_only")
-        reset_session = submit_yki_practice(session["session_id"], None, "retry_section")
+        invalid_retry = submit_yki_practice(session["session_id"], None, "retry_section")
 
         self.assertEqual(updated["results"][0]["taskId"], first_task["id"])
-        self.assertEqual(reset_session["currentTask"]["id"], first_task["id"])
-        self.assertEqual(reset_session["results"], [])
-        self.assertFalse(reset_session["isComplete"])
+        self.assertEqual(invalid_retry["error"], "YKI_RUNTIME_ACTION_INVALID")
         self.assertEqual(get_yki_practice(session["session_id"])["currentTask"]["id"], first_task["id"])
 
     def test_yki_result_includes_learning_signal_feedback(self):
@@ -194,6 +196,40 @@ class YkiPracticeModeTests(unittest.TestCase):
 
         self.assertEqual(planned_task_ids, refreshed["precomputedPlan"]["task_ids"])
         self.assertEqual(planned_task_ids, [task["id"] for task in updated["tasks"]])
+
+    def test_runtime_integrity_fields_are_present_and_sequential(self):
+        user_id = "practice-runtime-lock"
+        session = start_yki_practice(user_id)
+
+        self.assertEqual(session["next_allowed_action"], "submit_only")
+        self.assertEqual(session["completion_state"]["status"], "active")
+        self.assertTrue(session["session_hash"])
+        self.assertTrue(session["task_sequence_hash"])
+
+        submitted = submit_yki_practice(session["session_id"], "wrong answer", "submit_only")
+
+        self.assertEqual(submitted["current_task_index"], 0)
+        self.assertEqual(submitted["next_allowed_action"], "advance")
+        self.assertEqual(submitted["completion_state"]["status"], "awaiting_advance")
+        self.assertEqual(submitted["task_sequence_hash"], session["task_sequence_hash"])
+        self.assertNotEqual(submitted["session_hash"], session["session_hash"])
+
+        advanced = submit_yki_practice(session["session_id"], None, "advance")
+
+        self.assertEqual(advanced["current_task_index"], 1)
+        self.assertEqual(advanced["completion_state"]["completed_task_count"], 1)
+
+    def test_runtime_rejects_duplicate_submit_and_retry_actions(self):
+        user_id = "practice-runtime-reject"
+        session = start_yki_practice(user_id)
+        submitted = submit_yki_practice(session["session_id"], "wrong answer", "submit_only")
+
+        duplicate = submit_yki_practice(session["session_id"], "wrong answer", "submit_only")
+        retry = submit_yki_practice(session["session_id"], None, "retry_section")
+
+        self.assertEqual(submitted["next_allowed_action"], "advance")
+        self.assertEqual(duplicate["error"], "YKI_RUNTIME_ACTION_INVALID")
+        self.assertEqual(retry["error"], "YKI_RUNTIME_ACTION_INVALID")
 
     def test_same_seed_rebuilds_identical_yki_plan(self):
         user_id = "practice-deterministic-seed"

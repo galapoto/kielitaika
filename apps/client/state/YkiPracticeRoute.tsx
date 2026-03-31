@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import Card from "@ui/primitives/Card";
-import ScreenContainer from "@ui/primitives/ScreenContainer";
-import Stack from "@ui/primitives/Stack";
-import Text from "@ui/primitives/Text";
+import ApplicationErrorScreen from "@ui/screens/ApplicationErrorScreen";
 import YkiPracticeScreen from "@ui/screens/YkiPracticeScreen";
 
 import useYkiPractice from "../features/yki-practice/hooks/useYkiPractice";
@@ -96,13 +93,29 @@ export default function YkiPracticeRoute({ onBack }: Props) {
     ];
   }, [data]);
 
+  if (
+    error?.message === "SESSION_CORRUPTED" ||
+    error?.message === "SESSION_OUTDATED" ||
+    error?.message === "CONTRACT_VIOLATION"
+  ) {
+    return (
+      <ApplicationErrorScreen
+        code={error.message}
+        message="YKI runtime integrity validation failed. The session has been blocked."
+        onPrimaryAction={onBack}
+        primaryLabel="Return Home"
+      />
+    );
+  }
+
   return (
     <YkiPracticeScreen
       answer={answer}
       auditReplaySummary={auditReplaySummary}
       auditTimeline={auditTimeline}
-      canAdvance={Boolean(data?.currentTask?.evaluation)}
+      canAdvance={data?.next_allowed_action === "advance"}
       changeReference={data?.changeReference ?? null}
+      completionState={data?.completion_state ?? null}
       errorMessage={error?.message ?? null}
       governanceStatus={data?.governanceStatus ?? "governed"}
       latestResult={
@@ -151,7 +164,7 @@ export default function YkiPracticeRoute({ onBack }: Props) {
       policyVersion={data?.policyVersion ?? null}
       sessionId={data?.session_id ?? null}
       task={
-        data?.currentTask
+        data?.completion_state.status !== "completed" && data?.currentTask
           ? {
               guidance: data.currentTask.guidance,
               id: data.currentTask.id,

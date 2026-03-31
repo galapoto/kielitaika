@@ -43,6 +43,11 @@ type Props = {
   auditTimeline: string[];
   canAdvance: boolean;
   changeReference: string | null;
+  completionState: {
+    completed_task_count: number;
+    status: "active" | "awaiting_advance" | "completed";
+    total_task_count: number;
+  } | null;
   errorMessage: string | null;
   governanceStatus: "governed" | "legacy_uncontrolled";
   latestResult: LatestResultView | null;
@@ -78,6 +83,7 @@ export default function YkiPracticeScreen({
   auditTimeline,
   canAdvance,
   changeReference,
+  completionState,
   errorMessage,
   governanceStatus,
   latestResult,
@@ -152,6 +158,12 @@ export default function YkiPracticeScreen({
             <MetadataRow label="Session" value={sessionId} />
             <MetadataRow label="Policy version" value={policyVersion} />
             <MetadataRow label="Governance status" value={governanceStatus} />
+            {completionState ? (
+              <MetadataRow
+                label="Completion"
+                value={`${completionState.completed_task_count}/${completionState.total_task_count} ${completionState.status}`}
+              />
+            ) : null}
             {changeReference ? <MetadataRow label="Change reference" value={changeReference} /> : null}
             {offlineMessage ? <Text tone="muted">{offlineMessage}</Text> : null}
             {untrustedStateMessage ? <Text tone="error">{untrustedStateMessage}</Text> : null}
@@ -166,7 +178,7 @@ export default function YkiPracticeScreen({
           </Stack>
         </Card>
 
-        {task ? (
+        {completionState?.status !== "completed" && task ? (
           <Card>
             <Stack gap="xs">
               <Text variant="title">{task.title}</Text>

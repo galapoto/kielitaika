@@ -85,6 +85,10 @@ class AuditReplayTests(unittest.TestCase):
 
         active_session = session
         while not active_session["isComplete"]:
+            if active_session["next_allowed_action"] == "advance":
+                active_session = submit_yki_practice(session_id, None, "advance")
+                continue
+
             current_task = active_session["currentTask"]
             if current_task is None:
                 break
@@ -94,7 +98,7 @@ class AuditReplayTests(unittest.TestCase):
             else:
                 answer = f"{current_task['prompt']} {current_task['relatedLearningUnitId']}"
 
-            active_session = submit_yki_practice(session_id, answer, "submit_and_next")
+            active_session = submit_yki_practice(session_id, answer, "submit_only")
 
         events = get_session_events(session_id)
         replay = replay_session(events)

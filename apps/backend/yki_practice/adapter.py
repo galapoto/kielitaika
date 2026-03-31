@@ -14,5 +14,5 @@ def get_yki_practice(session_id: str):
     return get_practice_session(session_id)
 
 
-def submit_yki_practice(session_id: str, answer: str | None, action: str = "submit_and_next"):
+def submit_yki_practice(session_id: str, answer: str | None, action: str = "submit_only"):
     return submit_practice_answer(session_id, answer, action)

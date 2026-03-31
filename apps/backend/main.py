@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api_contract import failure, record_contract_action, success
+
 from learning.adapter import (
     get_learning_debug_state,
     get_learning_due_review,
@@ -37,23 +39,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def success(data):
-    return {
-        "ok": True,
-        "data": data,
-        "error": None,
-    }
-
-
-def failure(message):
-    return {
-        "ok": False,
-        "data": None,
-        "error": {"message": message},
-    }
-
 
 @app.get("/api/v1/auth/status")
 def auth_status():
@@ -163,7 +148,9 @@ def yki():
 
 @app.post("/api/v1/yki-practice/start")
 def yki_practice_start():
-    return success(start_yki_practice())
+    response = success(start_yki_practice())
+    record_contract_action("YKI_PRACTICE_START", response["data"]["session_id"], {}, response)
+    return response
 
 
 @app.get("/api/v1/yki-practice/{session_id}")
@@ -173,7 +160,9 @@ def yki_practice_get(session_id: str):
     if not session:
         return failure("SESSION_NOT_FOUND")
 
-    return success(session)
+    response = success(session)
+    record_contract_action("YKI_PRACTICE_FETCH", session_id, {"session_id": session_id}, response)
+    return response
 
 
 @app.post("/api/v1/yki-practice/{session_id}/submit")
@@ -185,7 +174,21 @@ def yki_practice_submit(session_id: str, body: dict):
     if not session:
         return failure("SESSION_NOT_FOUND")
 
-    return success(session)
+    if isinstance(session, dict) and "error" in session:
+        return failure(session["error"])
+
+    response = success(session)
+    record_contract_action(
+        "YKI_PRACTICE_SUBMIT",
+        session_id,
+        {
+            "action": action,
+            "answer": answer,
+            "session_id": session_id,
+        },
+        response,
+    )
+    return response
 
 
 @app.post("/api/v1/yki/start")
@@ -200,7 +203,9 @@ def yki_resume(session_id: str):
     if isinstance(session, dict) and "error" in session:
         return failure(session["error"])
 
-    return success(session)
+    response = success(session)
+    record_contract_action("YKI_SESSION_RESUME", session_id, {"session_id": session_id}, response)
+    return response
 
 
 @app.get("/api/v1/yki/history")
@@ -217,7 +222,9 @@ def yki_get(session_id: str):
     if isinstance(session, dict) and "error" in session:
         return failure(session["error"])
 
-    return success(session)
+    response = success(session)
+    record_contract_action("YKI_SESSION_FETCH", session_id, {"session_id": session_id}, response)
+    return response
 
 
 @app.get("/api/v1/yki/{session_id}/certificate")
@@ -241,7 +248,9 @@ def yki_next(session_id: str):
     if isinstance(session, dict) and "error" in session:
         return failure(session["error"])
 
-    return success(session)
+    response = success(session)
+    record_contract_action("YKI_SESSION_ADVANCE", session_id, {"session_id": session_id}, response)
+    return response
 
 
 @app.get("/api/v1/yki/{session_id}/task")
@@ -265,7 +274,9 @@ def yki_next_task(session_id: str):
     if isinstance(session, dict) and "error" in session:
         return failure(session["error"])
 
-    return success(session)
+    response = success(session)
+    _record_contract_action("YKI_TASK_ADVANCE", session_id, {"session_id": session_id}, response)
+    return response
 
 
 @app.post("/api/v1/yki/{session_id}/task/answer")
@@ -278,7 +289,14 @@ def yki_answer(session_id: str, body: dict):
     if isinstance(result, dict) and "error" in result:
         return failure(result["error"])
 
-    return success(result)
+    response = success(result)
+    record_contract_action(
+        "YKI_TASK_SUBMIT",
+        session_id,
+        {"answer": answer, "session_id": session_id},
+        response,
+    )
+    return response
 
 
 @app.post("/api/v1/yki/{session_id}/task/audio")

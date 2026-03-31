@@ -40,6 +40,8 @@ type PersistedYkiSession = PersistedEnvelopeBase & {
   kind: "yki";
   policyVersion: string;
   sessionId: string;
+  sessionHash: string;
+  taskSequenceHash: string;
 };
 
 type PersistedEnvelope = PersistedLearningSession | PersistedNavigationState | PersistedYkiSession;
@@ -138,7 +140,9 @@ function isPersistedYkiSession(value: unknown): value is PersistedYkiSession {
     typeof record.policyVersion === "string" &&
     typeof record.governanceVersion === "string" &&
     typeof record.currentTaskIndex === "number" &&
-    typeof record.isComplete === "boolean"
+    typeof record.isComplete === "boolean" &&
+    typeof record.sessionHash === "string" &&
+    typeof record.taskSequenceHash === "string"
   );
 }
 
@@ -253,6 +257,8 @@ export async function persistYkiSession(value: {
   isComplete: boolean;
   policyVersion: string;
   sessionId: string;
+  sessionHash: string;
+  taskSequenceHash: string;
 }) {
   await storageService.set(
     YKI_SESSION_KEY,
@@ -263,6 +269,8 @@ export async function persistYkiSession(value: {
       isComplete: value.isComplete,
       policyVersion: value.policyVersion,
       sessionId: value.sessionId,
+      sessionHash: value.sessionHash,
+      taskSequenceHash: value.taskSequenceHash,
     }),
   );
 }

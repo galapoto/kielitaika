@@ -6,5 +6,9 @@ export interface ApiResponse<T> {
     message: string;
     retryable?: boolean;
   } | null;
-  meta?: any;
+  meta: {
+    version: string;
+    contract_version: string;
+    timestamp: string;
+  };
 }

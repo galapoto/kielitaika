@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from hashlib import sha256
+import json
 
 from audit.audit_service import get_session_events, record_event
 from audit.replay_engine import replay_session, verify_replay_consistency
@@ -31,6 +32,21 @@ def _normalize_text(value):
 
 def _checksum_text(value: str):
     return sha256((value or "").encode("utf-8")).hexdigest()[:12]
+
+
+def _stable_value(value):
+    if isinstance(value, dict):
+        return {key: _stable_value(value[key]) for key in sorted(value)}
+
+    if isinstance(value, list):
+        return [_stable_value(item) for item in value]
+
+    return value
+
+
+def _runtime_hash(value):
+    serialized = json.dumps(_stable_value(value), separators=(",", ":"), sort_keys=True)
+    return sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def _runtime_metadata():
@@ -203,6 +219,58 @@ def _build_session_trace(context: dict, tasks: list[dict]):
     }
 
 
+def _task_sequence_hash(session: PracticeSession):
+    return _runtime_hash(
+        {
+            "session_id": session.session_id,
+            "task_ids": [task["id"] for task in session.tasks],
+        }
+    )
+
+
+def _session_hash(session: PracticeSession):
+    return _runtime_hash(
+        {
+            "current_task_index": session.current_task_index,
+            "evaluated_tasks": [
+                {
+                    "has_evaluation": bool(task.get("evaluation")),
+                    "submitted_answer": task.get("submittedAnswer"),
+                    "task_id": task["id"],
+                }
+                for task in session.tasks
+            ],
+            "results": session.results,
+            "session_id": session.session_id,
+        }
+    )
+
+
+def _next_allowed_action(session: PracticeSession, current_task: dict | None):
+    if current_task is None:
+        return "complete"
+
+    if current_task.get("evaluation"):
+        return "advance"
+
+    return "submit_only"
+
+
+def _completion_state(session: PracticeSession, completed_count: int, current_task: dict | None):
+    if current_task is None:
+        status = "completed"
+    elif current_task.get("evaluation"):
+        status = "awaiting_advance"
+    else:
+        status = "active"
+
+    return {
+        "completed_task_count": completed_count,
+        "status": status,
+        "total_task_count": len(session.tasks),
+    }
+
+
 def _update_session_trace(session: PracticeSession, task: dict, evaluation: dict, learning_progress: dict | None):
     if not session.session_trace:
         return
@@ -247,12 +315,18 @@ def _serialize_session(session: PracticeSession):
         else None
     )
     completed_count = sum(1 for task in session.tasks if task.get("evaluation"))
+    next_allowed_action = _next_allowed_action(session, current_task)
+    completion_state = _completion_state(session, completed_count, current_task)
     audit_timeline = get_session_events(session.session_id)
     audit_replay = replay_session(audit_timeline)
     audit_verification = verify_replay_consistency(audit_timeline)
     return {
         **asdict(session),
         "currentTask": current_task,
+        "next_allowed_action": next_allowed_action,
+        "completion_state": completion_state,
+        "session_hash": _session_hash(session),
+        "task_sequence_hash": _task_sequence_hash(session),
         "completedTaskCount": completed_count,
         "isComplete": is_complete,
         "sessionSummary": session_summary,
@@ -424,7 +498,7 @@ def get_practice_session(session_id: str):
     return _serialize_session(session)
 
 
-def submit_practice_answer(session_id: str, answer: str | None, action: str = "submit_and_next"):
+def submit_practice_answer(session_id: str, answer: str | None, action: str = "submit_only"):
     session = _practice_sessions.get(session_id)
     if not session:
         return None
@@ -433,29 +507,22 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
         return _serialize_session(session)
 
     current_task = session.tasks[session.current_task_index]
+    allowed_action = _next_allowed_action(session, current_task)
+
+    if action not in {"submit_only", "advance"}:
+        return {"error": "YKI_RUNTIME_ACTION_INVALID"}
 
     if action == "advance":
-        if current_task.get("evaluation"):
-            session.current_task_index = min(session.current_task_index + 1, len(session.tasks))
-            _record_task_presented(session, "advance")
-            _record_session_completed_if_needed(session, "advance")
+        if allowed_action != "advance":
+            return {"error": "YKI_RUNTIME_ACTION_INVALID"}
+
+        session.current_task_index = min(session.current_task_index + 1, len(session.tasks))
+        _record_task_presented(session, "advance")
+        _record_session_completed_if_needed(session, "advance")
         return _serialize_session(session)
 
-    if action == "retry_task":
-        _reset_task_state(current_task)
-        _record_task_presented(session, "retry_task")
-        return _serialize_session(session)
-
-    if action == "retry_section":
-        section_indices = _get_section_indices(session.tasks, current_task["section"])
-        session.results = [
-            result for result in session.results if result["section"] != current_task["section"]
-        ]
-        for index in section_indices:
-            _reset_task_state(session.tasks[index])
-        session.current_task_index = section_indices[0]
-        _record_task_presented(session, "retry_section")
-        return _serialize_session(session)
+    if allowed_action != "submit_only":
+        return {"error": "YKI_RUNTIME_ACTION_INVALID"}
 
     evaluation = _build_evaluation(current_task, answer or "")
     current_task["submittedAnswer"] = answer or ""
@@ -524,10 +591,6 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
         }
     )
     _update_session_trace(session, current_task, evaluation, learning_progress)
-
-    if action != "submit_only":
-        session.current_task_index = min(session.current_task_index + 1, len(session.tasks))
-        _record_task_presented(session, "submit_and_next")
 
     _record_session_completed_if_needed(session, action)
 

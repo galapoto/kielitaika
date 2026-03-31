@@ -3,6 +3,9 @@ export type ControlledUiErrorCode =
   | "GOVERNANCE_MISSING"
   | "TRANSPORT_ERROR";
 
+export const REQUIRED_BACKEND_VERSION = "2026-04-01.backend-lock.v1";
+export const REQUIRED_CONTRACT_VERSION = "2026-04-01.contract-lock.v1";
+
 export type GovernanceStatus = "governed" | "legacy_uncontrolled";
 
 type Schema =
@@ -54,6 +57,12 @@ function objectSchema(
     optional,
   };
 }
+
+const metaSchema = objectSchema({
+  version: stringSchema,
+  contract_version: stringSchema,
+  timestamp: stringSchema,
+});
 
 export class ControlledUiValidationError extends Error {
   code: Exclude<ControlledUiErrorCode, "TRANSPORT_ERROR">;
@@ -409,13 +418,12 @@ const learningModulesDataSchema = objectSchema(
     stagnatedUnitIds: arraySchema(stringSchema),
     weightsUsed: recordSchema(numberSchema),
     decisionVersion: stringSchema,
-    decisionPolicyVersion: stringSchema,
-  },
-  {
     policyVersion: stringSchema,
+    decisionPolicyVersion: stringSchema,
     governanceVersion: stringSchema,
     changeReference: nullableSchema(stringSchema),
   },
+  {},
 );
 
 const policyConfigSchema = objectSchema({
@@ -460,8 +468,11 @@ const policyConfigSchema = objectSchema({
 const learningDebugStateSchema = objectSchema(
   {
     decisionVersion: stringSchema,
+    policyVersion: stringSchema,
     decisionPolicyVersion: stringSchema,
     governanceStatus: stringSchema,
+    governanceVersion: stringSchema,
+    changeReference: nullableSchema(stringSchema),
     currentLevel: nullableSchema(stringSchema),
     weakPatterns: arraySchema(stringSchema),
     unitMastery: arraySchema(
@@ -673,11 +684,7 @@ const learningDebugStateSchema = objectSchema(
     ),
     weightsUsed: recordSchema(numberSchema),
   },
-  {
-    policyVersion: stringSchema,
-    governanceVersion: stringSchema,
-    changeReference: nullableSchema(stringSchema),
-  },
+  {},
 );
 
 const relatedUnitsSchema = objectSchema({
@@ -811,6 +818,14 @@ const ykiPracticeSessionSchema = objectSchema(
     examMode: booleanSchema,
     tasks: arraySchema(ykiPracticeTaskSchema),
     current_task_index: numberSchema,
+    next_allowed_action: enumSchema(["advance", "complete", "submit_only"]),
+    completion_state: objectSchema({
+      completed_task_count: numberSchema,
+      status: enumSchema(["active", "awaiting_advance", "completed"]),
+      total_task_count: numberSchema,
+    }),
+    session_hash: stringSchema,
+    task_sequence_hash: stringSchema,
     results: arraySchema(ykiPracticeResultSchema),
     currentTask: nullableSchema(ykiPracticeTaskSchema),
     completedTaskCount: numberSchema,
@@ -827,25 +842,21 @@ const ykiPracticeSessionSchema = objectSchema(
       decision_version: stringSchema,
       policy_version: stringSchema,
       decision_policy_version: stringSchema,
-      exam_mode: booleanSchema,
-      deterministic_seed: stringSchema,
-    }, {
       governance_version: stringSchema,
       change_reference: nullableSchema(stringSchema),
+      exam_mode: booleanSchema,
+      deterministic_seed: stringSchema,
     }),
     sessionTrace: objectSchema({
       decision_version: stringSchema,
       policy_version: stringSchema,
       decision_policy_version: stringSchema,
+      governance_version: stringSchema,
+      change_reference: nullableSchema(stringSchema),
       exam_mode: booleanSchema,
       adaptiveContext: unknownRecordSchema(),
       tasks: arraySchema(ykiTraceTaskSchema),
-    }, {
-      governance_version: stringSchema,
-      change_reference: nullableSchema(stringSchema),
     }),
-  },
-  {
     policyVersion: stringSchema,
     decisionVersion: stringSchema,
     governanceVersion: stringSchema,
@@ -898,10 +909,155 @@ const ykiPracticeSessionSchema = objectSchema(
       }),
     }),
   },
+  {},
 );
+
+const authStatusSchema = objectSchema({
+  isAuthenticated: booleanSchema,
+});
+
+const homePayloadSchema = objectSchema({
+  message: stringSchema,
+});
+
+type ApiEnvelopeOptions<TOutput> = {
+  allowNullData?: boolean;
+  validateData?: (payload: Record<string, unknown>) => TOutput;
+};
+
+type ApiEnvelope<TOutput> = {
+  ok: boolean;
+  data: TOutput | null;
+  error: {
+    code: string;
+    message: string;
+    retryable: boolean;
+  } | null;
+  meta: {
+    version: string;
+    contract_version: string;
+    timestamp: string;
+  };
+};
+
+function validateEnvelopeMeta(meta: Record<string, unknown>, path: string) {
+  validateSchema(meta, metaSchema, `${path}.meta`);
+
+  if (meta.version !== REQUIRED_BACKEND_VERSION) {
+    throw new ControlledUiValidationError(
+      `${path}.meta.version`,
+      "CONTRACT_VIOLATION",
+      `${path}.meta.version must match ${REQUIRED_BACKEND_VERSION}.`,
+    );
+  }
+
+  if (meta.contract_version !== REQUIRED_CONTRACT_VERSION) {
+    throw new ControlledUiValidationError(
+      `${path}.meta.contract_version`,
+      "CONTRACT_VIOLATION",
+      `${path}.meta.contract_version must match ${REQUIRED_CONTRACT_VERSION}.`,
+    );
+  }
+}
+
+export function validateApiEnvelope<TOutput>(
+  payload: unknown,
+  path: string,
+  options: ApiEnvelopeOptions<TOutput> = {},
+): ApiEnvelope<TOutput> {
+  if (!isRecord(payload)) {
+    throw new ControlledUiValidationError(
+      path,
+      "CONTRACT_VIOLATION",
+      `${path} must be a transport envelope object.`,
+    );
+  }
+
+  validateSchema(
+    payload,
+    objectSchema({
+      ok: booleanSchema,
+      data: nullableSchema(unknownRecordSchema()),
+      error: nullableSchema(
+        objectSchema({
+          code: stringSchema,
+          message: stringSchema,
+          retryable: booleanSchema,
+        }),
+      ),
+      meta: metaSchema,
+    }),
+    path,
+  );
+
+  validateEnvelopeMeta(payload.meta as Record<string, unknown>, path);
+
+  if (payload.ok) {
+    if (payload.error !== null) {
+      throw new ControlledUiValidationError(
+        `${path}.error`,
+        "CONTRACT_VIOLATION",
+        `${path}.error must be null when ok is true.`,
+      );
+    }
+
+    if (payload.data === null) {
+      if (!options.allowNullData) {
+        throw new ControlledUiValidationError(
+          `${path}.data`,
+          "CONTRACT_VIOLATION",
+          `${path}.data must not be null when ok is true.`,
+        );
+      }
+
+      return payload as ApiEnvelope<TOutput>;
+    }
+
+    if (!options.validateData) {
+      throw new ControlledUiValidationError(
+        `${path}.data`,
+        "CONTRACT_VIOLATION",
+        `${path}.data is missing a governed validator.`,
+      );
+    }
+
+    return {
+      ...payload,
+      data: options.validateData(payload.data as Record<string, unknown>),
+    } as ApiEnvelope<TOutput>;
+  }
+
+  if (payload.data !== null) {
+    throw new ControlledUiValidationError(
+      `${path}.data`,
+      "CONTRACT_VIOLATION",
+      `${path}.data must be null when ok is false.`,
+    );
+  }
+
+  if (payload.error === null) {
+    throw new ControlledUiValidationError(
+      `${path}.error`,
+      "CONTRACT_VIOLATION",
+      `${path}.error must be present when ok is false.`,
+    );
+  }
+
+  return payload as ApiEnvelope<TOutput>;
+}
 
 export function validateLearningUnitPayload<T extends Record<string, unknown>>(payload: T) {
   validateSchema(payload, learningUnitSchema, "learningUnit");
+  return payload;
+}
+
+export function validateAuthStatusPayload<T extends Record<string, unknown>>(payload: T) {
+  validateSchema(payload, authStatusSchema, "authStatus");
+  return payload;
+}
+
+export function validateHomePayload<T extends Record<string, unknown>>(payload: T) {
+  validateSchema(payload, homePayloadSchema, "homePayload");
   return payload;
 }
 
