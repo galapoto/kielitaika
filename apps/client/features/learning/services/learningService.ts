@@ -14,6 +14,7 @@ export type LearningUnit = {
   id: string;
   kind: string;
   level: string;
+  difficultyLevel: "easy" | "medium" | "hard";
   title: string;
   summary: string;
   example: string;
@@ -38,6 +39,8 @@ export type LearningUnitProgressSummary = {
   urgency: "scheduled" | "due_now" | "overdue";
   days_overdue: number;
   recent_mistake: boolean;
+  regression_detected: boolean;
+  previous_mastery_score: number;
 };
 
 export type LearningModule = {

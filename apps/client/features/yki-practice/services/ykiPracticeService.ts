@@ -18,7 +18,15 @@ export type YkiPracticeEvaluation = {
   maxScore: number;
   isCorrect: boolean;
   explanation: string;
+  whyWrong: string;
+  ruleApplies: string | null;
   relatedLearningUnitId: string;
+  linkedLearningUnit: {
+    id: string;
+    title: string;
+    kind: string;
+    difficultyLevel: "easy" | "medium" | "hard";
+  } | null;
 };
 
 export type YkiPracticeTask = {
@@ -45,13 +53,30 @@ export type YkiPracticeResult = {
   section: string;
   score: number;
   explanation: string;
+  whyWrong: string;
+  ruleApplies: string | null;
   relatedLearningUnitId: string;
+  linkedLearningUnit: {
+    id: string;
+    title: string;
+    kind: string;
+    difficultyLevel: "easy" | "medium" | "hard";
+  } | null;
   learningProgress?: {
     unitProgress: {
       mastery_level: string;
       review_interval_days: number;
+      regression_detected: boolean;
     };
   } | null;
+};
+
+export type YkiPracticeSessionSummary = {
+  strengths: string[];
+  weaknesses: string[];
+  improvement_trend: string;
+  recommended_focus: string[];
+  averageScore: number;
 };
 
 export type YkiPracticeSession = {
@@ -65,6 +90,7 @@ export type YkiPracticeSession = {
   currentTask: YkiPracticeTask | null;
   completedTaskCount: number;
   isComplete: boolean;
+  sessionSummary: YkiPracticeSessionSummary;
 };
 
 export async function getStoredPracticeSessionId() {

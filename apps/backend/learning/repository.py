@@ -62,12 +62,25 @@ class LearningRepository:
             return None
         return [self.serialize_unit(self.units[related_id]) for related_id in unit.related_unit_ids]
 
+    def resolve_difficulty_level(self, unit: VocabularyUnit | GrammarUnit | PhraseUnit):
+        if unit.difficulty_level:
+            return unit.difficulty_level
+
+        if unit.level == "A1":
+            return "easy"
+        if unit.level == "A2":
+            return "medium"
+        return "hard"
+
     def serialize_unit(self, unit: VocabularyUnit | GrammarUnit | PhraseUnit):
+        difficulty_level = self.resolve_difficulty_level(unit)
+
         if isinstance(unit, VocabularyUnit):
             return {
                 "id": unit.id,
                 "kind": "vocabulary",
                 "level": unit.level,
+                "difficultyLevel": difficulty_level,
                 "title": unit.finnish,
                 "summary": unit.english,
                 "example": unit.example,
@@ -83,6 +96,7 @@ class LearningRepository:
                 "id": unit.id,
                 "kind": "grammar",
                 "level": unit.level,
+                "difficultyLevel": difficulty_level,
                 "title": unit.title,
                 "summary": unit.rule,
                 "example": unit.example,
@@ -97,6 +111,7 @@ class LearningRepository:
             "id": unit.id,
             "kind": "phrase",
             "level": unit.level,
+            "difficultyLevel": difficulty_level,
             "title": unit.finnish,
             "summary": unit.english,
             "example": unit.usage,

@@ -58,6 +58,8 @@ export type UnitProgress = {
   urgency: "scheduled" | "due_now" | "overdue";
   days_overdue: number;
   recent_mistake: boolean;
+  regression_detected: boolean;
+  previous_mastery_score: number;
 };
 
 export type ModuleProgress = {

@@ -1,4 +1,5 @@
 from learning.graph_service import list_modules_for_user
+from learning.progress_service import get_unit_progress
 from learning.models import GrammarUnit, PhraseUnit, VocabularyUnit
 from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID
@@ -114,6 +115,49 @@ def rotate_options(options, unit_id: str):
         return []
     rotation = sum(ord(char) for char in unit_id) % len(options)
     return options[rotation:] + options[:rotation]
+
+
+def resolve_unit_difficulty(unit):
+    return repository.resolve_difficulty_level(unit)
+
+
+def get_difficulty_rank(difficulty_level: str):
+    return {"easy": 0, "medium": 1, "hard": 2}.get(difficulty_level, 1)
+
+
+def get_preferred_difficulty(unit_objects, user_id: str):
+    attempted_progress = []
+
+    for unit in unit_objects:
+        progress = get_unit_progress(unit.id, user_id)
+        if progress and progress["attempts"] > 0:
+            attempted_progress.append(progress)
+
+    if not attempted_progress:
+        return "medium"
+
+    average_mastery = sum(item["mastery_score"] for item in attempted_progress) / len(attempted_progress)
+
+    if average_mastery < 0.4:
+        return "easy"
+    if average_mastery > 0.7:
+        return "hard"
+    return "medium"
+
+
+def sort_unit_objects_for_user(unit_objects, user_id: str):
+    preferred_difficulty = get_preferred_difficulty(unit_objects, user_id)
+    preferred_rank = get_difficulty_rank(preferred_difficulty)
+
+    def sort_key(unit):
+        rank = get_difficulty_rank(resolve_unit_difficulty(unit))
+        if preferred_difficulty == "hard":
+            return (abs(rank - preferred_rank), -rank, unit.id)
+        if preferred_difficulty == "easy":
+            return (abs(rank - preferred_rank), rank, unit.id)
+        return (abs(rank - preferred_rank), rank, unit.id)
+
+    return sorted(unit_objects, key=sort_key)
 
 
 def build_phrase_options(unit: PhraseUnit):
@@ -259,14 +303,14 @@ def prioritize_review_exercises(exercises, prioritized_unit_ids):
     )
 
 
-def generate_practice(module_id: str):
+def generate_practice(module_id: str, user_id: str = DEFAULT_USER_ID):
     module = repository.get_module(module_id)
     unit_objects = get_module_unit_objects(module_id)
     if not module or unit_objects is None:
         return None
 
     exercises = []
-    for unit in unit_objects:
+    for unit in sort_unit_objects_for_user(unit_objects, user_id):
         exercises.extend(generate_exercises_for_unit(unit))
 
     return build_practice_bundle(module, exercises, "module")
@@ -276,7 +320,7 @@ def generate_practice_from_weakness(user_id: str = DEFAULT_USER_ID):
     modules_data = list_modules_for_user(user_id)
     suggested_modules = modules_data.get("suggestedModules", [])
     selected_module = suggested_modules[0] if suggested_modules else modules_data["modules"][0]
-    practice = generate_practice(selected_module["id"])
+    practice = generate_practice(selected_module["id"], user_id)
 
     if not practice:
         return None

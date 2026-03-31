@@ -70,6 +70,15 @@ export default function YkiPracticeFeature() {
         <Button label="Open Official YKI" onPress={() => router.push("/yki")} />
       </View>
 
+      <View style={styles.card}>
+        <Text size="lg">Session Summary</Text>
+        <Text>Trend: {formatTrend(data.sessionSummary.improvement_trend)}</Text>
+        <Text>Average score: {data.sessionSummary.averageScore.toFixed(1)} / 5</Text>
+        <Text>Strengths: {data.sessionSummary.strengths.join(" | ")}</Text>
+        <Text>Weaknesses: {data.sessionSummary.weaknesses.join(" | ")}</Text>
+        <Text>Recommended focus: {data.sessionSummary.recommended_focus.join(", ")}</Text>
+      </View>
+
       {notice ? (
         <View style={styles.card}>
           <Text>{notice}</Text>
@@ -153,12 +162,22 @@ export default function YkiPracticeFeature() {
           <Text size="lg">Latest Feedback</Text>
           <Text>Score: {latestResult.score} / 5</Text>
           <Text>{latestResult.explanation}</Text>
+          <Text>Why it failed or passed: {latestResult.whyWrong}</Text>
+          <Text>Rule applied: {latestResult.ruleApplies ?? "General comprehension and response control."}</Text>
           <Text>Related learning unit: {latestResult.relatedLearningUnitId}</Text>
+          {latestResult.linkedLearningUnit ? (
+            <Text>
+              Linked unit: {latestResult.linkedLearningUnit.title} ({latestResult.linkedLearningUnit.difficultyLevel})
+            </Text>
+          ) : null}
           {latestResult.learningProgress?.unitProgress ? (
             <Text>
               Updated mastery: {latestResult.learningProgress.unitProgress.mastery_level},
               review interval {latestResult.learningProgress.unitProgress.review_interval_days} day(s)
             </Text>
+          ) : null}
+          {latestResult.learningProgress?.unitProgress?.regression_detected ? (
+            <Text>Regression detected. This unit should be reviewed again soon.</Text>
           ) : null}
         </View>
       ) : null}
@@ -168,6 +187,13 @@ export default function YkiPracticeFeature() {
 
 function formatSection(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatTrend(value: string) {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 const styles = StyleSheet.create({

@@ -93,6 +93,41 @@ class YkiPracticeModeTests(unittest.TestCase):
         self.assertEqual(progress["correct_attempts"], 1)
         self.assertGreater(progress["mastery_score"], 0.0)
 
+    def test_feedback_and_session_summary_explain_performance(self):
+        user_id = "practice-summary"
+        session = start_yki_practice(user_id)
+
+        submitted = submit_yki_practice(session["session_id"], "wrong answer", "submit_only")
+        evaluation = submitted["currentTask"]["evaluation"]
+
+        self.assertIn("whyWrong", evaluation)
+        self.assertIsNotNone(evaluation["ruleApplies"])
+        self.assertEqual(
+            evaluation["linkedLearningUnit"]["id"],
+            submitted["currentTask"]["relatedLearningUnitId"],
+        )
+
+        active_session = submitted
+        while not active_session["isComplete"]:
+            current_task = active_session["currentTask"]
+            if current_task is None:
+                break
+
+            if current_task["section"] in {"reading", "listening"}:
+                answer = current_task["correctAnswer"]
+            else:
+                answer = f"{current_task['prompt']} {current_task['relatedLearningUnitId']}"
+
+            active_session = submit_yki_practice(
+                session["session_id"],
+                answer,
+                "submit_and_next",
+            )
+
+        self.assertTrue(active_session["sessionSummary"]["strengths"])
+        self.assertTrue(active_session["sessionSummary"]["weaknesses"])
+        self.assertTrue(active_session["sessionSummary"]["recommended_focus"])
+
     def test_retry_section_resets_progress_without_exam_locking(self):
         user_id = "practice-retry"
 

@@ -22,6 +22,18 @@ def get_level_at_rank(rank: int):
     return LEVEL_ORDER[max(0, min(rank, len(LEVEL_ORDER) - 1))]
 
 
+def get_difficulty_rank(value: str | None):
+    return {"easy": 0, "medium": 1, "hard": 2}.get(value or "medium", 1)
+
+
+def determine_preferred_difficulty(current_level: str, weak_patterns, due_review_unit_ids, low_mastery_unit_ids):
+    if weak_patterns or due_review_unit_ids or low_mastery_unit_ids:
+        return "easy"
+    if get_level_rank(current_level) >= get_level_rank("B1"):
+        return "hard"
+    return "medium"
+
+
 def build_adaptive_context(user_id: str = DEFAULT_USER_ID):
     progress_history = get_progress_history(user_id)
     weak_patterns = progress_history.get("weak_patterns", [])
@@ -51,6 +63,12 @@ def build_adaptive_context(user_id: str = DEFAULT_USER_ID):
     return {
         "currentLevel": current_level,
         "practiceLevel": practice_level,
+        "preferredDifficulty": determine_preferred_difficulty(
+            current_level,
+            weak_patterns,
+            due_review_unit_ids,
+            low_mastery_unit_ids,
+        ),
         "weakPatterns": weak_patterns,
         "dueReviewUnitIds": due_review_unit_ids,
         "lowMasteryUnitIds": low_mastery_unit_ids,
@@ -87,7 +105,15 @@ def select_practice_units(user_id: str = DEFAULT_USER_ID):
             selected_units.append(unit)
             seen.add(unit_id)
 
-    for unit in _build_fallback_units(context["practiceLevel"]):
+    fallback_units = sorted(
+        _build_fallback_units(context["practiceLevel"]),
+        key=lambda unit: (
+            abs(get_difficulty_rank(unit.get("difficultyLevel")) - get_difficulty_rank(context["preferredDifficulty"])),
+            unit["id"],
+        ),
+    )
+
+    for unit in fallback_units:
         if unit["id"] not in seen:
             selected_units.append(unit)
             seen.add(unit["id"])

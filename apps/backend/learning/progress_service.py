@@ -8,6 +8,7 @@ from yki.session_store import DEFAULT_USER_ID
 _unit_progress_store: dict[tuple[str, str], UserUnitProgress] = {}
 _module_progress_store: dict[tuple[str, str], UserModuleProgress] = {}
 MAX_REVIEW_INTERVAL_DAYS = 7
+RECENT_MASTERY_WEIGHTS = [0.2, 0.3, 0.6]
 
 
 def _current_time():
@@ -84,6 +85,7 @@ def _build_review_metadata(progress: UserUnitProgress, now: datetime):
         "urgency": urgency,
         "days_overdue": days_overdue,
         "recent_mistake": recent_mistake,
+        "regression_detected": progress.regression_detected,
     }
 
 
@@ -97,6 +99,21 @@ def _calculate_review_schedule(progress: UserUnitProgress, is_correct: bool, now
 
     next_review_at = now + timedelta(days=review_interval_days)
     return streak_correct, review_interval_days, next_review_at.isoformat()
+
+
+def _calculate_mastery_score(progress: UserUnitProgress, is_correct: bool):
+    recent_results = [*(progress.recent_results or []), is_correct]
+    recent_results = recent_results[-len(RECENT_MASTERY_WEIGHTS) :]
+
+    if len(recent_results) == 1:
+        return recent_results, 1.0 if is_correct else 0.0
+
+    weights = RECENT_MASTERY_WEIGHTS[-len(recent_results) :]
+    total_weight = sum(weights)
+    weighted_score = sum(
+        weight * float(result) for weight, result in zip(weights, recent_results, strict=False)
+    )
+    return recent_results, _round_score(weighted_score / total_weight)
 
 
 def _get_or_create_unit_progress(user_id: str, unit_id: str):
@@ -188,6 +205,7 @@ def record_practice_result(user_id: str, exercise, is_correct: bool):
 
     now = _current_time()
     unit_progress = _get_or_create_unit_progress(user_id, unit_id)
+    previous_mastery_score = unit_progress.mastery_score
     unit_progress.attempts += 1
     unit_progress.correct_attempts += 1 if is_correct else 0
     unit_progress.last_attempt_at = now.isoformat()
@@ -197,7 +215,14 @@ def record_practice_result(user_id: str, exercise, is_correct: bool):
         unit_progress.review_interval_days,
         unit_progress.next_review_at,
     ) = _calculate_review_schedule(unit_progress, is_correct, now)
-    unit_progress.mastery_score = _round_score(unit_progress.correct_attempts / unit_progress.attempts)
+    unit_progress.previous_mastery_score = previous_mastery_score
+    unit_progress.recent_results, unit_progress.mastery_score = _calculate_mastery_score(
+        unit_progress,
+        is_correct,
+    )
+    unit_progress.regression_detected = (
+        previous_mastery_score > 0.7 and unit_progress.mastery_score < 0.5
+    )
 
     module_progress = _recalculate_module_progress(user_id, module_id)
 

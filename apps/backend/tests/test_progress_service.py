@@ -88,7 +88,23 @@ class ProgressServiceTests(unittest.TestCase):
             third["unitProgress"]["mastery_score"],
             second["unitProgress"]["mastery_score"],
         )
-        self.assertEqual(third["unitProgress"]["mastery_level"], "improving")
+        self.assertEqual(third["unitProgress"]["mastery_level"], "mastered")
+
+    def test_regression_is_detected_when_mastery_drops_sharply(self):
+        user_id = "progress-test-regression"
+        practice = generate_practice("module-daily-life-routines")
+        exercise = next(
+            item for item in practice["exercises"] if item["unit_id"] == "vocab-aamu"
+        )
+
+        record_practice_result(user_id, exercise, True)
+        record_practice_result(user_id, exercise, True)
+        record_practice_result(user_id, exercise, True)
+        result = record_practice_result(user_id, exercise, False)
+
+        self.assertGreater(result["unitProgress"]["previous_mastery_score"], 0.7)
+        self.assertLess(result["unitProgress"]["mastery_score"], 0.5)
+        self.assertTrue(result["unitProgress"]["regression_detected"])
 
     def test_module_completion_tracks_mastered_units(self):
         user_id = "progress-test-module"

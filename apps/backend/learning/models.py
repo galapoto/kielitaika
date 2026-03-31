@@ -11,6 +11,7 @@ class VocabularyUnit:
     part_of_speech: str
     example: str
     related_unit_ids: list[str]
+    difficulty_level: str | None = None
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,7 @@ class GrammarUnit:
     rule: str
     example: str
     related_unit_ids: list[str]
+    difficulty_level: str | None = None
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,7 @@ class PhraseUnit:
     english: str
     usage: str
     related_unit_ids: list[str]
+    difficulty_level: str | None = None
 
 
 @dataclass(frozen=True)

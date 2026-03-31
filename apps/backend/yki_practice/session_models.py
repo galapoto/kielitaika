@@ -10,3 +10,4 @@ class PracticeSession:
     tasks: list[dict]
     current_task_index: int = 0
     results: list[dict] = field(default_factory=list)
+    session_summary: dict | None = None
