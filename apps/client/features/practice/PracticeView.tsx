@@ -82,6 +82,12 @@ export default function PracticeView({ moduleId }: Props) {
               ? data.recommendation.prioritizedUnitIds.length
               : "None"}
           </Text>
+          <Text>
+            Due reviews:{" "}
+            {data.recommendation.dueReviewUnitIds.length
+              ? data.recommendation.dueReviewUnitIds.length
+              : "None"}
+          </Text>
         </View>
       ) : null}
 
@@ -123,6 +129,8 @@ export default function PracticeView({ moduleId }: Props) {
             <Text>
               Attempts: {unitProgress.attempts} | Correct: {unitProgress.correct_attempts}
             </Text>
+            <Text>Review interval: {unitProgress.review_interval_days} day(s)</Text>
+            <Text>Review status: {formatReviewUrgency(unitProgress.urgency)}</Text>
           </View>
         ) : null}
         {currentExercise.input_mode === "choice" ? (
@@ -208,6 +216,16 @@ function formatMasteryLevel(value: string) {
 
 function formatPercentage(value: number) {
   return `${value.toFixed(0)}%`;
+}
+
+function formatReviewUrgency(value: string) {
+  if (value === "due_now") {
+    return "Due now";
+  }
+  if (value === "overdue") {
+    return "Overdue";
+  }
+  return "Scheduled";
 }
 
 const styles = StyleSheet.create({

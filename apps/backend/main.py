@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from learning.adapter import (
+    get_learning_due_review,
     get_learning_modules,
     get_learning_module_progress,
     get_learning_practice,
@@ -105,6 +106,11 @@ def learning_practice_recommended():
         return failure("PRACTICE_NOT_AVAILABLE")
 
     return success(practice)
+
+
+@app.get("/api/v1/learning/review/due")
+def learning_review_due():
+    return success({"units": get_learning_due_review()})
 
 
 @app.post("/api/v1/learning/progress/submit")

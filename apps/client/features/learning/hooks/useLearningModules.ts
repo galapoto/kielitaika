@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 
-import { getLearningModules, type LearningModulesData } from "../services/learningService";
+import {
+  getDueReviewUnits,
+  getLearningModules,
+  type DueReviewUnit,
+  type LearningModulesData,
+} from "../services/learningService";
 
 type LearningModulesState = {
   data: LearningModulesData | null;
+  dueReviewUnits: DueReviewUnit[];
   loading: boolean;
   error: { message: string } | null;
 };
@@ -11,23 +17,33 @@ type LearningModulesState = {
 export default function useLearningModules() {
   const [state, setState] = useState<LearningModulesState>({
     data: null,
+    dueReviewUnits: [],
     loading: true,
     error: null,
   });
 
   useEffect(() => {
     async function load() {
-      const res = await getLearningModules();
+      const [modulesRes, dueReviewRes] = await Promise.all([
+        getLearningModules(),
+        getDueReviewUnits(),
+      ]);
 
-      if (res.ok && res.data) {
-        setState({ data: res.data, loading: false, error: null });
+      if (modulesRes.ok && modulesRes.data) {
+        setState({
+          data: modulesRes.data,
+          dueReviewUnits: dueReviewRes.ok && dueReviewRes.data ? dueReviewRes.data.units : [],
+          loading: false,
+          error: null,
+        });
         return;
       }
 
       setState({
         data: null,
+        dueReviewUnits: [],
         loading: false,
-        error: res.error ?? { message: "LEARNING_MODULES_FAILED" },
+        error: modulesRes.error ?? { message: "LEARNING_MODULES_FAILED" },
       });
     }
 

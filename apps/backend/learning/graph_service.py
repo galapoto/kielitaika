@@ -1,4 +1,4 @@
-from learning.progress_service import get_low_mastery_unit_ids, get_module_progress
+from learning.progress_service import get_due_review_units, get_low_mastery_unit_ids, get_module_progress
 from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID, get_progress_history
 
@@ -26,7 +26,13 @@ def build_suggestion_reason(
     matched_weaknesses,
     current_level: str | None,
     low_mastery_unit_ids,
+    due_review_unit_ids,
+    recent_mistake_unit_ids,
 ):
+    if due_review_unit_ids:
+        return "Recommended because review is due for this module."
+    if recent_mistake_unit_ids:
+        return "Recommended to repeat recent mistakes before they settle in."
     if low_mastery_unit_ids:
         return "Recommended to revisit units with low mastery in this module."
     if matched_weaknesses and module["level"] == current_level:
@@ -40,7 +46,14 @@ def build_suggestion_reason(
     return None
 
 
-def score_module(module, weak_patterns, current_level: str | None, low_mastery_unit_ids, user_id: str):
+def score_module(
+    module,
+    weak_patterns,
+    current_level: str | None,
+    low_mastery_unit_ids,
+    due_review_unit_ids,
+    user_id: str,
+):
     matched_weaknesses = [
         weak_pattern for weak_pattern in weak_patterns if weak_pattern in module["focusTags"]
     ]
@@ -48,8 +61,17 @@ def score_module(module, weak_patterns, current_level: str | None, low_mastery_u
         unit_id for unit_id in module["unitIds"] if unit_id in low_mastery_unit_ids
     ]
     module_progress = get_module_progress(module["id"], user_id)
+    review_due_unit_ids = [
+        unit_id for unit_id in module["unitIds"] if unit_id in due_review_unit_ids
+    ]
+    recent_mistake_unit_ids = [
+        unit_id for unit_id in module_progress["recent_mistake_unit_ids"]
+        if unit_id in module["unitIds"]
+    ]
     weakness_score = len(matched_weaknesses) * 10
     mastery_score = len(prioritized_unit_ids) * 15
+    review_score = len(review_due_unit_ids) * 20
+    recent_mistake_score = len(recent_mistake_unit_ids) * 12
     level_distance = get_level_distance(current_level, module["level"])
     level_score = 0
 
@@ -58,19 +80,29 @@ def score_module(module, weak_patterns, current_level: str | None, low_mastery_u
     elif level_distance is not None:
         level_score = max(0, 3 - level_distance)
 
-    suggestion_score = weakness_score + mastery_score + level_score
+    suggestion_score = weakness_score + mastery_score + review_score + recent_mistake_score + level_score
 
     return {
         **module,
         "moduleProgress": module_progress,
         "lowMasteryUnitIds": prioritized_unit_ids,
+        "dueReviewUnitIds": review_due_unit_ids,
+        "recentMistakeUnitIds": recent_mistake_unit_ids,
         "matchedWeaknesses": matched_weaknesses,
-        "suggested": bool(matched_weaknesses) or level_score > 0 or bool(prioritized_unit_ids),
+        "suggested": (
+            bool(matched_weaknesses)
+            or level_score > 0
+            or bool(prioritized_unit_ids)
+            or bool(review_due_unit_ids)
+            or bool(recent_mistake_unit_ids)
+        ),
         "suggestionReason": build_suggestion_reason(
             module,
             matched_weaknesses,
             current_level,
             prioritized_unit_ids,
+            review_due_unit_ids,
+            recent_mistake_unit_ids,
         ),
         "suggestionScore": suggestion_score,
     }
@@ -81,8 +113,18 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID):
     weak_patterns = progress.get("weak_patterns", [])
     current_level = progress.get("current_level")
     low_mastery_unit_ids = set(get_low_mastery_unit_ids(user_id))
+    due_review_unit_ids = {
+        item["unit"]["id"] for item in get_due_review_units(user_id)
+    }
     scored_modules = [
-        score_module(module, weak_patterns, current_level, low_mastery_unit_ids, user_id)
+        score_module(
+            module,
+            weak_patterns,
+            current_level,
+            low_mastery_unit_ids,
+            due_review_unit_ids,
+            user_id,
+        )
         for module in repository.list_modules()
     ]
     scored_modules.sort(
@@ -100,6 +142,7 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID):
         "currentLevel": current_level,
         "weakPatterns": weak_patterns,
         "lowMasteryUnitIds": list(low_mastery_unit_ids),
+        "dueReviewUnitIds": list(due_review_unit_ids),
     }
 
 

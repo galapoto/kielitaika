@@ -10,7 +10,7 @@ import type { LearningModule } from "./services/learningService";
 
 export default function LearningHome() {
   const router = useRouter();
-  const { data, loading, error } = useLearningModules();
+  const { data, dueReviewUnits, loading, error } = useLearningModules();
 
   if (loading) {
     return <Text>Loading learning content...</Text>;
@@ -34,6 +34,25 @@ export default function LearningHome() {
           Weak patterns: {data.weakPatterns.length ? data.weakPatterns.join(", ") : "None yet"}
         </Text>
         <Button label="Recommended Practice" onPress={() => router.push("/practice")} />
+      </View>
+
+      <View style={styles.section}>
+        <Text size="lg">Review Now</Text>
+        {dueReviewUnits.length ? (
+          dueReviewUnits.map((item) => (
+            <View key={item.unit.id} style={styles.card}>
+              <Text size="lg">{item.unit.title}</Text>
+              <Text>Urgency: {formatUrgency(item.urgency)}</Text>
+              <Text>Next review: {formatReviewDate(item.progress.next_review_at)}</Text>
+              <Text>Mastery: {formatMastery(item.progress.mastery_level)}</Text>
+              <Button label="Review in Practice" onPress={() => router.push("/practice")} />
+            </View>
+          ))
+        ) : (
+          <View style={styles.card}>
+            <Text>No units are due for reinforcement yet.</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -97,11 +116,34 @@ function ModuleCard({ module, onOpen, onPractice }: ModuleCardProps) {
       <Text>{module.description}</Text>
       <Text>Focus: {module.focusTags.join(", ")}</Text>
       <Text>Units: {module.unitCount}</Text>
+      {module.dueReviewUnitIds?.length ? <Text>Due review units: {module.dueReviewUnitIds.length}</Text> : null}
       {module.suggestionReason ? <Text>{module.suggestionReason}</Text> : null}
       <Button label="Open Module" onPress={onOpen} />
       <Button label="Practice Module" onPress={onPractice} />
     </View>
   );
+}
+
+function formatUrgency(value: string) {
+  if (value === "overdue") {
+    return "Overdue";
+  }
+  if (value === "due_now") {
+    return "Due now";
+  }
+  return "Scheduled";
+}
+
+function formatMastery(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatReviewDate(value: string | null) {
+  if (!value) {
+    return "Not scheduled";
+  }
+
+  return new Date(value).toLocaleString();
 }
 
 const styles = StyleSheet.create({

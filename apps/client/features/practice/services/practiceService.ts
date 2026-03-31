@@ -36,6 +36,7 @@ export type PracticeBundle = {
     currentLevel: string | null;
     matchedWeaknesses: string[];
     prioritizedUnitIds: string[];
+    dueReviewUnitIds: string[];
   } | null;
   exerciseCount: number;
   exercises: PracticeExercise[];
@@ -47,8 +48,16 @@ export type UnitProgress = {
   attempts: number;
   correct_attempts: number;
   last_attempt_at: string | null;
+  last_practiced_at: string | null;
+  next_review_at: string | null;
+  review_interval_days: number;
+  streak_correct: number;
   mastery_score: number;
   mastery_level: "weak" | "improving" | "mastered";
+  due_for_review: boolean;
+  urgency: "scheduled" | "due_now" | "overdue";
+  days_overdue: number;
+  recent_mistake: boolean;
 };
 
 export type ModuleProgress = {
@@ -60,6 +69,8 @@ export type ModuleProgress = {
   mastered_unit_count: number;
   total_unit_count: number;
   low_mastery_unit_ids: string[];
+  due_review_unit_ids: string[];
+  recent_mistake_unit_ids: string[];
   unit_progress: UnitProgress[];
 };
 

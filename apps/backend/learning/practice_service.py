@@ -244,6 +244,21 @@ def build_practice_bundle(module, exercises, source, recommendation=None):
     }
 
 
+def prioritize_review_exercises(exercises, prioritized_unit_ids):
+    if not prioritized_unit_ids:
+        return exercises
+
+    priority_index = {unit_id: index for index, unit_id in enumerate(prioritized_unit_ids)}
+    return sorted(
+        exercises,
+        key=lambda exercise: (
+            priority_index.get(exercise["unit_id"], len(priority_index)),
+            exercise["unit_id"],
+            exercise["id"],
+        ),
+    )
+
+
 def generate_practice(module_id: str):
     module = repository.get_module(module_id)
     unit_objects = get_module_unit_objects(module_id)
@@ -267,11 +282,21 @@ def generate_practice_from_weakness(user_id: str = DEFAULT_USER_ID):
         return None
 
     practice["source"] = "recommended"
+    prioritized_unit_ids = (
+        selected_module.get("dueReviewUnitIds", [])
+        + [
+            unit_id
+            for unit_id in selected_module.get("lowMasteryUnitIds", [])
+            if unit_id not in selected_module.get("dueReviewUnitIds", [])
+        ]
+    )
+    practice["exercises"] = prioritize_review_exercises(practice["exercises"], prioritized_unit_ids)
     practice["recommendation"] = {
         "reason": selected_module.get("suggestionReason"),
         "weakPatterns": modules_data.get("weakPatterns", []),
         "currentLevel": modules_data.get("currentLevel"),
         "matchedWeaknesses": selected_module.get("matchedWeaknesses", []),
-        "prioritizedUnitIds": selected_module.get("lowMasteryUnitIds", []),
+        "prioritizedUnitIds": prioritized_unit_ids,
+        "dueReviewUnitIds": selected_module.get("dueReviewUnitIds", []),
     }
     return practice

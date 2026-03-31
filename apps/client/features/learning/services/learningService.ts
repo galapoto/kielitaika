@@ -22,6 +22,24 @@ export type LearningUnit = {
   relatedUnitIds: string[];
 };
 
+export type LearningUnitProgressSummary = {
+  user_id: string;
+  unit_id: string;
+  attempts: number;
+  correct_attempts: number;
+  last_attempt_at: string | null;
+  last_practiced_at: string | null;
+  next_review_at: string | null;
+  review_interval_days: number;
+  streak_correct: number;
+  mastery_score: number;
+  mastery_level: "weak" | "improving" | "mastered";
+  due_for_review: boolean;
+  urgency: "scheduled" | "due_now" | "overdue";
+  days_overdue: number;
+  recent_mistake: boolean;
+};
+
 export type LearningModule = {
   id: string;
   title: string;
@@ -32,8 +50,18 @@ export type LearningModule = {
   unitCount: number;
   units: LearningUnit[];
   matchedWeaknesses?: string[];
+  lowMasteryUnitIds?: string[];
+  dueReviewUnitIds?: string[];
+  recentMistakeUnitIds?: string[];
   suggested?: boolean;
   suggestionReason?: string | null;
+};
+
+export type DueReviewUnit = {
+  unit: LearningUnit;
+  progress: LearningUnitProgressSummary;
+  urgency: "due_now" | "overdue";
+  reviewPriorityScore: number;
 };
 
 export type LearningModulesData = {
@@ -41,11 +69,17 @@ export type LearningModulesData = {
   suggestedModules: LearningModule[];
   currentLevel: string | null;
   weakPatterns: string[];
+  lowMasteryUnitIds: string[];
+  dueReviewUnitIds: string[];
 };
 
 export type RelatedUnitsData = {
   unit: LearningUnit;
   relatedUnits: LearningUnit[];
+};
+
+export type DueReviewUnitsData = {
+  units: DueReviewUnit[];
 };
 
 export async function getLearningModules() {
@@ -58,4 +92,8 @@ export async function getLearningUnit(unitId: string) {
 
 export async function getRelatedUnits(unitId: string) {
   return (await apiClient(`/api/v1/learning/related/${unitId}`)) as ApiResponse<RelatedUnitsData>;
+}
+
+export async function getDueReviewUnits() {
+  return (await apiClient("/api/v1/learning/review/due")) as ApiResponse<DueReviewUnitsData>;
 }
