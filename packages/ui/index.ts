@@ -5,6 +5,8 @@ export { default as Box } from "./components/primitives/Box";
 export { default as Button } from "./components/primitives/Button";
 export { default as Input } from "./components/primitives/Input";
 export { default as Text } from "./components/primitives/Text";
+export { default as AuthScreen } from "./screens/AuthScreen";
+export { default as HomeScreen } from "./screens/HomeScreen";
 export { colors } from "./theme/colors";
 export { spacing } from "./theme/spacing";
 export { typography } from "./theme/typography";

@@ -1,3 +1,3 @@
-import AuthScreen from "@ui/screens/AuthScreen";
+import AppShell from "../state/AppShell";
 
-export default AuthScreen;
+export default AppShell;
