@@ -1,15 +1,16 @@
 from copy import deepcopy
-import json
+import sqlite3
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from audit.audit_logger import AUDIT_LOG_PATH, read_events
+from audit.audit_logger import read_events
 from audit.audit_integrity import compute_event_hash, verify_audit_integrity
 from audit.audit_service import get_session_events, get_user_events, reset_audit_store
 from audit.replay_engine import replay_session, verify_replay_consistency
+from audit.storage_adapter import SQLITE_PATH
 from learning.graph_service import list_modules_for_user
 from learning.policy_engine import reset_policy_governance
 from learning.practice_service import generate_practice
@@ -82,16 +83,17 @@ class AuditReplayTests(unittest.TestCase):
         self.assertTrue(replay["responseSequence"])
         self.assertEqual(replay["finalTaskSequenceHash"], events[-1]["task_sequence_hash"])
 
-    def test_audit_log_is_written_as_jsonl_for_replay(self):
+    def test_audit_log_is_written_to_durable_storage_for_replay(self):
         session = start_yki_practice("audit-jsonl")
 
-        self.assertTrue(AUDIT_LOG_PATH.exists())
-        lines = AUDIT_LOG_PATH.read_text(encoding="utf-8").strip().splitlines()
-        self.assertGreaterEqual(len(lines), 2)
+        self.assertTrue(SQLITE_PATH.exists())
+        with sqlite3.connect(SQLITE_PATH) as connection:
+            count = connection.execute(
+                "SELECT COUNT(*) FROM audit_events WHERE session_id = ?",
+                (session["session_id"],),
+            ).fetchone()[0]
 
-        parsed = [json.loads(line) for line in lines]
-        self.assertEqual(parsed[0]["session_id"], session["session_id"])
-        self.assertEqual(parsed[0]["event_id"], "audit-000001")
+        self.assertGreaterEqual(count, 2)
         self.assertEqual(read_events(session_id=session["session_id"])[0]["event_id"], "audit-000001")
 
     def test_replay_detects_response_hash_mismatch(self):

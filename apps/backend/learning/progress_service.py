@@ -714,6 +714,7 @@ def record_practice_result(
     *,
     signal_source: str = "learning_practice",
     signal_metadata: dict | None = None,
+    audit_connection=None,
 ):
     unit_id = exercise.get("unit_id") or exercise.get("unitId")
     module_id = exercise.get("module_id") or exercise.get("moduleId")
@@ -805,7 +806,8 @@ def record_practice_result(
                 "review_interval_days": serialized_unit_progress["review_interval_days"],
                 "next_review_at": serialized_unit_progress["next_review_at"],
             },
-        }
+        },
+        connection=audit_connection,
     )
 
     if not previously_mastered and unit_progress.mastery_score >= 0.7:
@@ -835,7 +837,8 @@ def record_practice_result(
                 "constraint_metadata": {
                     "previous_mastery_score": previous_mastery_score,
                 },
-            }
+            },
+            connection=audit_connection,
         )
 
     return {

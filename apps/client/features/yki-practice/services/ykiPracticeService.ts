@@ -127,7 +127,8 @@ export type YkiCertificationExport = {
     contract_version: string;
   };
   verification_instructions: string[];
-  verification: {
+  hash_algorithm: string;
+  verification?: {
     ok: boolean;
     status: string;
     issues: string[];
@@ -529,6 +530,78 @@ export async function getPracticeCertification(sessionId: string) {
   return {
     ok: true,
     data: response.data,
+    error: null,
+  } satisfies ApiResponse<YkiCertificationExport>;
+}
+
+export async function getPracticeCertificationExport(sessionId: string) {
+  let response: ApiResponse<YkiCertificationExport>;
+
+  try {
+    response = (await apiClient(`/api/v1/yki/certification/${sessionId}/export`, {}, {
+      sessionId,
+      validateData: (payload) =>
+        validateYkiCertificationPayload(payload as Record<string, unknown>) as YkiCertificationExport,
+    })) as ApiResponse<YkiCertificationExport>;
+  } catch (error) {
+    if (error instanceof ContractViolationError) {
+      return {
+        ok: false,
+        data: null,
+        error: {
+          code: error.code,
+          message: error.code,
+          traceReference: null,
+        },
+      } satisfies ApiResponse<YkiCertificationExport>;
+    }
+
+    throw error;
+  }
+
+  if (!response.ok || !response.data) {
+    return {
+      ok: false,
+      data: null,
+      error: normalizeError(response.error),
+    } satisfies ApiResponse<YkiCertificationExport>;
+  }
+
+  return {
+    ok: true,
+    data: response.data,
+    error: null,
+  } satisfies ApiResponse<YkiCertificationExport>;
+}
+
+export async function downloadPracticeCertification(sessionId: string) {
+  const result = await getPracticeCertificationExport(sessionId);
+
+  if (!result.ok || !result.data) {
+    return result;
+  }
+
+  const serialized = JSON.stringify(result.data, null, 2);
+  const filename = `${sessionId}-certification.json`;
+
+  if (
+    typeof window !== "undefined" &&
+    typeof Blob !== "undefined" &&
+    typeof URL !== "undefined" &&
+    typeof document !== "undefined"
+  ) {
+    const blob = new Blob([serialized], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return {
+    ok: true,
+    data: result.data,
     error: null,
   } satisfies ApiResponse<YkiCertificationExport>;
 }

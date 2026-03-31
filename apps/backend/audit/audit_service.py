@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from audit.audit_logger import append_event, next_event_id, read_events, reset_audit_log
 from audit.audit_integrity import compute_event_hash, get_event_stream_key
-from audit.audit_models import AUDIT_EVENT_TYPES, AuditEvent, serialize_event
+from audit.audit_models import AuditEvent, serialize_event
 from learning.decision_version import get_decision_metadata
 from utils.hash_utils import deterministic_hash
 
@@ -34,12 +34,12 @@ def _extract_runtime_hash(snapshot: dict, key: str):
     return None
 
 
-def _coerce_event(event: AuditEvent | dict):
+def _coerce_event(event: AuditEvent | dict, connection=None):
     runtime_metadata = get_decision_metadata()
 
     if isinstance(event, AuditEvent):
         return AuditEvent(
-            event_id=event.event_id or next_event_id(),
+            event_id=event.event_id or next_event_id(connection),
             timestamp=event.timestamp or _current_timestamp(),
             user_id=event.user_id,
             session_id=event.session_id,
@@ -69,7 +69,7 @@ def _coerce_event(event: AuditEvent | dict):
     output_snapshot = deepcopy(event.get("output_snapshot") or {})
 
     return AuditEvent(
-        event_id=event.get("event_id") or next_event_id(),
+        event_id=event.get("event_id") or next_event_id(connection),
         timestamp=event.get("timestamp") or _current_timestamp(),
         user_id=event.get("user_id"),
         session_id=event.get("session_id"),
@@ -98,10 +98,10 @@ def _sorted_events(events: list[AuditEvent]):
     return sorted(events, key=lambda event: (event.timestamp, event.event_id))
 
 
-def _get_last_event_for_stream(stream_key: str):
+def _get_last_event_for_stream(stream_key: str, connection=None):
     stream_events = [
         event
-        for event in (AuditEvent(**item) for item in read_events())
+        for event in (AuditEvent(**item) for item in read_events(connection=connection))
         if get_event_stream_key(serialize_event(event)) == stream_key
     ]
     if not stream_events:
@@ -118,14 +118,14 @@ def is_audit_enabled():
     return _audit_enabled
 
 
-def record_event(event: AuditEvent | dict):
+def record_event(event: AuditEvent | dict, connection=None):
     if not _audit_enabled:
         return None
 
-    normalized_event = _coerce_event(event)
+    normalized_event = _coerce_event(event, connection)
     serialized_event = serialize_event(normalized_event)
     stream_key = get_event_stream_key(serialized_event)
-    last_event = _get_last_event_for_stream(stream_key)
+    last_event = _get_last_event_for_stream(stream_key, connection)
     previous_event_hash = last_event.event_hash if last_event else None
     event_hash = compute_event_hash(serialized_event, previous_event_hash)
     normalized_event = AuditEvent(
@@ -151,20 +151,20 @@ def record_event(event: AuditEvent | dict):
         event_hash=event_hash,
     )
     serialized = serialize_event(normalized_event)
-    append_event(serialized)
+    append_event(serialized, connection)
     return serialized
 
 
-def get_session_events(session_id: str):
-    return read_events(session_id=session_id)
+def get_session_events(session_id: str, connection=None):
+    return read_events(session_id=session_id, connection=connection)
 
 
-def get_user_events(user_id: str):
-    return read_events(user_id=user_id)
+def get_user_events(user_id: str, connection=None):
+    return read_events(user_id=user_id, connection=connection)
 
 
-def get_all_events():
-    return read_events()
+def get_all_events(connection=None):
+    return read_events(connection=connection)
 
 
 def reset_audit_store():

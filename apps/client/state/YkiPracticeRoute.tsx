@@ -19,6 +19,7 @@ export default function YkiPracticeRoute({ onBack }: Props) {
     loading,
     notice,
     advanceTask,
+    downloadResult,
     refreshSession,
     submitAnswer,
   } = useYkiPractice();
@@ -98,14 +99,15 @@ export default function YkiPracticeRoute({ onBack }: Props) {
     if (!certification) {
       return [];
     }
+    const verification = certification.verification;
 
     return [
-      `Certification status: ${certification.verification.status}`,
+      `Certification status: ${verification?.status ?? "unverified export"}`,
       `Final score: ${certification.certification_record.final_score.toFixed(2)}`,
       `Final result hash: ${certification.final_result_hash}`,
       `Audit range: ${certification.certification_record.audit_event_range.first_event_id} -> ${certification.certification_record.audit_event_range.last_event_id}`,
       `Trace reference: ${certification.replay_reference.session_id}`,
-      ...(certification.verification.issues ?? []).slice(0, 3),
+      ...(verification?.issues ?? []).slice(0, 3),
     ];
   }, [certification]);
 
@@ -170,6 +172,13 @@ export default function YkiPracticeRoute({ onBack }: Props) {
       }}
       onAnswerChange={setAnswer}
       onBack={onBack}
+      onDownloadResult={() => {
+        if (isOffline) {
+          return;
+        }
+
+        void downloadResult();
+      }}
       onRefresh={() => {
         if (isOffline) {
           return;

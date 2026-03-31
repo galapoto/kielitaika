@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import {
   clearPracticeSession,
+  downloadPracticeCertification,
   resumePracticeSession,
   startPracticeSession,
   submitPracticeTask,
@@ -101,6 +102,19 @@ export default function useYkiPractice() {
     void hydrate();
   }, []);
 
+  async function handleDownloadResult() {
+    if (!state.data?.session_id) {
+      return;
+    }
+
+    const res = await downloadPracticeCertification(state.data.session_id);
+    setState((current) => ({
+      ...current,
+      error: !res.ok ? res.error ?? { message: "CERTIFICATION_NOT_FOUND" } : current.error,
+      notice: res.ok ? "Certification export prepared." : current.notice,
+    }));
+  }
+
   const latestResult: YkiPracticeResult | null =
     state.data?.results[state.data.results.length - 1] ?? null;
 
@@ -111,6 +125,7 @@ export default function useYkiPractice() {
     refreshSession: hydrate,
     submitAnswer: (answer: string) => handleSessionAction("submit_only", answer),
     advanceTask: () => handleSessionAction("advance"),
+    downloadResult: handleDownloadResult,
     clearSession: clearPracticeSession,
   };
 }

@@ -1,6 +1,7 @@
 from yki.session_store import DEFAULT_USER_ID
 from yki_practice.service import (
     get_practice_certification,
+    get_practice_certification_export,
     get_practice_session,
     start_practice_session,
     submit_practice_answer,
@@ -17,6 +18,10 @@ def get_yki_practice(session_id: str):
 
 def get_yki_certification(session_id: str):
     return get_practice_certification(session_id)
+
+
+def export_yki_certification(session_id: str):
+    return get_practice_certification_export(session_id)
 
 
 def submit_yki_practice(session_id: str, answer: str | None, action: str = "submit_only"):

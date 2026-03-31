@@ -6,12 +6,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from audit.audit_service import get_session_events, record_event, reset_audit_store
+from audit.external_verify import verify_export
+from audit.storage_adapter import SQLITE_PATH
 from audit.verification_engine import verify_certification
 from learning.policy_engine import reset_policy_governance
 from learning.progress_service import reset_progress_store
 from yki.storage import _history
-from yki_practice.certification_service import export_certification
-from yki_practice.service import reset_practice_sessions
+from yki_practice.certification_service import export_certification, get_certification_record
+from yki_practice.service import (
+    export_practice_session_bundle,
+    get_practice_session,
+    reset_practice_sessions,
+    restore_practice_session_bundle,
+)
 from yki_practice.adapter import start_yki_practice, submit_yki_practice
 
 
@@ -56,6 +63,7 @@ class CertificationIntegrityTests(unittest.TestCase):
         )
         self.assertTrue(certification["final_result_hash"])
         self.assertEqual(certification["verification"]["status"], "valid")
+        self.assertTrue(SQLITE_PATH.exists())
 
     def test_certification_is_immutable_after_creation(self):
         completed = self._complete_session("certification-immutable")
@@ -110,6 +118,35 @@ class CertificationIntegrityTests(unittest.TestCase):
 
         self.assertFalse(verification["ok"])
         self.assertEqual(verification["status"], "CERTIFICATION_INVALID")
+
+    def test_export_matches_stored_record_exactly(self):
+        completed = self._complete_session("certification-export")
+
+        exported = export_certification(completed["session_id"])
+        stored = get_certification_record(completed["session_id"])
+
+        self.assertEqual(exported, stored["export"])
+
+    def test_external_verification_accepts_exported_result(self):
+        completed = self._complete_session("certification-external")
+
+        ok, status = verify_export(export_certification(completed["session_id"]))
+
+        self.assertTrue(ok)
+        self.assertEqual(status, "VALID")
+
+    def test_restore_bundle_recovers_session_and_certification(self):
+        completed = self._complete_session("certification-restore")
+        bundle = export_practice_session_bundle(completed["session_id"])
+
+        reset_practice_sessions()
+        restore_practice_session_bundle(bundle)
+
+        restored = get_practice_session(completed["session_id"])
+        verification = verify_certification(completed["session_id"])
+
+        self.assertIsNotNone(restored)
+        self.assertTrue(verification["ok"])
 
 
 if __name__ == "__main__":

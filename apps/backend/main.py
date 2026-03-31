@@ -30,6 +30,7 @@ from yki.adapter import (
 )
 from yki.session_store import DEFAULT_USER_ID
 from yki_practice.adapter import (
+    export_yki_certification,
     get_yki_certification,
     get_yki_practice,
     start_yki_practice,
@@ -415,6 +416,28 @@ def yki_certification(session_id: str, request: Request):
         request,
         certification,
         event_type="YKI_CERTIFICATION_LOADED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.get("/api/v1/yki/certification/{session_id}/export")
+def yki_certification_export(session_id: str, request: Request):
+    export_payload = export_yki_certification(session_id)
+
+    if not export_payload:
+        return _failure_response(
+            request,
+            "CERTIFICATION_NOT_FOUND",
+            event_type="YKI_CERTIFICATION_EXPORTED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        export_payload,
+        event_type="YKI_CERTIFICATION_EXPORTED",
         request_payload={"session_id": session_id},
         session_id=session_id,
     )

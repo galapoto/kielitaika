@@ -64,6 +64,7 @@ type Props = {
   onAnswerChange: (value: string) => void;
   onAdvance: () => void;
   onBack: () => void;
+  onDownloadResult: () => void;
   onRefresh: () => void;
   onSubmit: () => void;
 };
@@ -102,6 +103,7 @@ export default function YkiPracticeScreen({
   onAnswerChange,
   onAdvance,
   onBack,
+  onDownloadResult,
   onRefresh,
   onSubmit,
 }: Props) {
@@ -222,6 +224,7 @@ export default function YkiPracticeScreen({
               {certificationSummary.map((item) => (
                 <Text key={item}>{item}</Text>
               ))}
+              <Button label="Download Result" onPress={onDownloadResult} />
               <Button label="Back Home" onPress={onBack} />
             </Stack>
           </Card>

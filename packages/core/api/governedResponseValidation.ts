@@ -769,6 +769,8 @@ const certificationExportSchema = objectSchema({
     contract_version: stringSchema,
   }),
   verification_instructions: arraySchema(stringSchema),
+  hash_algorithm: stringSchema,
+}, {
   verification: certificationVerificationSchema,
 });
 
