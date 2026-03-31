@@ -40,6 +40,8 @@ class AuditEvent:
     input_snapshot: dict = field(default_factory=dict)
     output_snapshot: dict = field(default_factory=dict)
     constraint_metadata: dict = field(default_factory=dict)
+    previous_event_hash: str | None = None
+    event_hash: str | None = None
 
 
 def serialize_event(event: AuditEvent):

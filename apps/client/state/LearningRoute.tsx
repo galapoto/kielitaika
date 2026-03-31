@@ -327,13 +327,20 @@ export default function LearningRoute() {
     }
 
     const verification = state.debugState.auditVerification;
+    const integrity = verification.integrity;
     const counts = Object.entries(state.debugState.auditReplay.eventCounts)
       .map(([key, value]) => `${key} ${value}`)
       .join(", ");
 
     return [
+      `Integrity status: ${integrity.integrityStatus}`,
       `Replay verification: ${verification.ok ? "consistent" : "issues detected"}`,
+      `Hash chain length: ${integrity.chainLength}`,
+      integrity.failureEventId
+        ? `Failure point: ${integrity.failureEventId} at index ${integrity.failureIndex}`
+        : "Failure point: none",
       counts ? `Audit counts: ${counts}` : "Audit counts unavailable.",
+      integrity.failureReason ?? "Audit chain is intact.",
       ...verification.issues.slice(0, 4),
     ];
   }, [state.debugState]);

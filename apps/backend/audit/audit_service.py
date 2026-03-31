@@ -1,6 +1,7 @@
 from copy import deepcopy
 from datetime import UTC, datetime
 
+from audit.audit_integrity import compute_event_hash, get_event_stream_key
 from audit.audit_models import AUDIT_EVENT_TYPES, AuditEvent, serialize_event
 
 _audit_store: list[AuditEvent] = []
@@ -31,6 +32,8 @@ def _coerce_event(event: AuditEvent | dict):
             input_snapshot=deepcopy(event.input_snapshot),
             output_snapshot=deepcopy(event.output_snapshot),
             constraint_metadata=deepcopy(event.constraint_metadata),
+            previous_event_hash=event.previous_event_hash,
+            event_hash=event.event_hash,
         )
 
     event_type = event["event_type"]
@@ -48,11 +51,22 @@ def _coerce_event(event: AuditEvent | dict):
         input_snapshot=deepcopy(event.get("input_snapshot") or {}),
         output_snapshot=deepcopy(event.get("output_snapshot") or {}),
         constraint_metadata=deepcopy(event.get("constraint_metadata") or {}),
+        previous_event_hash=event.get("previous_event_hash"),
+        event_hash=event.get("event_hash"),
     )
 
 
 def _sorted_events(events: list[AuditEvent]):
     return sorted(events, key=lambda event: (event.timestamp, event.event_id))
+
+
+def _get_last_event_for_stream(stream_key: str):
+    stream_events = [
+        event for event in _audit_store if get_event_stream_key(serialize_event(event)) == stream_key
+    ]
+    if not stream_events:
+        return None
+    return _sorted_events(stream_events)[-1]
 
 
 def set_audit_enabled(enabled: bool):
@@ -69,6 +83,25 @@ def record_event(event: AuditEvent | dict):
         return None
 
     normalized_event = _coerce_event(event)
+    serialized_event = serialize_event(normalized_event)
+    stream_key = get_event_stream_key(serialized_event)
+    last_event = _get_last_event_for_stream(stream_key)
+    previous_event_hash = last_event.event_hash if last_event else None
+    event_hash = compute_event_hash(serialized_event, previous_event_hash)
+    normalized_event = AuditEvent(
+        event_id=normalized_event.event_id,
+        timestamp=normalized_event.timestamp,
+        user_id=normalized_event.user_id,
+        session_id=normalized_event.session_id,
+        event_type=normalized_event.event_type,
+        decision_version=normalized_event.decision_version,
+        policy_version=normalized_event.policy_version,
+        input_snapshot=deepcopy(normalized_event.input_snapshot),
+        output_snapshot=deepcopy(normalized_event.output_snapshot),
+        constraint_metadata=deepcopy(normalized_event.constraint_metadata),
+        previous_event_hash=previous_event_hash,
+        event_hash=event_hash,
+    )
     _audit_store.append(normalized_event)
     return serialize_event(normalized_event)
 

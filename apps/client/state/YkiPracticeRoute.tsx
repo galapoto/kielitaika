@@ -83,6 +83,7 @@ export default function YkiPracticeRoute() {
       return [];
     }
 
+    const integrity = data.auditVerification.integrity;
     const counts = data.auditReplay
       ? Object.entries(data.auditReplay.eventCounts)
           .map(([key, value]) => `${key} ${value}`)
@@ -90,8 +91,14 @@ export default function YkiPracticeRoute() {
       : "";
 
     return [
+      `Integrity status: ${integrity.integrityStatus}`,
       `Replay verification: ${data.auditVerification.ok ? "consistent" : "issues detected"}`,
+      `Hash chain length: ${integrity.chainLength}`,
+      integrity.failureEventId
+        ? `Failure point: ${integrity.failureEventId} at index ${integrity.failureIndex}`
+        : "Failure point: none",
       counts ? `Audit counts: ${counts}` : "Audit counts unavailable.",
+      integrity.failureReason ?? "Audit chain is intact.",
       ...(data.auditVerification.issues ?? []).slice(0, 4),
     ];
   }, [data?.auditReplay, data?.auditVerification]);

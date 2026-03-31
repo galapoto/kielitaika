@@ -349,6 +349,8 @@ export type LearningDebugState = {
     event_type: string;
     decision_version: string;
     policy_version: string;
+    previous_event_hash: string | null;
+    event_hash: string | null;
     input_snapshot: Record<string, unknown>;
     output_snapshot: Record<string, unknown>;
     constraint_metadata: Record<string, unknown>;
@@ -364,10 +366,48 @@ export type LearningDebugState = {
     ykiTaskFlow: Array<Record<string, unknown>>;
     unitProgressFlow: Array<Record<string, unknown>>;
     decisionsMade: Array<Record<string, unknown>>;
+    trusted: boolean;
+    integrity: {
+      ok: boolean;
+      integrityStatus: string;
+      chainLength: number;
+      failureIndex: number | null;
+      failureEventId: string | null;
+      failureReason: string | null;
+      legacyEventCount: number;
+      streamKey: string | null;
+    };
   };
   auditVerification: {
     ok: boolean;
     issues: string[];
+    trusted: boolean;
+    integrity: {
+      ok: boolean;
+      integrityStatus: string;
+      chainLength: number;
+      failureIndex: number | null;
+      failureEventId: string | null;
+      failureReason: string | null;
+      legacyEventCount: number;
+      streamKey: string | null;
+    };
+    sessionChecks?: Array<{
+      sessionId: string | null;
+      ok: boolean;
+      issues: string[];
+      trusted: boolean;
+      integrity: {
+        ok: boolean;
+        integrityStatus: string;
+        chainLength: number;
+        failureIndex: number | null;
+        failureEventId: string | null;
+        failureReason: string | null;
+        legacyEventCount: number;
+        streamKey: string | null;
+      };
+    }>;
   };
   weightsUsed: Record<string, number>;
 };

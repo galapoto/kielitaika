@@ -1,3 +1,4 @@
+from copy import deepcopy
 import sys
 import unittest
 from pathlib import Path
@@ -5,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from audit.audit_service import get_session_events, get_user_events, reset_audit_store
+from audit.audit_integrity import verify_audit_integrity
 from audit.replay_engine import replay_session, verify_replay_consistency
 from learning.graph_service import list_modules_for_user
 from learning.practice_service import generate_practice
@@ -70,6 +72,8 @@ class AuditReplayTests(unittest.TestCase):
             replay["recommendationSequence"][0]["suggestedModuleIds"],
             [module["id"] for module in modules["suggestedModules"]],
         )
+        self.assertTrue(all(event["event_hash"] for event in events))
+        self.assertEqual(verification["integrity"]["integrityStatus"], "valid")
 
     def test_yki_session_is_replayable_and_consistent(self):
         user_id = "audit-yki"
@@ -111,6 +115,45 @@ class AuditReplayTests(unittest.TestCase):
         self.assertEqual(presented_task_ids, planned_task_ids)
         self.assertEqual(responded_task_ids, planned_task_ids)
         self.assertEqual(completed_event["completedTaskIds"], planned_task_ids)
+        self.assertEqual(verification["integrity"]["integrityStatus"], "valid")
+
+    def test_integrity_verification_detects_tampering(self):
+        user_id = "audit-tamper"
+        list_modules_for_user(user_id)
+        events = get_user_events(user_id)
+        tampered_events = deepcopy(events)
+        tampered_events[1]["output_snapshot"]["suggested_module_ids"] = ["tampered-module"]
+
+        verification = verify_audit_integrity(tampered_events)
+
+        self.assertFalse(verification["ok"])
+        self.assertEqual(verification["integrityStatus"], "invalid")
+        self.assertIn("Event hash mismatch", verification["failureReason"])
+
+    def test_integrity_verification_detects_deleted_event(self):
+        user_id = "audit-delete"
+        list_modules_for_user(user_id)
+        events = get_user_events(user_id)
+        deleted_events = [events[0], *events[2:]]
+
+        verification = verify_audit_integrity(deleted_events)
+
+        self.assertFalse(verification["ok"])
+        self.assertEqual(verification["integrityStatus"], "invalid")
+        self.assertIn("Hash chain broke", verification["failureReason"])
+
+    def test_integrity_verification_detects_reordered_events(self):
+        user_id = "audit-reorder"
+        list_modules_for_user(user_id)
+        events = get_user_events(user_id)
+        reordered_events = deepcopy(events)
+        reordered_events[0], reordered_events[1] = reordered_events[1], reordered_events[0]
+
+        verification = verify_audit_integrity(reordered_events)
+
+        self.assertFalse(verification["ok"])
+        self.assertEqual(verification["integrityStatus"], "invalid")
+        self.assertIn("Hash chain broke", verification["failureReason"])
 
 
 if __name__ == "__main__":

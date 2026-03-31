@@ -154,6 +154,8 @@ export type YkiPracticeSession = {
     event_type: string;
     decision_version: string;
     policy_version: string;
+    previous_event_hash: string | null;
+    event_hash: string | null;
     input_snapshot: Record<string, unknown>;
     output_snapshot: Record<string, unknown>;
     constraint_metadata: Record<string, unknown>;
@@ -162,10 +164,32 @@ export type YkiPracticeSession = {
     orderedEventIds: string[];
     eventCounts: Record<string, number>;
     ykiTaskFlow: Array<Record<string, unknown>>;
+    trusted: boolean;
+    integrity: {
+      ok: boolean;
+      integrityStatus: string;
+      chainLength: number;
+      failureIndex: number | null;
+      failureEventId: string | null;
+      failureReason: string | null;
+      legacyEventCount: number;
+      streamKey: string | null;
+    };
   };
   auditVerification?: {
     ok: boolean;
     issues: string[];
+    trusted: boolean;
+    integrity: {
+      ok: boolean;
+      integrityStatus: string;
+      chainLength: number;
+      failureIndex: number | null;
+      failureEventId: string | null;
+      failureReason: string | null;
+      legacyEventCount: number;
+      streamKey: string | null;
+    };
   };
 };
 

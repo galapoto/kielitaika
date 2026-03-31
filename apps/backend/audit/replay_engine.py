@@ -1,6 +1,7 @@
 from collections import Counter
 
 from audit.audit_service import get_session_events, get_user_events
+from audit.audit_integrity import verify_audit_integrity
 
 
 def _sort_events(events: list[dict]):
@@ -9,12 +10,29 @@ def _sort_events(events: list[dict]):
 
 def replay_session(events: list[dict]):
     ordered_events = _sort_events(events)
+    integrity = verify_audit_integrity(ordered_events)
     recommendation_sequence = []
     yki_task_flow = []
     unit_progress_flow = []
     decisions_made = []
     decision_versions = []
     policy_versions = []
+
+    if not integrity["ok"] and integrity["integrityStatus"] == "invalid":
+        return {
+            "userId": ordered_events[0]["user_id"] if ordered_events else None,
+            "sessionId": ordered_events[0]["session_id"] if ordered_events else None,
+            "orderedEventIds": [event["event_id"] for event in ordered_events],
+            "eventCounts": dict(Counter(event["event_type"] for event in ordered_events)),
+            "decisionVersions": [],
+            "policyVersions": [],
+            "recommendationSequence": [],
+            "ykiTaskFlow": [],
+            "unitProgressFlow": [],
+            "decisionsMade": [],
+            "trusted": False,
+            "integrity": integrity,
+        }
 
     for event in ordered_events:
         decision_versions.append(event["decision_version"])
@@ -104,6 +122,8 @@ def replay_session(events: list[dict]):
         "ykiTaskFlow": yki_task_flow,
         "unitProgressFlow": unit_progress_flow,
         "decisionsMade": decisions_made,
+        "trusted": integrity["ok"],
+        "integrity": integrity,
     }
 
 
@@ -111,10 +131,29 @@ def verify_replay_consistency(events: list[dict]):
     ordered_events = _sort_events(events)
     replay = replay_session(ordered_events)
     issues = []
+    integrity = verify_audit_integrity(ordered_events)
 
     if not ordered_events:
         issues.append("No audit events were provided.")
-        return {"ok": False, "issues": issues, "replay": replay}
+        return {
+            "ok": False,
+            "issues": issues,
+            "replay": replay,
+            "integrity": integrity,
+            "trusted": False,
+        }
+
+    if integrity["integrityStatus"] == "legacy_unverified":
+        issues.append("Audit chain uses legacy unverified events.")
+    elif not integrity["ok"]:
+        issues.append(integrity["failureReason"])
+        return {
+            "ok": False,
+            "issues": issues,
+            "replay": replay,
+            "integrity": integrity,
+            "trusted": False,
+        }
 
     event_ids = [event["event_id"] for event in ordered_events]
     if len(event_ids) != len(set(event_ids)):
@@ -180,9 +219,11 @@ def verify_replay_consistency(events: list[dict]):
                     issues.append("Completed YKI task ids do not match the precomputed plan.")
 
     return {
-        "ok": len(issues) == 0,
+        "ok": len(issues) == 0 and integrity["ok"],
         "issues": issues,
         "replay": replay,
+        "integrity": integrity,
+        "trusted": len(issues) == 0 and integrity["ok"],
     }
 
 
@@ -202,8 +243,10 @@ def replay_user_journey(user_id: str):
         session_groups.setdefault(event["session_id"], []).append(event)
 
     session_checks = []
+    stream_replays = []
     issues = []
     ok = True
+    legacy_event_count = 0
     for session_id, grouped_events in session_groups.items():
         relevant_events = grouped_events
         if session_id is None:
@@ -212,18 +255,56 @@ def replay_user_journey(user_id: str):
                 for event in grouped_events
                 if not event["event_type"].startswith("YKI_")
             ]
-        verification = verify_replay_consistency(relevant_events) if relevant_events else {
-            "ok": True,
-            "issues": [],
+        verification = (
+            verify_replay_consistency(relevant_events)
+            if relevant_events
+            else {
+                "ok": True,
+                "issues": [],
+                "integrity": {
+                    "ok": True,
+                    "integrityStatus": "valid",
+                    "chainLength": 0,
+                    "failureIndex": None,
+                    "failureEventId": None,
+                    "failureReason": None,
+                    "legacyEventCount": 0,
+                    "streamKey": None,
+                },
+                "trusted": True,
+            }
+        )
+        replay = replay_session(relevant_events) if relevant_events else {
+            "userId": user_id,
+            "sessionId": session_id,
+            "orderedEventIds": [],
+            "eventCounts": {},
+            "decisionVersions": [],
+            "policyVersions": [],
+            "recommendationSequence": [],
+            "ykiTaskFlow": [],
+            "unitProgressFlow": [],
+            "decisionsMade": [],
+            "trusted": True,
+            "integrity": verification["integrity"],
         }
         session_checks.append(
             {
                 "sessionId": session_id,
                 "ok": verification["ok"],
                 "issues": verification["issues"],
+                "integrity": verification["integrity"],
+                "trusted": verification["trusted"],
+            }
+        )
+        stream_replays.append(
+            {
+                "sessionId": session_id,
+                "replay": replay,
             }
         )
         ok = ok and verification["ok"]
+        legacy_event_count += verification["integrity"]["legacyEventCount"]
         issues.extend(
             [
                 f"{session_id or 'sessionless'}: {issue}"
@@ -231,12 +312,70 @@ def replay_user_journey(user_id: str):
             ]
         )
 
+    aggregate_event_counts = dict(Counter(event["event_type"] for event in events))
+    decision_versions = sorted({event["decision_version"] for event in events})
+    policy_versions = sorted({event["policy_version"] for event in events})
+    aggregate_replay = {
+        "userId": user_id,
+        "sessionId": None,
+        "orderedEventIds": [event["event_id"] for event in _sort_events(events)],
+        "eventCounts": aggregate_event_counts,
+        "decisionVersions": decision_versions,
+        "policyVersions": policy_versions,
+        "recommendationSequence": [
+            item
+            for stream in stream_replays
+            for item in stream["replay"]["recommendationSequence"]
+        ],
+        "ykiTaskFlow": [
+            item
+            for stream in stream_replays
+            for item in stream["replay"]["ykiTaskFlow"]
+        ],
+        "unitProgressFlow": [
+            item
+            for stream in stream_replays
+            for item in stream["replay"]["unitProgressFlow"]
+        ],
+        "decisionsMade": [
+            item
+            for stream in stream_replays
+            for item in stream["replay"]["decisionsMade"]
+        ],
+        "trusted": all(stream["replay"]["trusted"] for stream in stream_replays),
+        "integrity": {
+            "ok": ok,
+            "integrityStatus": (
+                "valid"
+                if ok
+                else (
+                    "legacy_unverified"
+                    if stream_replays
+                    and all(
+                        stream["replay"]["integrity"]["integrityStatus"] == "legacy_unverified"
+                        for stream in stream_replays
+                    )
+                    else "invalid"
+                )
+            ),
+            "chainLength": len(events),
+            "failureIndex": None,
+            "failureEventId": None,
+            "failureReason": issues[0] if issues else None,
+            "legacyEventCount": legacy_event_count,
+            "streamKey": f"user:{user_id}:multi-stream",
+        },
+        "streamReplays": stream_replays,
+    }
+
     return {
         "events": events,
-        "replay": replay_session(events),
+        "replay": aggregate_replay,
         "verification": {
             "ok": ok,
             "issues": issues,
             "sessionChecks": session_checks,
+            "trusted": ok,
+            "integrity": aggregate_replay["integrity"],
         },
     }
