@@ -1,3 +1,5 @@
-import YkiPracticeRoute from "../state/YkiPracticeRoute";
+import AppShell from "../state/AppShell";
 
-export default YkiPracticeRoute;
+export default function YkiPracticeRouteEntry() {
+  return <AppShell requestedScreen="yki-practice" />;
+}

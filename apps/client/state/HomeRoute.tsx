@@ -1,13 +1,19 @@
-import { useRouter } from "expo-router";
-
 import HomeScreen from "@ui/screens/HomeScreen";
 
 import { useAuthStore } from "./authStore";
 
-export default function HomeRoute() {
-  const router = useRouter();
+type Props = {
+  onLogout: () => void;
+  onOpenLearning: () => void;
+  onOpenYkiPractice: () => void;
+};
+
+export default function HomeRoute({
+  onLogout,
+  onOpenLearning,
+  onOpenYkiPractice,
+}: Props) {
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
 
   if (!user) {
     return null;
@@ -16,11 +22,9 @@ export default function HomeRoute() {
   return (
     <HomeScreen
       debugAvailable
-      onLogout={() => {
-        void logout();
-      }}
-      onOpenLearning={() => router.push("/learning")}
-      onOpenYkiPractice={() => router.push("/yki-practice")}
+      onLogout={onLogout}
+      onOpenLearning={onOpenLearning}
+      onOpenYkiPractice={onOpenYkiPractice}
       user={user}
     />
   );

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "expo-router";
 
 import Card from "@ui/primitives/Card";
 import ScreenContainer from "@ui/primitives/ScreenContainer";
@@ -8,12 +7,12 @@ import Text from "@ui/primitives/Text";
 import YkiPracticeScreen from "@ui/screens/YkiPracticeScreen";
 
 import useYkiPractice from "../features/yki-practice/hooks/useYkiPractice";
-import { useAuthStore } from "./authStore";
 
-export default function YkiPracticeRoute() {
-  const router = useRouter();
-  const hasHydrated = useAuthStore((state) => state.hasHydrated);
-  const user = useAuthStore((state) => state.user);
+type Props = {
+  onBack: () => void;
+};
+
+export default function YkiPracticeRoute({ onBack }: Props) {
   const {
     data,
     error,
@@ -22,30 +21,13 @@ export default function YkiPracticeRoute() {
     notice,
     advanceTask,
     refreshSession,
-    startSession,
     submitAnswer,
   } = useYkiPractice();
   const [answer, setAnswer] = useState("");
 
   useEffect(() => {
-    if (!hasHydrated) {
-      return;
-    }
-
-    if (!user) {
-      router.replace("/auth");
-    }
-  }, [hasHydrated, router, user]);
-
-  useEffect(() => {
     setAnswer(data?.currentTask?.submittedAnswer ?? "");
   }, [data?.currentTask?.id, data?.currentTask?.submittedAnswer]);
-
-  useEffect(() => {
-    if (!loading && !error && !data) {
-      void startSession();
-    }
-  }, [data, error, loading, startSession]);
 
   const untrustedStateMessage = useMemo(() => {
     if (data?.governanceStatus === "legacy_uncontrolled") {
@@ -112,21 +94,6 @@ export default function YkiPracticeRoute() {
     ];
   }, [data]);
 
-  if (!hasHydrated || !user) {
-    return (
-      <ScreenContainer center>
-        <Stack gap="sm">
-          <Card>
-            <Stack gap="xs">
-              <Text variant="title">YKI Practice</Text>
-              <Text tone="muted">Preparing your practice session...</Text>
-            </Stack>
-          </Card>
-        </Stack>
-      </ScreenContainer>
-    );
-  }
-
   return (
     <YkiPracticeScreen
       answer={answer}
@@ -151,12 +118,9 @@ export default function YkiPracticeRoute() {
         void advanceTask();
       }}
       onAnswerChange={setAnswer}
-      onBack={() => router.push("/")}
+      onBack={onBack}
       onRefresh={() => {
         void refreshSession();
-      }}
-      onStart={() => {
-        void startSession();
       }}
       onSubmit={() => {
         void submitAnswer(answer);

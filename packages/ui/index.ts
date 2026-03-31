@@ -6,6 +6,7 @@ export { default as Button } from "./primitives/Button";
 export { default as Input } from "./primitives/Input";
 export { default as Text } from "./primitives/Text";
 export { default as AuthScreen } from "./screens/AuthScreen";
+export { default as ApplicationErrorScreen } from "./screens/ApplicationErrorScreen";
 export { default as HomeScreen } from "./screens/HomeScreen";
 export { default as LearningScreen } from "./screens/LearningScreen";
 export { default as YkiPracticeScreen } from "./screens/YkiPracticeScreen";

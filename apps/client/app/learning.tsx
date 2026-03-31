@@ -1,3 +1,5 @@
-import LearningRoute from "../state/LearningRoute";
+import AppShell from "../state/AppShell";
 
-export default LearningRoute;
+export default function LearningRouteEntry() {
+  return <AppShell requestedScreen="learning" />;
+}

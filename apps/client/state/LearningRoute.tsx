@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "expo-router";
 
 import { getApiContractViolations } from "@core/api/apiClient";
 import Card from "@ui/primitives/Card";
@@ -13,7 +12,6 @@ import {
   type LearningDebugState,
   type LearningModulesData,
 } from "../features/learning/services/learningService";
-import { useAuthStore } from "./authStore";
 
 type LearningRuntimeState = {
   debugState: LearningDebugState | null;
@@ -22,10 +20,11 @@ type LearningRuntimeState = {
   modulesData: LearningModulesData | null;
 };
 
-export default function LearningRoute() {
-  const router = useRouter();
-  const hasHydrated = useAuthStore((state) => state.hasHydrated);
-  const user = useAuthStore((state) => state.user);
+type Props = {
+  onBack: () => void;
+};
+
+export default function LearningRoute({ onBack }: Props) {
   const [state, setState] = useState<LearningRuntimeState>({
     debugState: null,
     errorMessage: null,
@@ -67,28 +66,8 @@ export default function LearningRoute() {
   }
 
   useEffect(() => {
-    if (!hasHydrated) {
-      return;
-    }
-
-    if (!user) {
-      router.replace("/auth");
-    }
-  }, [hasHydrated, router, user]);
-
-  useEffect(() => {
-    if (!user) {
-      setState({
-        debugState: null,
-        errorMessage: null,
-        loading: false,
-        modulesData: null,
-      });
-      return;
-    }
-
     void load();
-  }, [user]);
+  }, []);
 
   const untrustedStateMessage = useMemo(() => {
     if (state.modulesData?.governanceStatus === "legacy_uncontrolled") {
@@ -295,21 +274,6 @@ export default function LearningRoute() {
     ];
   }, [state.debugState]);
 
-  if (!hasHydrated || !user) {
-    return (
-      <ScreenContainer center>
-        <Stack gap="sm">
-          <Card>
-            <Stack gap="xs">
-              <Text variant="title">Learning</Text>
-              <Text tone="muted">Preparing your learning workspace...</Text>
-            </Stack>
-          </Card>
-        </Stack>
-      </ScreenContainer>
-    );
-  }
-
   if (!state.loading && !state.errorMessage && (!state.modulesData || !state.debugState)) {
     return (
       <ScreenContainer center>
@@ -349,7 +313,7 @@ export default function LearningRoute() {
         })) ?? []
       }
       loading={state.loading}
-      onBack={() => router.push("/")}
+      onBack={onBack}
       onRefresh={() => {
         void load();
       }}

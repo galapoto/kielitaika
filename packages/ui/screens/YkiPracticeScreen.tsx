@@ -57,7 +57,6 @@ type Props = {
   onAdvance: () => void;
   onBack: () => void;
   onRefresh: () => void;
-  onStart: () => void;
   onSubmit: () => void;
 };
 
@@ -92,7 +91,6 @@ export default function YkiPracticeScreen({
   onAdvance,
   onBack,
   onRefresh,
-  onStart,
   onSubmit,
 }: Props) {
   if (loading) {
@@ -135,7 +133,7 @@ export default function YkiPracticeScreen({
               <Text tone="muted">No active governed practice session.</Text>
             </Stack>
           </Card>
-          <Button label="Start Session" onPress={onStart} />
+          <Button label="Refresh Session" onPress={onRefresh} />
           <Button label="Back Home" onPress={onBack} tone="surface" />
         </Stack>
       </ScreenContainer>
@@ -189,7 +187,7 @@ export default function YkiPracticeScreen({
             <Stack gap="xs">
               <Text variant="title">Session Complete</Text>
               <Text tone="muted">The governed playback plan has been completed.</Text>
-              <Button label="Start Session" onPress={onStart} />
+              <Button label="Back Home" onPress={onBack} />
             </Stack>
           </Card>
         )}
