@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from learning.decision_version import DECISION_VERSION
 from learning.practice_service import generate_practice
 from learning.progress_service import get_unit_progress, record_practice_result, reset_progress_store
 from yki.storage import _history
@@ -134,6 +135,7 @@ class YkiPracticeModeTests(unittest.TestCase):
         session = start_yki_practice(user_id)
         first_trace = session["sessionTrace"]["tasks"][0]
 
+        self.assertEqual(session["sessionTrace"]["decision_version"], DECISION_VERSION)
         self.assertTrue(first_trace["task_selection_reason"])
         self.assertIsNotNone(first_trace["difficulty_level"])
         self.assertIsNone(first_trace["user_performance"])

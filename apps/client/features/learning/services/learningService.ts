@@ -119,9 +119,11 @@ export type LearningModulesData = {
   lowMasteryUnitIds: string[];
   dueReviewUnitIds: string[];
   weightsUsed: Record<string, number>;
+  decisionVersion: string;
 };
 
 export type LearningDebugState = {
+  decisionVersion: string;
   currentLevel: string | null;
   weakPatterns: string[];
   unitMastery: Array<{
@@ -136,13 +138,59 @@ export type LearningDebugState = {
     masteryScore: number;
   }>;
   recommendationReasoning: Array<{
+      moduleId: string;
+      title: string;
+      suggested: boolean;
+      suggestionReason: string | null;
+      suggestionScore: number;
+      scoreBreakdown: LearningModule["scoreBreakdown"];
+      whyThisWasSelected: LearningModule["whyThisWasSelected"];
+    }>;
+  recommendationOutcomes: Array<{
+    user_id: string;
+    module_id: string;
+    unit_id: string;
+    decision_version: string;
+    recommended_at: string;
+    baseline_mastery_score: number;
+    subsequent_attempts: number;
+    improvement_delta: number;
+    effectiveness_score: number;
+    latest_mastery_score: number;
+    status: string;
+    factors_used: string[];
+    weights_used: Record<string, number>;
+    impact_label: string;
+  }>;
+  recommendationEffectiveness: {
+    overallAverageEffectiveness: number;
+    measuredOutcomeCount: number;
+    factorAverages: Record<
+      string,
+      {
+        average_effectiveness: number;
+        samples: number;
+        impact_label: string;
+      }
+    >;
+    improvementTrends: Array<{
+      unitId: string;
+      moduleId: string;
+      decisionVersion: string;
+      subsequentAttempts: number;
+      improvementDelta: number;
+      effectivenessScore: number;
+      impactLabel: string;
+    }>;
+  };
+  improvementTrends: Array<{
+    unitId: string;
     moduleId: string;
-    title: string;
-    suggested: boolean;
-    suggestionReason: string | null;
-    suggestionScore: number;
-    scoreBreakdown: LearningModule["scoreBreakdown"];
-    whyThisWasSelected: LearningModule["whyThisWasSelected"];
+    decisionVersion: string;
+    subsequentAttempts: number;
+    improvementDelta: number;
+    effectivenessScore: number;
+    impactLabel: string;
   }>;
   weightsUsed: Record<string, number>;
 };

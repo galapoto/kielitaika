@@ -1,5 +1,6 @@
 from dataclasses import asdict
 
+from learning.decision_version import DECISION_VERSION
 from learning.progress_service import record_practice_result
 from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID
@@ -164,6 +165,7 @@ def _record_completed_session_summary(session: PracticeSession):
 
 def _build_session_trace(context: dict, tasks: list[dict]):
     return {
+        "decision_version": DECISION_VERSION,
         "adaptiveContext": context,
         "tasks": [
             {

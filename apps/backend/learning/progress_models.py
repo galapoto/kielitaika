@@ -1,4 +1,21 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass
+class RecommendationOutcome:
+    user_id: str
+    module_id: str
+    unit_id: str
+    decision_version: str
+    recommended_at: str
+    baseline_mastery_score: float = 0.0
+    subsequent_attempts: int = 0
+    improvement_delta: float = 0.0
+    effectiveness_score: float = 0.0
+    latest_mastery_score: float = 0.0
+    status: str = "active"
+    factors_used: list[str] = field(default_factory=list)
+    weights_used: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -16,6 +33,7 @@ class UserUnitProgress:
     previous_mastery_score: float = 0.0
     regression_detected: bool = False
     mastery_score: float = 0.0
+    post_recommendation_performance: list[dict] | None = None
 
 
 @dataclass

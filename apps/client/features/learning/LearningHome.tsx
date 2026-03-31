@@ -223,9 +223,13 @@ function DebugPanel({ debugState, loading, error }: DebugPanelProps) {
     <View style={styles.section}>
       <View style={styles.card}>
         <Text size="lg">Learning Debug Info</Text>
+        <Text>Decision version: {debugState.decisionVersion}</Text>
         <Text>Tracked units: {debugState.unitMastery.length}</Text>
         <Text>
           Active weights: {Object.entries(debugState.weightsUsed).map(([key, value]) => `${key} ${value}`).join(", ")}
+        </Text>
+        <Text>
+          Recommendation effectiveness: {debugState.recommendationEffectiveness.overallAverageEffectiveness} across {debugState.recommendationEffectiveness.measuredOutcomeCount} measured outcomes
         </Text>
         <Text>
           Regression flags: {debugState.regressionFlags.length ? debugState.regressionFlags.map((item) => item.title).join(", ") : "None"}
@@ -252,6 +256,28 @@ function DebugPanel({ debugState, loading, error }: DebugPanelProps) {
             <Text>
               Difficulty adjustment: {item.whyThisWasSelected?.difficulty_adjustment ?? "baseline"}
             </Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text size="lg">Effectiveness Analysis</Text>
+        {Object.entries(debugState.recommendationEffectiveness.factorAverages).map(([factor, value]) => (
+          <View key={factor} style={styles.card}>
+            <Text size="lg">{factor}</Text>
+            <Text>Average effectiveness: {value.average_effectiveness}</Text>
+            <Text>Samples: {value.samples}</Text>
+            <Text>Impact: {value.impact_label}</Text>
+          </View>
+        ))}
+        {debugState.improvementTrends.slice(0, 3).map((trend) => (
+          <View key={`${trend.moduleId}-${trend.unitId}-${trend.decisionVersion}`} style={styles.card}>
+            <Text size="lg">{trend.unitId}</Text>
+            <Text>Module: {trend.moduleId}</Text>
+            <Text>Effectiveness: {trend.effectivenessScore}</Text>
+            <Text>Improvement delta: {trend.improvementDelta}</Text>
+            <Text>Attempts after recommendation: {trend.subsequentAttempts}</Text>
+            <Text>Impact: {trend.impactLabel}</Text>
           </View>
         ))}
       </View>

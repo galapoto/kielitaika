@@ -6,11 +6,14 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from learning.decision_version import DECISION_VERSION
 from learning.graph_service import get_user_learning_debug_state, list_modules_for_user
 from learning.practice_service import generate_practice, generate_practice_from_weakness
 from learning.progress_service import (
     get_due_review_units,
     get_module_progress,
+    get_recommendation_effectiveness_summary,
+    get_recommendation_outcomes,
     get_unit_progress,
     record_practice_result,
     reset_progress_store,
@@ -192,6 +195,10 @@ class ProgressServiceTests(unittest.TestCase):
             modules["suggestedModules"][0]["whyThisWasSelected"]["due_review_used"]["unit_ids"],
             ["grammar-object-cases"],
         )
+        self.assertEqual(
+            modules["suggestedModules"][0]["whyThisWasSelected"]["decision_version"],
+            DECISION_VERSION,
+        )
         self.assertEqual(recommended_practice["exercises"][0]["unit_id"], "grammar-object-cases")
 
     def test_mastered_units_appear_less_in_recommendations(self):
@@ -240,6 +247,7 @@ class ProgressServiceTests(unittest.TestCase):
         self.assertIn("difficulty_adjustment", traced_module["whyThisWasSelected"])
         self.assertIn("mastery_score_used", traced_module["whyThisWasSelected"])
         self.assertIn("scoreBreakdown", traced_module)
+        self.assertEqual(debug_state["decisionVersion"], DECISION_VERSION)
 
     def test_same_inputs_keep_recommendation_scores_stable(self):
         user_id = "progress-test-stable"
@@ -320,6 +328,64 @@ class ProgressServiceTests(unittest.TestCase):
 
         self.assertEqual(score_breakdown["final_score"], summed_weighted_scores)
         self.assertEqual(traced_module["suggestionScore"], score_breakdown["final_score"])
+
+    def test_recommendation_outcomes_track_post_recommendation_improvement(self):
+        user_id = "progress-test-effectiveness"
+
+        modules = list_modules_for_user(user_id)
+        suggested_module = modules["suggestedModules"][0]
+        unit_id = suggested_module["unitIds"][0]
+        practice = generate_practice(suggested_module["id"])
+        exercise = next(item for item in practice["exercises"] if item["unit_id"] == unit_id)
+
+        record_practice_result(user_id, exercise, True)
+
+        outcomes = get_recommendation_outcomes(user_id)
+        tracked_outcome = next(item for item in outcomes if item["unit_id"] == unit_id)
+
+        self.assertEqual(tracked_outcome["decision_version"], DECISION_VERSION)
+        self.assertEqual(tracked_outcome["subsequent_attempts"], 1)
+        self.assertGreaterEqual(tracked_outcome["improvement_delta"], 0.0)
+        self.assertEqual(
+            get_unit_progress(unit_id, user_id)["post_recommendation_performance"][0]["unit_id"],
+            unit_id,
+        )
+
+    def test_effectiveness_summary_identifies_ineffective_patterns(self):
+        user_id = "progress-test-ineffective"
+        practice = generate_practice("module-work-and-study-communication")
+        exercise = next(
+            item
+            for item in practice["exercises"]
+            if item["unit_id"] == "grammar-object-cases"
+        )
+
+        with patch(
+            "learning.progress_service._current_time",
+            return_value=datetime(2026, 1, 1, tzinfo=UTC),
+        ):
+            record_practice_result(user_id, exercise, True)
+
+        with patch(
+            "learning.progress_service._current_time",
+            return_value=datetime(2026, 1, 3, tzinfo=UTC),
+        ):
+            list_modules_for_user(user_id)
+
+        with patch(
+            "learning.progress_service._current_time",
+            return_value=datetime(2026, 1, 3, tzinfo=UTC),
+        ):
+            record_practice_result(user_id, exercise, False)
+
+        summary = get_recommendation_effectiveness_summary(user_id)
+
+        self.assertGreater(summary["measuredOutcomeCount"], 0)
+        self.assertIn("due_review", summary["factorAverages"])
+        self.assertEqual(
+            summary["factorAverages"]["due_review"]["impact_label"],
+            "ineffective",
+        )
 
 
 if __name__ == "__main__":

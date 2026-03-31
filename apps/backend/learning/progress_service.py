@@ -1,12 +1,13 @@
 from dataclasses import asdict
 from datetime import datetime, timedelta, UTC
 
-from learning.progress_models import UserModuleProgress, UserUnitProgress
+from learning.progress_models import RecommendationOutcome, UserModuleProgress, UserUnitProgress
 from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID
 
 _unit_progress_store: dict[tuple[str, str], UserUnitProgress] = {}
 _module_progress_store: dict[tuple[str, str], UserModuleProgress] = {}
+_recommendation_outcome_store: list[RecommendationOutcome] = []
 MAX_REVIEW_INTERVAL_DAYS = 7
 RECENT_MASTERY_WEIGHTS = [0.2, 0.3, 0.6]
 
@@ -127,6 +128,10 @@ def _get_or_create_unit_progress(user_id: str, unit_id: str):
 
 def _serialize_unit_progress(progress: UserUnitProgress):
     now = _current_time()
+    progress.post_recommendation_performance = get_post_recommendation_performance(
+        progress.user_id,
+        progress.unit_id,
+    )
     return {
         **asdict(progress),
         "mastery_level": get_mastery_label(progress.mastery_score),
@@ -194,6 +199,182 @@ def _recalculate_module_progress(user_id: str, module_id: str):
     return module_progress
 
 
+def _serialize_recommendation_outcome(outcome: RecommendationOutcome):
+    return {
+        **asdict(outcome),
+        "impact_label": _get_effectiveness_impact_label(outcome.effectiveness_score),
+    }
+
+
+def _get_effectiveness_impact_label(effectiveness_score: float):
+    if effectiveness_score >= 0.2:
+        return "high_impact"
+    if effectiveness_score > 0:
+        return "positive"
+    if effectiveness_score == 0:
+        return "neutral"
+    return "ineffective"
+
+
+def get_post_recommendation_performance(user_id: str, unit_id: str):
+    outcomes = [
+        _serialize_recommendation_outcome(outcome)
+        for outcome in _recommendation_outcome_store
+        if outcome.user_id == user_id and outcome.unit_id == unit_id
+    ]
+    outcomes.sort(key=lambda item: (item["recommended_at"], item["unit_id"]))
+    return outcomes
+
+
+def register_recommendation_outcomes(
+    user_id: str,
+    module_id: str,
+    unit_ids: list[str],
+    decision_version: str,
+    factors_used: list[str],
+    weights_used: dict[str, float],
+):
+    now = _current_time().isoformat()
+
+    for unit_id in unit_ids:
+        progress = _get_or_create_unit_progress(user_id, unit_id)
+        existing_active = next(
+            (
+                outcome
+                for outcome in _recommendation_outcome_store
+                if outcome.user_id == user_id
+                and outcome.module_id == module_id
+                and outcome.unit_id == unit_id
+                and outcome.decision_version == decision_version
+                and outcome.status == "active"
+            ),
+            None,
+        )
+        if existing_active is not None:
+            continue
+
+        _recommendation_outcome_store.append(
+            RecommendationOutcome(
+                user_id=user_id,
+                module_id=module_id,
+                unit_id=unit_id,
+                decision_version=decision_version,
+                recommended_at=now,
+                baseline_mastery_score=progress.mastery_score,
+                latest_mastery_score=progress.mastery_score,
+                factors_used=factors_used,
+                weights_used=weights_used,
+            )
+        )
+        progress.post_recommendation_performance = get_post_recommendation_performance(user_id, unit_id)
+
+
+def _update_recommendation_outcomes(user_id: str, unit_id: str, mastery_score: float):
+    updated = False
+
+    for outcome in _recommendation_outcome_store:
+        if outcome.user_id != user_id or outcome.unit_id != unit_id or outcome.status != "active":
+            continue
+
+        outcome.subsequent_attempts += 1
+        outcome.latest_mastery_score = mastery_score
+        outcome.improvement_delta = _round_score(mastery_score - outcome.baseline_mastery_score)
+        outcome.effectiveness_score = outcome.improvement_delta
+        if outcome.subsequent_attempts >= 3 or abs(outcome.improvement_delta) >= 0.2:
+            outcome.status = "completed"
+        updated = True
+
+    if updated:
+        progress = _get_or_create_unit_progress(user_id, unit_id)
+        progress.post_recommendation_performance = get_post_recommendation_performance(user_id, unit_id)
+
+
+def get_recommendation_outcomes(user_id: str = DEFAULT_USER_ID):
+    outcomes = [
+        _serialize_recommendation_outcome(outcome)
+        for outcome in _recommendation_outcome_store
+        if outcome.user_id == user_id
+    ]
+    outcomes.sort(key=lambda item: (item["recommended_at"], item["module_id"], item["unit_id"]))
+    return outcomes
+
+
+def get_recommendation_effectiveness_summary(user_id: str = DEFAULT_USER_ID):
+    outcomes = get_recommendation_outcomes(user_id)
+    measured_outcomes = [item for item in outcomes if item["subsequent_attempts"] > 0]
+
+    if not measured_outcomes:
+        factor_averages = {
+            factor: {
+                "average_effectiveness": 0.0,
+                "samples": 0,
+                "impact_label": "neutral",
+            }
+            for factor in [
+                "weak_pattern",
+                "low_mastery",
+                "due_review",
+                "regression",
+                "difficulty_alignment",
+            ]
+        }
+        return {
+            "overallAverageEffectiveness": 0.0,
+            "measuredOutcomeCount": 0,
+            "factorAverages": factor_averages,
+            "improvementTrends": [],
+        }
+
+    factor_totals: dict[str, list[float]] = {}
+    improvement_trends = []
+
+    for outcome in measured_outcomes:
+        for factor in outcome["factors_used"]:
+            factor_totals.setdefault(factor, []).append(outcome["effectiveness_score"])
+
+        improvement_trends.append(
+            {
+                "unitId": outcome["unit_id"],
+                "moduleId": outcome["module_id"],
+                "decisionVersion": outcome["decision_version"],
+                "subsequentAttempts": outcome["subsequent_attempts"],
+                "improvementDelta": outcome["improvement_delta"],
+                "effectivenessScore": outcome["effectiveness_score"],
+                "impactLabel": outcome["impact_label"],
+            }
+        )
+
+    factor_averages = {}
+    for factor in [
+        "weak_pattern",
+        "low_mastery",
+        "due_review",
+        "regression",
+        "difficulty_alignment",
+    ]:
+        scores = factor_totals.get(factor, [])
+        average_effectiveness = _round_score(sum(scores) / len(scores)) if scores else 0.0
+        factor_averages[factor] = {
+            "average_effectiveness": average_effectiveness,
+            "samples": len(scores),
+            "impact_label": _get_effectiveness_impact_label(average_effectiveness),
+        }
+
+    overall_average = _round_score(
+        sum(item["effectiveness_score"] for item in measured_outcomes) / len(measured_outcomes)
+    )
+    improvement_trends.sort(
+        key=lambda item: (-item["effectivenessScore"], item["unitId"], item["moduleId"])
+    )
+
+    return {
+        "overallAverageEffectiveness": overall_average,
+        "measuredOutcomeCount": len(measured_outcomes),
+        "factorAverages": factor_averages,
+        "improvementTrends": improvement_trends,
+    }
+
+
 def record_practice_result(user_id: str, exercise, is_correct: bool):
     unit_id = exercise.get("unit_id") or exercise.get("unitId")
     module_id = exercise.get("module_id") or exercise.get("moduleId")
@@ -223,6 +404,7 @@ def record_practice_result(user_id: str, exercise, is_correct: bool):
     unit_progress.regression_detected = (
         previous_mastery_score > 0.7 and unit_progress.mastery_score < 0.5
     )
+    _update_recommendation_outcomes(user_id, unit_id, unit_progress.mastery_score)
 
     module_progress = _recalculate_module_progress(user_id, module_id)
 
@@ -306,3 +488,4 @@ def get_due_review_units(user_id: str = DEFAULT_USER_ID):
 def reset_progress_store():
     _unit_progress_store.clear()
     _module_progress_store.clear()
+    _recommendation_outcome_store.clear()

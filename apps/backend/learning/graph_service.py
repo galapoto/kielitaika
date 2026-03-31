@@ -1,5 +1,13 @@
+from learning.decision_version import DECISION_VERSION
 from learning.decision_weights import get_decision_weights
-from learning.progress_service import get_due_review_units, get_low_mastery_unit_ids, get_module_progress
+from learning.progress_service import (
+    get_due_review_units,
+    get_low_mastery_unit_ids,
+    get_module_progress,
+    get_recommendation_effectiveness_summary,
+    get_recommendation_outcomes,
+    register_recommendation_outcomes,
+)
 from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID, get_progress_history
 
@@ -134,6 +142,22 @@ def build_weighted_score_breakdown(
     return breakdown
 
 
+def get_recommended_unit_ids(module):
+    prioritized_unit_ids = list(
+        dict.fromkeys(
+            [
+                *module["dueReviewUnitIds"],
+                *module["lowMasteryUnitIds"],
+                *module["regressionUnitIds"],
+                *module["recentMistakeUnitIds"],
+            ]
+        )
+    )
+    if prioritized_unit_ids:
+        return prioritized_unit_ids
+    return module["unitIds"]
+
+
 def score_module(
     module,
     weak_patterns,
@@ -198,6 +222,7 @@ def score_module(
     score_breakdown = build_weighted_score_breakdown(factor_scores, weights)
     suggestion_score = score_breakdown["final_score"]
     why_this_was_selected = {
+        "decision_version": DECISION_VERSION,
         "weak_patterns_used": matched_weaknesses,
         "mastery_score_used": {
             "module_mastery_score": module_progress["mastery_score"],
@@ -271,6 +296,19 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
         )
     )
     suggested_modules = [module for module in scored_modules if module["suggested"]][:3]
+    for module in suggested_modules:
+        register_recommendation_outcomes(
+            user_id,
+            module["id"],
+            get_recommended_unit_ids(module),
+            DECISION_VERSION,
+            [
+                factor_name
+                for factor_name, values in module["scoreBreakdown"].items()
+                if factor_name != "final_score" and values["factor_score"] > 0
+            ],
+            module["whyThisWasSelected"]["weights_used"],
+        )
 
     return {
         "modules": scored_modules,
@@ -280,6 +318,7 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
         "lowMasteryUnitIds": list(low_mastery_unit_ids),
         "dueReviewUnitIds": list(due_review_unit_ids),
         "weightsUsed": get_decision_weights(weight_overrides),
+        "decisionVersion": DECISION_VERSION,
     }
 
 
@@ -326,14 +365,20 @@ def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID, weight_overrid
         }
         for module in module_listing["modules"]
     ]
+    recommendation_outcomes = get_recommendation_outcomes(user_id)
+    recommendation_effectiveness = get_recommendation_effectiveness_summary(user_id)
 
     return {
+        "decisionVersion": DECISION_VERSION,
         "currentLevel": module_listing["currentLevel"],
         "weakPatterns": module_listing["weakPatterns"],
         "unitMastery": unit_progress,
         "dueReviewUnits": due_review_units,
         "regressionFlags": regression_flags,
         "recommendationReasoning": recommendation_reasoning,
+        "recommendationOutcomes": recommendation_outcomes,
+        "recommendationEffectiveness": recommendation_effectiveness,
+        "improvementTrends": recommendation_effectiveness["improvementTrends"],
         "weightsUsed": module_listing["weightsUsed"],
     }
 

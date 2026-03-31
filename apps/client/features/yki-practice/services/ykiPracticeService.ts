@@ -91,6 +91,28 @@ export type YkiPracticeSession = {
   completedTaskCount: number;
   isComplete: boolean;
   sessionSummary: YkiPracticeSessionSummary;
+  sessionTrace?: {
+    decision_version: string;
+    adaptiveContext: Record<string, unknown>;
+    tasks: Array<{
+      taskId: string;
+      section: string;
+      relatedLearningUnitId: string;
+      task_selection_reason: string;
+      difficulty_level: string;
+      user_performance: {
+        score: number;
+        maxScore: number;
+        isCorrect: boolean;
+      } | null;
+      feedback_generated: {
+        explanation: string;
+        whyWrong: string;
+        ruleApplies: string | null;
+        linkedLearningUnitId: string;
+      } | null;
+    }>;
+  };
 };
 
 export async function getStoredPracticeSessionId() {
