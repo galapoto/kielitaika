@@ -48,7 +48,7 @@ export const authService = {
 
     if (!response.ok || !response.data) {
       const isFallbackEligible =
-        response.error?.code === "NOT_FOUND" || response.error?.code === "NETWORK_ERROR";
+        response.error?.code === "NOT_FOUND" || response.error?.code === "TRANSPORT_ERROR";
 
       if (env.MOCK_AUTH_FALLBACK_ENABLED && isFallbackEligible) {
         return mockLogin(email);

@@ -5,7 +5,7 @@ let authToken: string | null = null;
 let expectedDecisionVersion: string | null = null;
 let expectedYkiPracticeSessionId: string | null = null;
 const contractViolations: Array<{
-  code: "CONTRACT_VIOLATION";
+  code: "CONTRACT_VIOLATION" | "GOVERNANCE_MISSING";
   details: string;
   message: string;
   path: string;
@@ -30,11 +30,15 @@ export function getApiContractViolations() {
   return [...contractViolations];
 }
 
-function recordContractViolation(path: string, message: string) {
+export function recordApiContractIssue(
+  path: string,
+  code: "CONTRACT_VIOLATION" | "GOVERNANCE_MISSING",
+  message: string,
+) {
   contractViolations.push({
-    code: "CONTRACT_VIOLATION",
+    code,
     details: message,
-    message: "CONTRACT_VIOLATION",
+    message: code,
     path,
     recordedAt: new Date().toISOString(),
   });
@@ -171,8 +175,8 @@ export async function apiClient<T>(path: string, options: RequestInit = {}): Pro
         ok: false,
         data: null,
         error: {
-          code: res.status === 404 ? "NOT_FOUND" : "API_CONTRACT_ERROR",
-          message: res.status === 404 ? "Endpoint not found" : "Invalid API response shape",
+          code: "CONTRACT_VIOLATION",
+          message: "Invalid API response shape",
           retryable: false,
         },
       };
@@ -185,7 +189,7 @@ export async function apiClient<T>(path: string, options: RequestInit = {}): Pro
     return payload as ApiResponse<T>;
   } catch (error) {
     if (error instanceof ContractViolationError) {
-      recordContractViolation(error.path, error.message);
+      recordApiContractIssue(error.path, "CONTRACT_VIOLATION", error.message);
       return {
         ok: false,
         data: null,
@@ -201,8 +205,8 @@ export async function apiClient<T>(path: string, options: RequestInit = {}): Pro
       ok: false,
       data: null,
       error: {
-        code: "NETWORK_ERROR",
-        message: "NETWORK_ERROR",
+        code: "TRANSPORT_ERROR",
+        message: "TRANSPORT_ERROR",
         retryable: true,
       },
     };

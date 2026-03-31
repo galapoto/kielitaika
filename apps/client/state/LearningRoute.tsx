@@ -6,7 +6,6 @@ import Screen from "@ui/components/layout/Screen";
 import Section from "@ui/components/layout/Section";
 import Text from "@ui/components/primitives/Text";
 import LearningScreen from "@ui/screens/LearningScreen";
-import { storageService } from "@core/services/storageService";
 import {
   getLearningDebugState,
   getLearningModules,
@@ -14,8 +13,6 @@ import {
   type LearningModulesData,
 } from "../features/learning/services/learningService";
 import { useAuthStore } from "./authStore";
-
-const COMPLETED_UNITS_KEY = "learning_completed_units";
 
 type LearningRuntimeState = {
   debugState: LearningDebugState | null;
@@ -34,17 +31,6 @@ export default function LearningRoute() {
     loading: true,
     modulesData: null,
   });
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
-  const [completedUnitIds, setCompletedUnitIds] = useState<string[]>([]);
-  const [stagnationActionMessage, setStagnationActionMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    void storageService.get(COMPLETED_UNITS_KEY).then((value) => {
-      if (Array.isArray(value)) {
-        setCompletedUnitIds(value.filter((item): item is string => typeof item === "string"));
-      }
-    });
-  }, []);
 
   async function load() {
     setState((current) => ({
@@ -58,12 +44,7 @@ export default function LearningRoute() {
       getLearningDebugState(),
     ]);
 
-    if (
-      modulesResponse.ok &&
-      modulesResponse.data &&
-      debugResponse.ok &&
-      debugResponse.data
-    ) {
+    if (modulesResponse.ok && modulesResponse.data && debugResponse.ok && debugResponse.data) {
       setState({
         debugState: debugResponse.data,
         errorMessage: null,
@@ -78,7 +59,7 @@ export default function LearningRoute() {
       errorMessage:
         modulesResponse.error?.message ??
         debugResponse.error?.message ??
-        "LEARNING_RUNTIME_FAILED",
+        "CONTRACT_VIOLATION",
       loading: false,
       modulesData: null,
     });
@@ -108,48 +89,31 @@ export default function LearningRoute() {
     void load();
   }, [user]);
 
-  const recommendedUnits = useMemo(() => {
-    const suggestedModules = state.modulesData?.suggestedModules ?? [];
-    if (suggestedModules.length) {
-      return suggestedModules.map((module) => {
-        const preferredUnitId =
-          module.stagnatedUnitIds?.[0] ??
-          module.dueReviewUnitIds?.[0] ??
-          module.lowMasteryUnitIds?.[0] ??
-          module.unitIds[0];
-        const preferredUnit = module.units.find((unit) => unit.id === preferredUnitId) ?? module.units[0];
-        const matchingProgress = state.debugState?.unitMastery.find(
-          (item) => item.unit.id === preferredUnit?.id,
-        )?.progress;
-
-        return {
-          id: preferredUnit?.id ?? module.id,
-          masteryLabel: matchingProgress?.mastery_level ?? "improving",
-          moduleTitle: module.title,
-          stagnated: Boolean(module.stagnatedUnitIds?.length),
-          suggestionReason: module.suggestionReason ?? "Recommended from the adaptive learning graph.",
-          title: preferredUnit?.title ?? module.title,
-          urgencyLabel:
-            matchingProgress?.urgency ??
-            (module.stagnatedUnitIds?.length ? "stagnated" : "adaptive"),
-        };
-      });
+  const untrustedStateMessage = useMemo(() => {
+    if (state.modulesData?.governanceStatus === "legacy_uncontrolled") {
+      return "UNTRUSTED_STATE: learning modules are legacy and not governed.";
     }
 
-    if (!state.debugState) {
-      return [];
+    if (state.debugState?.governanceStatus === "legacy_uncontrolled") {
+      return "UNTRUSTED_STATE: learning diagnostics are legacy and not governed.";
     }
 
-    return state.debugState.dueReviewUnits.map((item) => ({
-      id: item.unit.id,
-      masteryLabel: item.progress.mastery_level,
-      moduleTitle: item.unit.moduleIds[0] ?? "review",
-      stagnated: Boolean(item.progress.stagnated),
-      suggestionReason: item.progress.stagnation_reason ?? "Unit is due for review.",
-      title: item.unit.title,
-      urgencyLabel: item.urgency,
-    }));
+    return null;
   }, [state.debugState, state.modulesData]);
+
+  const recommendedModules = useMemo(
+    () =>
+      (state.modulesData?.suggestedModules ?? []).map((module) => ({
+        id: module.id,
+        title: module.title,
+        suggestionReason: module.suggestionReason ?? null,
+        lowMasteryUnitIds: module.lowMasteryUnitIds ?? [],
+        dueReviewUnitIds: module.dueReviewUnitIds ?? [],
+        stagnatedUnitIds: module.stagnatedUnitIds ?? [],
+        recommendationRejectedBecause: module.recommendationRejectedBecause ?? [],
+      })),
+    [state.modulesData],
+  );
 
   const factorContributionSummary = useMemo(() => {
     const factorAverages = state.debugState?.recommendationEffectiveness.factorAverages;
@@ -256,9 +220,7 @@ export default function LearningRoute() {
     return state.debugState.recommendationReasoning
       .filter((item) => item.recommendationRejectedBecause.length)
       .flatMap((item) =>
-        item.recommendationRejectedBecause.map(
-          (reason) => `${item.title}: ${reason}`,
-        ),
+        item.recommendationRejectedBecause.map((reason) => `${item.title}: ${reason}`),
       )
       .slice(0, 8);
   }, [state.debugState]);
@@ -276,42 +238,24 @@ export default function LearningRoute() {
         }
 
         return [
-          ...adaptive.appliedConstraints.map(
-            (entry) => `${item.title}: ${entry}`,
-          ),
-          ...adaptive.clampedValues.map(
-            (entry) => `${item.title}: ${entry}`,
-          ),
+          ...adaptive.appliedConstraints.map((entry) => `${item.title}: ${entry}`),
+          ...adaptive.clampedValues.map((entry) => `${item.title}: ${entry}`),
         ];
       })
       .slice(0, 8);
   }, [state.debugState]);
 
-  const selectedStagnatedUnit = useMemo(() => {
-    if (!state.debugState?.stagnatedUnits.length) {
-      return null;
-    }
-
-    return (
-      state.debugState.stagnatedUnits.find((item) => item.unitId === selectedUnitId) ??
-      state.debugState.stagnatedUnits[0]
-    );
-  }, [selectedUnitId, state.debugState]);
-
-  const ykiInfluenceLogs = useMemo(() => {
-    return (
+  const ykiInfluenceLogs = useMemo(
+    () =>
       state.debugState?.ykiInfluenceLogs.slice(0, 6).map(
         (item) =>
           `${item.unit_id}: ${item.task_section ?? "task"} ${item.task_type ?? "response"} ${item.is_correct ? "improved" : "missed"} at ${item.difficulty_level ?? "medium"} difficulty (delta ${item.improvement_delta.toFixed(2)})`,
-      ) ?? []
-    );
-  }, [state.debugState]);
+      ) ?? [],
+    [state.debugState],
+  );
 
   const contractViolations = useMemo(
-    () =>
-      getApiContractViolations().map(
-        (item) => `${item.path}: ${item.details}`,
-      ),
+    () => getApiContractViolations().map((item) => `${item.code} ${item.path}: ${item.details}`),
     [state.debugState, state.modulesData],
   );
 
@@ -350,46 +294,6 @@ export default function LearningRoute() {
     ];
   }, [state.debugState]);
 
-  async function handleMarkComplete() {
-    if (!selectedUnitId || completedUnitIds.includes(selectedUnitId)) {
-      return;
-    }
-
-    const nextCompleted = [...completedUnitIds, selectedUnitId];
-    setCompletedUnitIds(nextCompleted);
-    await storageService.set(COMPLETED_UNITS_KEY, nextCompleted);
-  }
-
-  function handleUseRetrySuggestion() {
-    if (!selectedStagnatedUnit) {
-      return;
-    }
-
-    setSelectedUnitId(selectedStagnatedUnit.unitId);
-    setStagnationActionMessage(selectedStagnatedUnit.retrySuggestion);
-  }
-
-  function handleTryAlternativeUnit() {
-    if (!selectedStagnatedUnit?.alternativeUnit?.id) {
-      return;
-    }
-
-    setSelectedUnitId(selectedStagnatedUnit.alternativeUnit.id);
-    setStagnationActionMessage(
-      `Switched focus to ${selectedStagnatedUnit.alternativeUnit.title} as an alternative support unit.`,
-    );
-  }
-
-  function handleSwitchDifficulty() {
-    if (!selectedStagnatedUnit) {
-      return;
-    }
-
-    setStagnationActionMessage(
-      `Next retry should switch ${selectedStagnatedUnit.title} to ${selectedStagnatedUnit.switchDifficultyTo} difficulty.`,
-    );
-  }
-
   if (!hasHydrated || !user) {
     return (
       <Screen>
@@ -401,66 +305,75 @@ export default function LearningRoute() {
     );
   }
 
+  if (!state.loading && !state.errorMessage && (!state.modulesData || !state.debugState)) {
+    return (
+      <Screen>
+        <Section>
+          <Text variant="title">Learning</Text>
+          <Text>CONTRACT_VIOLATION</Text>
+        </Section>
+      </Screen>
+    );
+  }
+
+  const modulesData = state.modulesData;
+  const debugState = state.debugState;
+
   return (
     <LearningScreen
       adaptiveWeightChanges={adaptiveWeightChanges}
       auditReplaySummary={auditReplaySummary}
       auditTimeline={auditTimeline}
-      completedUnitIds={completedUnitIds}
+      changeReference={debugState?.changeReference ?? modulesData?.changeReference ?? null}
       contractViolations={contractViolations}
-      decisionVersion={state.debugState?.decisionVersion ?? state.modulesData?.decisionVersion ?? "unknown"}
+      decisionVersion={debugState?.decisionVersion ?? modulesData?.decisionVersion ?? ""}
       errorMessage={state.errorMessage}
       factorContributionSummary={factorContributionSummary}
-      improvementTrends={state.debugState?.improvementTrends.slice(0, 5).map((item) => ({
-        effectivenessScore: item.effectivenessScore,
-        impactLabel: item.impactLabel,
-        improvementDelta: item.improvementDelta,
-        unitId: item.unitId,
-      })) ?? []}
+      governanceStatus={debugState?.governanceStatus ?? modulesData?.governanceStatus ?? "governed"}
+      governanceVersion={debugState?.governanceVersion ?? modulesData?.governanceVersion ?? ""}
+      improvementTrends={
+        state.debugState?.improvementTrends.slice(0, 5).map((item) => ({
+          effectivenessScore: item.effectivenessScore,
+          impactLabel: item.impactLabel,
+          improvementDelta: item.improvementDelta,
+          unitId: item.unitId,
+        })) ?? []
+      }
       loading={state.loading}
       onBack={() => router.push("/")}
-      onMarkComplete={() => {
-        void handleMarkComplete();
-      }}
       onRefresh={() => {
-        setStagnationActionMessage(null);
         void load();
       }}
-      onSelectUnit={setSelectedUnitId}
-      onSwitchDifficulty={handleSwitchDifficulty}
-      onTryAlternativeUnit={handleTryAlternativeUnit}
-      onUseRetrySuggestion={handleUseRetrySuggestion}
       policyConstraintLogs={policyConstraintLogs}
       policySummary={policySummary}
-      policyVersion={state.debugState?.policyVersion ?? state.modulesData?.policyVersion ?? "unknown"}
-      recommendationRejections={recommendationRejections}
-      rawRecommendationOutcomes={state.debugState?.recommendationOutcomes.slice(0, 5).map((item) => ({
-        effectivenessScore: item.effectiveness_score,
-        improvementDelta: item.improvement_delta,
-        impactLabel: item.impact_label,
-        status: item.status,
-        unitId: item.unit_id,
-      })) ?? []}
-      recommendedUnits={recommendedUnits}
-      recommendationTrace={recommendationTrace}
-      selectedUnitId={selectedUnitId}
-      selectedStagnatedUnit={
-        selectedStagnatedUnit
-          ? {
-              alternativeUnitTitle: selectedStagnatedUnit.alternativeUnit?.title ?? null,
-              attempts: selectedStagnatedUnit.attempts,
-              masteryScore: selectedStagnatedUnit.masteryScore,
-              stagnationReason: selectedStagnatedUnit.stagnationReason,
-              retrySuggestion: selectedStagnatedUnit.retrySuggestion,
-              policyStage: selectedStagnatedUnit.policyStage,
-              retryCount: selectedStagnatedUnit.retryCount,
-              switchDifficultyTo: selectedStagnatedUnit.switchDifficultyTo,
-              title: selectedStagnatedUnit.title,
-              unitId: selectedStagnatedUnit.unitId,
-            }
-          : null
+      policyVersion={debugState?.policyVersion ?? modulesData?.policyVersion ?? ""}
+      rawRecommendationOutcomes={
+        state.debugState?.recommendationOutcomes.slice(0, 5).map((item) => ({
+          effectivenessScore: item.effectiveness_score,
+          improvementDelta: item.improvement_delta,
+          impactLabel: item.impact_label,
+          status: item.status,
+          unitId: item.unit_id,
+        })) ?? []
       }
-      stagnationActionMessage={stagnationActionMessage}
+      recommendedModules={recommendedModules}
+      recommendationRejections={recommendationRejections}
+      recommendationTrace={recommendationTrace}
+      stagnatedUnits={
+        state.debugState?.stagnatedUnits.map((item) => ({
+          alternativeUnitTitle: item.alternativeUnit?.title ?? null,
+          attempts: item.attempts,
+          masteryScore: item.masteryScore,
+          policyStage: item.policyStage,
+          retryCount: item.retryCount,
+          retrySuggestion: item.retrySuggestion,
+          stagnationReason: item.stagnationReason,
+          switchDifficultyTo: item.switchDifficultyTo,
+          title: item.title,
+          unitId: item.unitId,
+        })) ?? []
+      }
+      untrustedStateMessage={untrustedStateMessage}
       ykiInfluenceLogs={ykiInfluenceLogs}
     />
   );

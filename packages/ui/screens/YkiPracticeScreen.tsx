@@ -19,7 +19,7 @@ type TraceView = {
   decisionVersion: string;
   policyVersion: string;
   governanceVersion: string;
-  changeReference: string;
+  changeReference: string | null;
   examMode: boolean;
   precomputedPlanSummary: string;
   tasks: Array<{
@@ -40,19 +40,22 @@ type Props = {
   answer: string;
   auditReplaySummary: string[];
   auditTimeline: string[];
+  canAdvance: boolean;
+  changeReference: string | null;
   errorMessage: string | null;
+  governanceStatus: "governed" | "legacy_uncontrolled";
   latestResult: LatestResultView | null;
   loading: boolean;
   notice: string | null;
+  policyVersion: string | null;
   sessionId: string | null;
   task: TaskView | null;
   trace: TraceView | null;
+  untrustedStateMessage: string | null;
   onAnswerChange: (value: string) => void;
   onAdvance: () => void;
   onBack: () => void;
   onRefresh: () => void;
-  onRetrySection: () => void;
-  onRetryTask: () => void;
   onStart: () => void;
   onSubmit: () => void;
 };
@@ -61,19 +64,22 @@ export default function YkiPracticeScreen({
   answer,
   auditReplaySummary,
   auditTimeline,
+  canAdvance,
+  changeReference,
   errorMessage,
+  governanceStatus,
   latestResult,
   loading,
   notice,
+  policyVersion,
   sessionId,
   task,
   trace,
+  untrustedStateMessage,
   onAnswerChange,
   onAdvance,
   onBack,
   onRefresh,
-  onRetrySection,
-  onRetryTask,
   onStart,
   onSubmit,
 }: Props) {
@@ -82,7 +88,7 @@ export default function YkiPracticeScreen({
       <Screen>
         <Section>
           <Text variant="title">YKI Practice</Text>
-          <Text tone="secondary">Loading session...</Text>
+          <Text tone="secondary">Loading governed session...</Text>
         </Section>
       </Screen>
     );
@@ -101,12 +107,12 @@ export default function YkiPracticeScreen({
     );
   }
 
-  if (!sessionId) {
+  if (!sessionId || !trace || !policyVersion) {
     return (
       <Screen>
         <Section>
           <Text variant="title">YKI Practice</Text>
-          <Text tone="secondary">No active practice session.</Text>
+          <Text tone="secondary">No active governed practice session.</Text>
           <Button label="Start Session" onPress={onStart} />
           <Button label="Back Home" onPress={onBack} />
         </Section>
@@ -120,6 +126,10 @@ export default function YkiPracticeScreen({
         <Section>
           <Text variant="title">YKI Practice</Text>
           <Text>Session: {sessionId}</Text>
+          <Text>Policy version: {policyVersion}</Text>
+          <Text>Governance status: {governanceStatus}</Text>
+          <Text tone="secondary">Change reference: {changeReference ?? "none"}</Text>
+          {untrustedStateMessage ? <Text>{untrustedStateMessage}</Text> : null}
           {notice ? <Text tone="secondary">{notice}</Text> : null}
           <Button label="Refresh Session" onPress={onRefresh} />
           <Button label="Back Home" onPress={onBack} />
@@ -140,15 +150,13 @@ export default function YkiPracticeScreen({
               </Box>
             ) : null}
             <Input multiline onChangeText={onAnswerChange} placeholder="Write your answer" value={answer} />
-            <Button label="Submit Answer" onPress={onSubmit} />
-            <Button label="Next Task" onPress={onAdvance} />
-            <Button label="Retry Task" onPress={onRetryTask} />
-            <Button label="Retry Section" onPress={onRetrySection} />
+            {!canAdvance ? <Button label="Submit Answer" onPress={onSubmit} /> : null}
+            {canAdvance ? <Button label="Continue Playback" onPress={onAdvance} /> : null}
           </Section>
         ) : (
           <Section>
             <Text variant="title">Session Complete</Text>
-            <Text tone="secondary">All tasks have been completed for this session.</Text>
+            <Text tone="secondary">The governed playback plan has been completed.</Text>
             <Button label="Start Session" onPress={onStart} />
           </Section>
         )}
@@ -162,22 +170,20 @@ export default function YkiPracticeScreen({
           </Section>
         ) : null}
 
-        {trace ? (
-          <Section>
-            <Text variant="title">Session Trace</Text>
-            <Text>Decision version: {trace.decisionVersion}</Text>
-            <Text>Policy version: {trace.policyVersion}</Text>
-            <Text>Governance version: {trace.governanceVersion}</Text>
-            <Text tone="secondary">Change reference: {trace.changeReference}</Text>
-            <Text>Exam mode: {trace.examMode ? "locked" : "adaptive"}</Text>
-            <Text tone="secondary">Precomputed plan: {trace.precomputedPlanSummary}</Text>
-            {trace.tasks.map((item) => (
-              <Text key={item.taskId}>
-                {item.taskId}: {item.reason} ({item.difficultyLevel}) unit {item.relatedLearningUnitId}
-              </Text>
-            ))}
-          </Section>
-        ) : null}
+        <Section>
+          <Text variant="title">Session Trace</Text>
+          <Text>Decision version: {trace.decisionVersion}</Text>
+          <Text>Policy version: {trace.policyVersion}</Text>
+          <Text>Governance version: {trace.governanceVersion}</Text>
+          <Text tone="secondary">Change reference: {trace.changeReference ?? "none"}</Text>
+          <Text>Exam mode: {trace.examMode ? "locked" : "adaptive"}</Text>
+          <Text tone="secondary">Precomputed plan: {trace.precomputedPlanSummary}</Text>
+          {trace.tasks.map((item) => (
+            <Text key={item.taskId}>
+              {item.taskId}: {item.reason} ({item.difficultyLevel}) unit {item.relatedLearningUnitId}
+            </Text>
+          ))}
+        </Section>
 
         <Section>
           <Text variant="title">Audit Timeline</Text>

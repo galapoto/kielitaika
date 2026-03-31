@@ -1,9 +1,14 @@
-import { apiClient } from "@core/api/apiClient";
+import { apiClient, recordApiContractIssue } from "@core/api/apiClient";
+import {
+  ControlledUiValidationError,
+  validateYkiPracticeSessionPayload,
+} from "@core/api/governedResponseValidation";
 import { storageService } from "@core/services/storageService";
 
 const YKI_PRACTICE_SESSION_STORAGE_KEY = "yki_practice_session_id";
 
 type ApiError = {
+  code?: string;
   message: string;
 };
 
@@ -95,18 +100,19 @@ export type YkiPracticeSession = {
   user_id: string;
   level: string;
   focus_areas: string[];
-  examMode?: boolean;
-  policyVersion?: string;
-  decisionVersion?: string;
-  governanceVersion?: string;
-  changeReference?: string | null;
+  examMode: boolean;
+  policyVersion: string;
+  decisionVersion: string;
+  governanceVersion: string;
+  changeReference: string | null;
+  governanceStatus: "governed" | "legacy_uncontrolled";
   precomputedPlan?: {
     task_ids: string[];
     decision_version: string;
     policy_version: string;
     decision_policy_version: string;
-    governance_version?: string;
-    change_reference?: string | null;
+    governance_version: string;
+    change_reference: string | null;
     exam_mode: boolean;
     deterministic_seed: string;
   };
@@ -119,11 +125,11 @@ export type YkiPracticeSession = {
   sessionSummary: YkiPracticeSessionSummary;
   sessionTrace?: {
     decision_version: string;
-    policy_version?: string;
-    decision_policy_version?: string;
-    governance_version?: string;
-    change_reference?: string | null;
-    exam_mode?: boolean;
+    policy_version: string;
+    decision_policy_version: string;
+    governance_version: string;
+    change_reference: string | null;
+    exam_mode: boolean;
     adaptiveContext: Record<string, unknown>;
     tasks: Array<{
       taskId: string;
@@ -201,6 +207,69 @@ export type YkiPracticeSession = {
   };
 };
 
+function normalizeError(error: ApiError | null): ApiError {
+  if (!error) {
+    return { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION" };
+  }
+
+  if (error.code === "TRANSPORT_ERROR") {
+    return { code: "TRANSPORT_ERROR", message: "TRANSPORT_ERROR" };
+  }
+
+  if (error.code === "GOVERNANCE_MISSING") {
+    return { code: "GOVERNANCE_MISSING", message: "GOVERNANCE_MISSING" };
+  }
+
+  return { code: "CONTRACT_VIOLATION", message: error.message || "CONTRACT_VIOLATION" };
+}
+
+function validationFailure<T>(path: string, error: ControlledUiValidationError): ApiResponse<T> {
+  recordApiContractIssue(path, error.code, error.message);
+
+  return {
+    ok: false,
+    data: null,
+    error: {
+      code: error.code,
+      message: error.code,
+    },
+  };
+}
+
+async function withSessionValidation(
+  path: string,
+  options?: RequestInit,
+): Promise<ApiResponse<YkiPracticeSession>> {
+  const response = (await apiClient(path, options)) as ApiResponse<YkiPracticeSession>;
+
+  if (!response.ok || !response.data) {
+    return {
+      ok: false,
+      data: null,
+      error: normalizeError(response.error),
+    };
+  }
+
+  try {
+    return {
+      ok: true,
+      data: validateYkiPracticeSessionPayload(
+        response.data as unknown as Record<string, unknown> & {
+          precomputedPlan: Record<string, unknown>;
+          sessionTrace: Record<string, unknown>;
+        },
+      ) as YkiPracticeSession,
+      error: null,
+    };
+  } catch (error) {
+    if (error instanceof ControlledUiValidationError) {
+      return validationFailure(path, error);
+    }
+
+    throw error;
+  }
+}
+
 export async function getStoredPracticeSessionId() {
   return storageService.get(YKI_PRACTICE_SESSION_STORAGE_KEY);
 }
@@ -210,9 +279,9 @@ export async function clearPracticeSession() {
 }
 
 export async function startPracticeSession() {
-  const res = (await apiClient("/api/v1/yki-practice/start", {
+  const res = await withSessionValidation("/api/v1/yki-practice/start", {
     method: "POST",
-  })) as ApiResponse<YkiPracticeSession>;
+  });
 
   if (res.ok && res.data?.session_id) {
     await storageService.set(YKI_PRACTICE_SESSION_STORAGE_KEY, res.data.session_id);
@@ -228,9 +297,7 @@ export async function resumePracticeSession() {
     return null;
   }
 
-  return (await apiClient(
-    `/api/v1/yki-practice/${sessionId}`,
-  )) as ApiResponse<YkiPracticeSession>;
+  return withSessionValidation(`/api/v1/yki-practice/${sessionId}`);
 }
 
 export async function submitPracticeTask(
@@ -243,11 +310,11 @@ export async function submitPracticeTask(
     return {
       ok: false,
       data: null,
-      error: { message: "SESSION_NOT_FOUND" },
+      error: { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION" },
     } satisfies ApiResponse<null>;
   }
 
-  return (await apiClient(`/api/v1/yki-practice/${sessionId}/submit`, {
+  return withSessionValidation(`/api/v1/yki-practice/${sessionId}/submit`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -256,5 +323,5 @@ export async function submitPracticeTask(
       action,
       answer,
     }),
-  })) as ApiResponse<YkiPracticeSession>;
+  });
 }

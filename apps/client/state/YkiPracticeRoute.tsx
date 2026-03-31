@@ -21,8 +21,6 @@ export default function YkiPracticeRoute() {
     notice,
     advanceTask,
     refreshSession,
-    retrySection,
-    retryTask,
     startSession,
     submitAnswer,
   } = useYkiPractice();
@@ -48,18 +46,26 @@ export default function YkiPracticeRoute() {
     }
   }, [data, error, loading, startSession]);
 
+  const untrustedStateMessage = useMemo(() => {
+    if (data?.governanceStatus === "legacy_uncontrolled") {
+      return "UNTRUSTED_STATE: YKI playback metadata is legacy and not governed.";
+    }
+
+    return null;
+  }, [data?.governanceStatus]);
+
   const trace = useMemo(() => {
-    if (!data?.sessionTrace) {
+    if (!data?.sessionTrace || !data.precomputedPlan) {
       return null;
     }
 
     return {
       decisionVersion: data.sessionTrace.decision_version,
-      examMode: data.examMode ?? data.sessionTrace.exam_mode ?? false,
-      governanceVersion: data.governanceVersion ?? data.sessionTrace.governance_version ?? "legacy_uncontrolled",
-      policyVersion: data.sessionTrace.policy_version ?? "legacy",
-      changeReference: data.changeReference ?? data.sessionTrace.change_reference ?? "none",
-      precomputedPlanSummary: data.precomputedPlan?.task_ids.join(", ") ?? "legacy session plan",
+      examMode: data.sessionTrace.exam_mode,
+      governanceVersion: data.sessionTrace.governance_version,
+      policyVersion: data.sessionTrace.policy_version,
+      changeReference: data.sessionTrace.change_reference,
+      precomputedPlanSummary: data.precomputedPlan.task_ids.join(", "),
       tasks: data.sessionTrace.tasks.slice(0, 5).map((item) => ({
         difficultyLevel: item.difficulty_level,
         reason: item.task_selection_reason,
@@ -67,34 +73,32 @@ export default function YkiPracticeRoute() {
         taskId: item.taskId,
       })),
     };
-  }, [data?.sessionTrace]);
+  }, [data]);
 
-  const auditTimeline = useMemo(() => {
-    return (
+  const auditTimeline = useMemo(
+    () =>
       data?.auditTimeline?.slice(-10).map((event) => {
         const taskId =
           (event.output_snapshot.task_id as string | undefined) ??
           (event.input_snapshot.task_id as string | undefined);
         return `${event.timestamp} | ${event.event_type} | decision ${event.decision_version} | policy ${event.policy_version}${taskId ? ` | task ${taskId}` : ""}`;
-      }) ?? []
-    );
-  }, [data?.auditTimeline]);
+      }) ?? [],
+    [data?.auditTimeline],
+  );
 
   const auditReplaySummary = useMemo(() => {
-    if (!data?.auditVerification) {
+    if (!data?.auditVerification || !data.auditReplay) {
       return [];
     }
 
     const integrity = data.auditVerification.integrity;
-    const counts = data.auditReplay
-      ? Object.entries(data.auditReplay.eventCounts)
-          .map(([key, value]) => `${key} ${value}`)
-          .join(", ")
-      : "";
+    const counts = Object.entries(data.auditReplay.eventCounts)
+      .map(([key, value]) => `${key} ${value}`)
+      .join(", ");
 
     return [
       `Integrity status: ${integrity.integrityStatus}`,
-      `Governance version: ${data.governanceVersion ?? "legacy_uncontrolled"}`,
+      `Governance version: ${data.governanceVersion}`,
       `Change reference: ${data.changeReference ?? "none"}`,
       `Replay verification: ${data.auditVerification.ok ? "consistent" : "issues detected"}`,
       `Hash chain length: ${integrity.chainLength}`,
@@ -105,7 +109,7 @@ export default function YkiPracticeRoute() {
       integrity.failureReason ?? "Audit chain is intact.",
       ...(data.auditVerification.issues ?? []).slice(0, 4),
     ];
-  }, [data?.auditReplay, data?.auditVerification]);
+  }, [data]);
 
   if (!hasHydrated || !user) {
     return (
@@ -123,7 +127,10 @@ export default function YkiPracticeRoute() {
       answer={answer}
       auditReplaySummary={auditReplaySummary}
       auditTimeline={auditTimeline}
+      canAdvance={Boolean(data?.currentTask?.evaluation)}
+      changeReference={data?.changeReference ?? null}
       errorMessage={error?.message ?? null}
+      governanceStatus={data?.governanceStatus ?? "governed"}
       latestResult={
         latestResult
           ? {
@@ -143,18 +150,13 @@ export default function YkiPracticeRoute() {
       onRefresh={() => {
         void refreshSession();
       }}
-      onRetrySection={() => {
-        void retrySection();
-      }}
-      onRetryTask={() => {
-        void retryTask();
-      }}
       onStart={() => {
         void startSession();
       }}
       onSubmit={() => {
         void submitAnswer(answer);
       }}
+      policyVersion={data?.policyVersion ?? null}
       sessionId={data?.session_id ?? null}
       task={
         data?.currentTask
@@ -170,6 +172,7 @@ export default function YkiPracticeRoute() {
           : null
       }
       trace={trace}
+      untrustedStateMessage={untrustedStateMessage}
     />
   );
 }

@@ -1,6 +1,15 @@
-import { apiClient } from "@core/api/apiClient";
+import { apiClient, recordApiContractIssue } from "@core/api/apiClient";
+import {
+  ControlledUiValidationError,
+  validateDueReviewUnitsPayload,
+  validateLearningDebugStatePayload,
+  validateLearningModulesPayload,
+  validateLearningUnitPayload,
+  validateRelatedUnitsPayload,
+} from "@core/api/governedResponseValidation";
 
 type ApiError = {
+  code?: string;
   message: string;
 };
 
@@ -185,6 +194,7 @@ export type LearningModulesData = {
   decisionPolicyVersion: string;
   governanceVersion: string;
   changeReference: string | null;
+  governanceStatus: "governed" | "legacy_uncontrolled";
 };
 
 export type LearningDebugState = {
@@ -193,7 +203,7 @@ export type LearningDebugState = {
   decisionPolicyVersion: string;
   governanceVersion: string;
   changeReference: string | null;
-  governanceStatus: string;
+  governanceStatus: "governed" | "legacy_uncontrolled";
   currentLevel: string | null;
   weakPatterns: string[];
   unitMastery: Array<{
@@ -443,22 +453,90 @@ export type DueReviewUnitsData = {
   units: DueReviewUnit[];
 };
 
+function normalizeError(error: ApiError | null): ApiError {
+  if (!error) {
+    return { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION" };
+  }
+
+  if (error.code === "TRANSPORT_ERROR") {
+    return { code: "TRANSPORT_ERROR", message: "TRANSPORT_ERROR" };
+  }
+
+  if (error.code === "GOVERNANCE_MISSING") {
+    return { code: "GOVERNANCE_MISSING", message: "GOVERNANCE_MISSING" };
+  }
+
+  return { code: "CONTRACT_VIOLATION", message: error.message || "CONTRACT_VIOLATION" };
+}
+
+function validationFailure<T>(path: string, error: ControlledUiValidationError): ApiResponse<T> {
+  recordApiContractIssue(path, error.code, error.message);
+
+  return {
+    ok: false,
+    data: null,
+    error: {
+      code: error.code,
+      message: error.code,
+    },
+  };
+}
+
+async function withLearningValidation<TInput, TOutput>(
+  path: string,
+  validate: (payload: TInput) => TOutput,
+): Promise<ApiResponse<TOutput>> {
+  const response = (await apiClient(path)) as ApiResponse<TInput>;
+
+  if (!response.ok || !response.data) {
+    return {
+      ok: false,
+      data: null,
+      error: normalizeError(response.error),
+    };
+  }
+
+  try {
+    return {
+      ok: true,
+      data: validate(response.data),
+      error: null,
+    };
+  } catch (error) {
+    if (error instanceof ControlledUiValidationError) {
+      return validationFailure(path, error);
+    }
+
+    throw error;
+  }
+}
+
 export async function getLearningModules() {
-  return (await apiClient("/api/v1/learning/modules")) as ApiResponse<LearningModulesData>;
+  return withLearningValidation("/api/v1/learning/modules", (payload) =>
+    validateLearningModulesPayload(payload as Record<string, unknown>),
+  ) as Promise<ApiResponse<LearningModulesData>>;
 }
 
 export async function getLearningUnit(unitId: string) {
-  return (await apiClient(`/api/v1/learning/unit/${unitId}`)) as ApiResponse<LearningUnit>;
+  return withLearningValidation(`/api/v1/learning/unit/${unitId}`, (payload) =>
+    validateLearningUnitPayload(payload as Record<string, unknown>),
+  ) as Promise<ApiResponse<LearningUnit>>;
 }
 
 export async function getRelatedUnits(unitId: string) {
-  return (await apiClient(`/api/v1/learning/related/${unitId}`)) as ApiResponse<RelatedUnitsData>;
+  return withLearningValidation(`/api/v1/learning/related/${unitId}`, (payload) =>
+    validateRelatedUnitsPayload(payload as Record<string, unknown>),
+  ) as Promise<ApiResponse<RelatedUnitsData>>;
 }
 
 export async function getDueReviewUnits() {
-  return (await apiClient("/api/v1/learning/review/due")) as ApiResponse<DueReviewUnitsData>;
+  return withLearningValidation("/api/v1/learning/review/due", (payload) =>
+    validateDueReviewUnitsPayload(payload as Record<string, unknown>),
+  ) as Promise<ApiResponse<DueReviewUnitsData>>;
 }
 
 export async function getLearningDebugState() {
-  return (await apiClient("/api/v1/debug/user-learning-state")) as ApiResponse<LearningDebugState>;
+  return withLearningValidation("/api/v1/debug/user-learning-state", (payload) =>
+    validateLearningDebugStatePayload(payload as Record<string, unknown>),
+  ) as Promise<ApiResponse<LearningDebugState>>;
 }

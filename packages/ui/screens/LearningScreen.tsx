@@ -4,14 +4,14 @@ import Text from "../components/primitives/Text";
 import Screen from "../components/layout/Screen";
 import Section from "../components/layout/Section";
 
-type RecommendedUnit = {
+type RecommendedModule = {
   id: string;
-  moduleTitle: string;
   title: string;
-  urgencyLabel: string;
-  masteryLabel: string;
-  suggestionReason: string;
-  stagnated: boolean;
+  suggestionReason: string | null;
+  lowMasteryUnitIds: string[];
+  dueReviewUnitIds: string[];
+  stagnatedUnitIds: string[];
+  recommendationRejectedBecause: string[];
 };
 
 type RecommendationOutcome = {
@@ -54,11 +54,13 @@ type Props = {
   adaptiveWeightChanges: string[];
   auditReplaySummary: string[];
   auditTimeline: string[];
-  completedUnitIds: string[];
+  changeReference: string | null;
   contractViolations: string[];
   decisionVersion: string;
   errorMessage: string | null;
   factorContributionSummary: string[];
+  governanceStatus: "governed" | "legacy_uncontrolled";
+  governanceVersion: string;
   improvementTrends: ImprovementTrend[];
   loading: boolean;
   policyConstraintLogs: string[];
@@ -66,30 +68,26 @@ type Props = {
   policyVersion: string;
   recommendationRejections: string[];
   rawRecommendationOutcomes: RecommendationOutcome[];
-  recommendedUnits: RecommendedUnit[];
+  recommendedModules: RecommendedModule[];
   recommendationTrace: RecommendationTrace[];
-  selectedUnitId: string | null;
-  selectedStagnatedUnit: StagnatedUnit | null;
-  stagnationActionMessage: string | null;
+  stagnatedUnits: StagnatedUnit[];
+  untrustedStateMessage: string | null;
   ykiInfluenceLogs: string[];
   onBack: () => void;
-  onMarkComplete: () => void;
   onRefresh: () => void;
-  onSelectUnit: (unitId: string) => void;
-  onSwitchDifficulty: () => void;
-  onTryAlternativeUnit: () => void;
-  onUseRetrySuggestion: () => void;
 };
 
 export default function LearningScreen({
   adaptiveWeightChanges,
   auditReplaySummary,
   auditTimeline,
-  completedUnitIds,
+  changeReference,
   contractViolations,
   decisionVersion,
   errorMessage,
   factorContributionSummary,
+  governanceStatus,
+  governanceVersion,
   improvementTrends,
   loading,
   policyConstraintLogs,
@@ -97,26 +95,20 @@ export default function LearningScreen({
   policyVersion,
   recommendationRejections,
   rawRecommendationOutcomes,
-  recommendedUnits,
+  recommendedModules,
   recommendationTrace,
-  selectedUnitId,
-  selectedStagnatedUnit,
-  stagnationActionMessage,
+  stagnatedUnits,
+  untrustedStateMessage,
   ykiInfluenceLogs,
   onBack,
-  onMarkComplete,
   onRefresh,
-  onSelectUnit,
-  onSwitchDifficulty,
-  onTryAlternativeUnit,
-  onUseRetrySuggestion,
 }: Props) {
   if (loading) {
     return (
       <Screen>
         <Section>
           <Text variant="title">Learning</Text>
-          <Text tone="secondary">Loading recommendations...</Text>
+          <Text tone="secondary">Loading governed learning state...</Text>
         </Section>
       </Screen>
     );
@@ -142,6 +134,10 @@ export default function LearningScreen({
           <Text variant="title">Learning</Text>
           <Text>Decision version: {decisionVersion}</Text>
           <Text>Policy version: {policyVersion}</Text>
+          <Text>Governance version: {governanceVersion}</Text>
+          <Text tone="secondary">Change reference: {changeReference ?? "none"}</Text>
+          <Text tone="secondary">Governance status: {governanceStatus}</Text>
+          {untrustedStateMessage ? <Text>{untrustedStateMessage}</Text> : null}
           <Button label="Refresh Learning" onPress={onRefresh} />
           <Button label="Back Home" onPress={onBack} />
         </Section>
@@ -154,74 +150,46 @@ export default function LearningScreen({
           {policyConstraintLogs.length ? (
             policyConstraintLogs.map((item) => <Text key={item}>{item}</Text>)
           ) : (
-            <Text tone="secondary">No policy clamps were needed for the current recommendations.</Text>
+            <Text tone="secondary">No policy clamps were applied to the current governed output.</Text>
           )}
         </Section>
 
         <Section>
-          <Text variant="title">Recommended Units</Text>
-          {recommendedUnits.length ? (
-            recommendedUnits.map((unit) => (
-              <Box key={unit.id} gap="sm">
-                <Text>{unit.title}</Text>
-                <Text tone="secondary">Module: {unit.moduleTitle}</Text>
-                <Text tone="secondary">Urgency: {unit.urgencyLabel}</Text>
-                <Text tone="secondary">Mastery: {unit.masteryLabel}</Text>
-                <Text tone="secondary">{unit.suggestionReason}</Text>
-                {unit.stagnated ? (
-                  <Text tone="secondary">Adaptive status: stagnated, retry variation suggested.</Text>
+          <Text variant="title">Recommended Modules</Text>
+          {recommendedModules.length ? (
+            recommendedModules.map((module) => (
+              <Box key={module.id} gap="sm">
+                <Text>{module.title}</Text>
+                <Text tone="secondary">{module.suggestionReason ?? "No suggestion reason was returned."}</Text>
+                <Text tone="secondary">Low mastery units: {module.lowMasteryUnitIds.join(", ") || "none"}</Text>
+                <Text tone="secondary">Due review units: {module.dueReviewUnitIds.join(", ") || "none"}</Text>
+                <Text tone="secondary">Stagnated units: {module.stagnatedUnitIds.join(", ") || "none"}</Text>
+                {module.recommendationRejectedBecause.length ? (
+                  <Text tone="secondary">
+                    Rejections: {module.recommendationRejectedBecause.join(", ")}
+                  </Text>
                 ) : null}
-                <Button label="Select Unit" onPress={() => onSelectUnit(unit.id)} />
               </Box>
             ))
           ) : (
-            <Text tone="secondary">
-              No recommendation units are currently available. Refresh to rebuild recommendations or review your debug signals below.
-            </Text>
+            <Text tone="secondary">The backend returned no governed module recommendations.</Text>
           )}
-          {selectedUnitId ? (
-            <Box gap="sm">
-              <Text>Selected unit: {selectedUnitId}</Text>
-              <Button label="Mark Completion" onPress={onMarkComplete} />
-            </Box>
-          ) : null}
-          {completedUnitIds.length ? (
-            <Text tone="secondary">Simulated completions: {completedUnitIds.join(", ")}</Text>
-          ) : null}
         </Section>
 
-        {selectedStagnatedUnit ? (
-          <Section>
-            <Text variant="title">Stagnation Response</Text>
-            <Text>{selectedStagnatedUnit.title}</Text>
-            <Text tone="secondary">
-              Attempts: {selectedStagnatedUnit.attempts}, mastery {selectedStagnatedUnit.masteryScore.toFixed(2)}
-            </Text>
-            <Text tone="secondary">
-              Policy stage: {selectedStagnatedUnit.policyStage}, retry count {selectedStagnatedUnit.retryCount}
-            </Text>
-            <Text tone="secondary">
-              {selectedStagnatedUnit.stagnationReason ?? selectedStagnatedUnit.retrySuggestion}
-            </Text>
-            <Button label="Use Retry Suggestion" onPress={onUseRetrySuggestion} />
-            <Button
-              label={
-                selectedStagnatedUnit.alternativeUnitTitle
-                  ? `Try ${selectedStagnatedUnit.alternativeUnitTitle}`
-                  : "Try Alternative Unit"
-              }
-              onPress={onTryAlternativeUnit}
-              disabled={!selectedStagnatedUnit.alternativeUnitTitle}
-            />
-            <Button
-              label={`Switch To ${selectedStagnatedUnit.switchDifficultyTo}`}
-              onPress={onSwitchDifficulty}
-            />
-            {stagnationActionMessage ? (
-              <Text tone="secondary">{stagnationActionMessage}</Text>
-            ) : null}
-          </Section>
-        ) : null}
+        <Section>
+          <Text variant="title">Stagnation State</Text>
+          {stagnatedUnits.length ? (
+            stagnatedUnits.map((unit) => (
+              <Text key={unit.unitId}>
+                {unit.title}: attempts {unit.attempts}, mastery {unit.masteryScore.toFixed(2)}, retry {unit.retryCount}, policy {unit.policyStage}, next difficulty {unit.switchDifficultyTo}, suggestion {unit.retrySuggestion}
+                {unit.alternativeUnitTitle ? `, alternative ${unit.alternativeUnitTitle}` : ""}
+                {unit.stagnationReason ? `, reason ${unit.stagnationReason}` : ""}
+              </Text>
+            ))
+          ) : (
+            <Text tone="secondary">No stagnated units are currently governed for escalation.</Text>
+          )}
+        </Section>
 
         <Section>
           <Text variant="title">Effectiveness</Text>
@@ -234,14 +202,18 @@ export default function LearningScreen({
 
         <Section>
           <Text variant="title">Recommendation Trace</Text>
-          {recommendationTrace.map((item) => (
-            <Box key={item.moduleId} gap="sm">
-              <Text>{item.title}</Text>
-              <Text tone="secondary">Final score: {item.finalScore.toFixed(2)}</Text>
-              <Text tone="secondary">{item.weightedFactors}</Text>
-              <Text tone="secondary">{item.adaptiveSummary}</Text>
-            </Box>
-          ))}
+          {recommendationTrace.length ? (
+            recommendationTrace.map((item) => (
+              <Box key={item.moduleId} gap="sm">
+                <Text>{item.title}</Text>
+                <Text tone="secondary">Final score: {item.finalScore.toFixed(2)}</Text>
+                <Text tone="secondary">{item.weightedFactors}</Text>
+                <Text tone="secondary">{item.adaptiveSummary}</Text>
+              </Box>
+            ))
+          ) : (
+            <Text tone="secondary">No recommendation trace is available.</Text>
+          )}
         </Section>
 
         <Section>
