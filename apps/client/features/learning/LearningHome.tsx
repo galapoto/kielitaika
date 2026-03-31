@@ -225,6 +225,9 @@ function DebugPanel({ debugState, loading, error }: DebugPanelProps) {
         <Text size="lg">Learning Debug Info</Text>
         <Text>Tracked units: {debugState.unitMastery.length}</Text>
         <Text>
+          Active weights: {Object.entries(debugState.weightsUsed).map(([key, value]) => `${key} ${value}`).join(", ")}
+        </Text>
+        <Text>
           Regression flags: {debugState.regressionFlags.length ? debugState.regressionFlags.map((item) => item.title).join(", ") : "None"}
         </Text>
         <Text>
@@ -241,7 +244,7 @@ function DebugPanel({ debugState, loading, error }: DebugPanelProps) {
             <Text>Reason: {item.suggestionReason ?? "No suggestion reason"}</Text>
             <Text>Score: {item.suggestionScore}</Text>
             <Text>
-              Breakdown: weakness {item.suggestionScoreBreakdown?.weakness ?? 0}, mastery {item.suggestionScoreBreakdown?.mastery ?? 0}, review {item.suggestionScoreBreakdown?.review ?? 0}, level {item.suggestionScoreBreakdown?.level ?? 0}
+              Breakdown: weak {item.scoreBreakdown?.weak_pattern.weighted_score ?? 0}, mastery {item.scoreBreakdown?.low_mastery.weighted_score ?? 0}, review {item.scoreBreakdown?.due_review.weighted_score ?? 0}, regression {item.scoreBreakdown?.regression.weighted_score ?? 0}, difficulty {item.scoreBreakdown?.difficulty_alignment.weighted_score ?? 0}
             </Text>
             <Text>
               Trace: weak patterns {item.whyThisWasSelected?.weak_patterns_used.join(", ") || "none"}, low mastery {item.whyThisWasSelected?.mastery_score_used.low_mastery_unit_ids.join(", ") || "none"}, due review {item.whyThisWasSelected?.due_review_used.unit_ids.join(", ") || "none"}

@@ -1,3 +1,4 @@
+from learning.decision_weights import get_decision_weights
 from learning.progress_service import get_due_review_units, get_low_mastery_unit_ids, get_module_progress
 from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID, get_progress_history
@@ -19,6 +20,20 @@ def get_level_distance(user_level: str | None, module_level: str):
         return None
 
     return abs(user_rank - module_rank)
+
+
+def _round_score(value: float):
+    return round(value, 4)
+
+
+def _clamp_score(value: float):
+    return max(0.0, min(1.0, _round_score(value)))
+
+
+def _normalize_count(count: int, total: int):
+    if total <= 0:
+        return 0.0
+    return _clamp_score(count / total)
 
 
 def build_suggestion_reason(
@@ -73,6 +88,52 @@ def resolve_difficulty_adjustment(
     return "review_aligned"
 
 
+def get_difficulty_alignment_score(
+    current_level: str | None,
+    module_level: str,
+    difficulty_adjustment: str,
+):
+    if current_level is None:
+        return 0.25 if module_level == "A1" else 0.0
+
+    level_distance = get_level_distance(current_level, module_level)
+    if level_distance is None:
+        return 0.0
+
+    max_distance = max(1, len(LEVEL_ORDER) - 1)
+    base_score = _clamp_score(1 - (level_distance / max_distance))
+
+    if difficulty_adjustment == "support_lowered":
+        return max(base_score, 0.85)
+    if difficulty_adjustment == "targeted_support":
+        return max(base_score, 0.75)
+    if difficulty_adjustment == "stretch":
+        return max(base_score, 0.6)
+    if difficulty_adjustment == "level_aligned":
+        return max(base_score, 0.9)
+    return base_score
+
+
+def build_weighted_score_breakdown(
+    factor_scores: dict[str, float],
+    weights: dict[str, float],
+):
+    breakdown = {}
+
+    for factor_name, factor_score in factor_scores.items():
+        weight = weights[factor_name]
+        breakdown[factor_name] = {
+            "factor_score": _round_score(factor_score),
+            "weight": weight,
+            "weighted_score": _round_score(factor_score * weight),
+        }
+
+    breakdown["final_score"] = _clamp_score(
+        sum(item["weighted_score"] for item in breakdown.values())
+    )
+    return breakdown
+
+
 def score_module(
     module,
     weak_patterns,
@@ -80,6 +141,7 @@ def score_module(
     low_mastery_unit_ids,
     due_review_unit_ids,
     user_id: str,
+    weight_overrides: dict | None = None,
 ):
     matched_weaknesses = [
         weak_pattern for weak_pattern in weak_patterns if weak_pattern in module["focusTags"]
@@ -121,6 +183,20 @@ def score_module(
         review_due_unit_ids=review_due_unit_ids,
         regression_flag=bool(regression_unit_ids),
     )
+    weights = get_decision_weights(weight_overrides)
+    factor_scores = {
+        "weak_pattern": _normalize_count(len(matched_weaknesses), len(module["focusTags"])),
+        "low_mastery": _normalize_count(len(prioritized_unit_ids), len(module["unitIds"])),
+        "due_review": _normalize_count(len(review_due_unit_ids), len(module["unitIds"])),
+        "regression": _normalize_count(len(regression_unit_ids), len(module["unitIds"])),
+        "difficulty_alignment": get_difficulty_alignment_score(
+            current_level,
+            module["level"],
+            difficulty_adjustment,
+        ),
+    }
+    score_breakdown = build_weighted_score_breakdown(factor_scores, weights)
+    suggestion_score = score_breakdown["final_score"]
     why_this_was_selected = {
         "weak_patterns_used": matched_weaknesses,
         "mastery_score_used": {
@@ -134,6 +210,7 @@ def score_module(
         "regression_flag": bool(regression_unit_ids),
         "regression_unit_ids": regression_unit_ids,
         "difficulty_adjustment": difficulty_adjustment,
+        "weights_used": weights,
     }
 
     return {
@@ -146,10 +223,11 @@ def score_module(
         "regressionUnitIds": regression_unit_ids,
         "suggested": (
             bool(matched_weaknesses)
-            or level_score > 0
             or bool(prioritized_unit_ids)
             or bool(review_due_unit_ids)
             or bool(recent_mistake_unit_ids)
+            or bool(regression_unit_ids)
+            or score_breakdown["final_score"] > 0
         ),
         "suggestionReason": build_suggestion_reason(
             module,
@@ -160,19 +238,12 @@ def score_module(
             recent_mistake_unit_ids,
         ),
         "whyThisWasSelected": why_this_was_selected,
-        "suggestionScoreBreakdown": {
-            "weakness": weakness_score,
-            "mastery": mastery_score,
-            "review": review_score,
-            "recentMistake": recent_mistake_score,
-            "level": level_score,
-            "total": suggestion_score,
-        },
+        "scoreBreakdown": score_breakdown,
         "suggestionScore": suggestion_score,
     }
 
 
-def list_modules_for_user(user_id: str = DEFAULT_USER_ID):
+def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict | None = None):
     progress = get_progress_history(user_id)
     weak_patterns = progress.get("weak_patterns", [])
     current_level = progress.get("current_level")
@@ -188,6 +259,7 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID):
             low_mastery_unit_ids,
             due_review_unit_ids,
             user_id,
+            weight_overrides,
         )
         for module in repository.list_modules()
     ]
@@ -207,11 +279,12 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID):
         "weakPatterns": weak_patterns,
         "lowMasteryUnitIds": list(low_mastery_unit_ids),
         "dueReviewUnitIds": list(due_review_unit_ids),
+        "weightsUsed": get_decision_weights(weight_overrides),
     }
 
 
-def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID):
-    module_listing = list_modules_for_user(user_id)
+def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID, weight_overrides: dict | None = None):
+    module_listing = list_modules_for_user(user_id, weight_overrides)
     unit_progress = []
 
     for unit_id in repository.units:
@@ -248,7 +321,7 @@ def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID):
             "suggested": module["suggested"],
             "suggestionReason": module["suggestionReason"],
             "suggestionScore": module["suggestionScore"],
-            "suggestionScoreBreakdown": module["suggestionScoreBreakdown"],
+            "scoreBreakdown": module["scoreBreakdown"],
             "whyThisWasSelected": module["whyThisWasSelected"],
         }
         for module in module_listing["modules"]
@@ -261,6 +334,7 @@ def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID):
         "dueReviewUnits": due_review_units,
         "regressionFlags": regression_flags,
         "recommendationReasoning": recommendation_reasoning,
+        "weightsUsed": module_listing["weightsUsed"],
     }
 
 

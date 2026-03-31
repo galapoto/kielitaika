@@ -72,14 +72,35 @@ export type LearningModule = {
     regression_flag: boolean;
     regression_unit_ids: string[];
     difficulty_adjustment: string;
+    weights_used: Record<string, number>;
   };
-  suggestionScoreBreakdown?: {
-    weakness: number;
-    mastery: number;
-    review: number;
-    recentMistake: number;
-    level: number;
-    total: number;
+  scoreBreakdown?: {
+    weak_pattern: {
+      factor_score: number;
+      weight: number;
+      weighted_score: number;
+    };
+    low_mastery: {
+      factor_score: number;
+      weight: number;
+      weighted_score: number;
+    };
+    due_review: {
+      factor_score: number;
+      weight: number;
+      weighted_score: number;
+    };
+    regression: {
+      factor_score: number;
+      weight: number;
+      weighted_score: number;
+    };
+    difficulty_alignment: {
+      factor_score: number;
+      weight: number;
+      weighted_score: number;
+    };
+    final_score: number;
   };
 };
 
@@ -97,6 +118,7 @@ export type LearningModulesData = {
   weakPatterns: string[];
   lowMasteryUnitIds: string[];
   dueReviewUnitIds: string[];
+  weightsUsed: Record<string, number>;
 };
 
 export type LearningDebugState = {
@@ -119,9 +141,10 @@ export type LearningDebugState = {
     suggested: boolean;
     suggestionReason: string | null;
     suggestionScore: number;
-    suggestionScoreBreakdown: LearningModule["suggestionScoreBreakdown"];
+    scoreBreakdown: LearningModule["scoreBreakdown"];
     whyThisWasSelected: LearningModule["whyThisWasSelected"];
   }>;
+  weightsUsed: Record<string, number>;
 };
 
 export type RelatedUnitsData = {

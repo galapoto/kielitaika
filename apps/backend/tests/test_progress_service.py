@@ -239,7 +239,87 @@ class ProgressServiceTests(unittest.TestCase):
         self.assertTrue(debug_state["regressionFlags"])
         self.assertIn("difficulty_adjustment", traced_module["whyThisWasSelected"])
         self.assertIn("mastery_score_used", traced_module["whyThisWasSelected"])
-        self.assertIn("suggestionScoreBreakdown", traced_module)
+        self.assertIn("scoreBreakdown", traced_module)
+
+    def test_same_inputs_keep_recommendation_scores_stable(self):
+        user_id = "progress-test-stable"
+        modules_first = list_modules_for_user(user_id)
+        modules_second = list_modules_for_user(user_id)
+
+        first_scores = [
+            (module["id"], module["suggestionScore"])
+            for module in modules_first["modules"]
+        ]
+        second_scores = [
+            (module["id"], module["suggestionScore"])
+            for module in modules_second["modules"]
+        ]
+
+        self.assertEqual(first_scores, second_scores)
+
+    def test_weight_overrides_change_recommendation_priority(self):
+        user_id = "progress-test-weights"
+        _history[user_id] = [
+            {
+                "session_id": "history-weight-focus",
+                "date": "2026-01-01T00:00:00",
+                "overall_score": 2,
+                "level": "A2",
+                "section_scores": {
+                    "reading": 3,
+                    "listening": 3,
+                    "writing": 2,
+                    "speaking": 2,
+                },
+                "weak_areas": ["language_accuracy"],
+                "passed": False,
+            }
+        ]
+        practice = generate_practice("module-moving-around-services")
+        exercise = next(
+            item for item in practice["exercises"] if item["unit_id"] == "vocab-asema"
+        )
+
+        with patch(
+            "learning.progress_service._current_time",
+            return_value=datetime(2026, 1, 1, tzinfo=UTC),
+        ):
+            record_practice_result(user_id, exercise, False)
+
+        default_modules = list_modules_for_user(user_id)
+        review_heavy_modules = list_modules_for_user(
+            user_id,
+            {
+                "weak_pattern": 0.0,
+                "low_mastery": 0.4,
+                "due_review": 0.5,
+                "regression": 0.05,
+                "difficulty_alignment": 0.05,
+            },
+        )
+
+        self.assertEqual(default_modules["suggestedModules"][0]["id"], "module-work-and-study-communication")
+        self.assertEqual(
+            review_heavy_modules["suggestedModules"][0]["id"],
+            "module-moving-around-services",
+        )
+
+    def test_trace_matches_weighted_score_calculation(self):
+        user_id = "progress-test-trace-score"
+        modules = list_modules_for_user(user_id)
+        traced_module = modules["modules"][0]
+        score_breakdown = traced_module["scoreBreakdown"]
+        summed_weighted_scores = round(
+            score_breakdown["weak_pattern"]["weighted_score"]
+            + score_breakdown["low_mastery"]["weighted_score"]
+            + score_breakdown["due_review"]["weighted_score"]
+            + score_breakdown["regression"]["weighted_score"]
+            + score_breakdown["difficulty_alignment"]["weighted_score"],
+            4,
+        )
+
+        self.assertEqual(score_breakdown["final_score"], summed_weighted_scores)
+        self.assertEqual(traced_module["suggestionScore"], score_breakdown["final_score"])
 
 
 if __name__ == "__main__":
