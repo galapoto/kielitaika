@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from audit.audit_service import reset_audit_store
 from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
 from learning.graph_service import get_user_learning_debug_state, list_modules_for_user
 from learning.policy_engine import clamp_adaptive_weights
@@ -29,6 +30,7 @@ from yki.storage import _history
 class ProgressServiceTests(unittest.TestCase):
     def setUp(self):
         reset_progress_store()
+        reset_audit_store()
         _history.clear()
 
     def test_correct_answers_increase_review_interval(self):

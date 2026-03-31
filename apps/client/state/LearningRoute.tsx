@@ -310,6 +310,34 @@ export default function LearningRoute() {
     [state.debugState, state.modulesData],
   );
 
+  const auditTimeline = useMemo(() => {
+    if (!state.debugState) {
+      return [];
+    }
+
+    return state.debugState.auditTimeline.slice(-12).map((event) => {
+      const outputKeys = Object.keys(event.output_snapshot).slice(0, 3).join(", ");
+      return `${event.timestamp} | ${event.event_type} | decision ${event.decision_version} | policy ${event.policy_version}${outputKeys ? ` | ${outputKeys}` : ""}`;
+    });
+  }, [state.debugState]);
+
+  const auditReplaySummary = useMemo(() => {
+    if (!state.debugState) {
+      return [];
+    }
+
+    const verification = state.debugState.auditVerification;
+    const counts = Object.entries(state.debugState.auditReplay.eventCounts)
+      .map(([key, value]) => `${key} ${value}`)
+      .join(", ");
+
+    return [
+      `Replay verification: ${verification.ok ? "consistent" : "issues detected"}`,
+      counts ? `Audit counts: ${counts}` : "Audit counts unavailable.",
+      ...verification.issues.slice(0, 4),
+    ];
+  }, [state.debugState]);
+
   async function handleMarkComplete() {
     if (!selectedUnitId || completedUnitIds.includes(selectedUnitId)) {
       return;
@@ -364,6 +392,8 @@ export default function LearningRoute() {
   return (
     <LearningScreen
       adaptiveWeightChanges={adaptiveWeightChanges}
+      auditReplaySummary={auditReplaySummary}
+      auditTimeline={auditTimeline}
       completedUnitIds={completedUnitIds}
       contractViolations={contractViolations}
       decisionVersion={state.debugState?.decisionVersion ?? state.modulesData?.decisionVersion ?? "unknown"}

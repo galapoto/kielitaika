@@ -148,6 +148,25 @@ export type YkiPracticeSession = {
       } | null;
     }>;
   };
+  auditTimeline?: Array<{
+    event_id: string;
+    timestamp: string;
+    event_type: string;
+    decision_version: string;
+    policy_version: string;
+    input_snapshot: Record<string, unknown>;
+    output_snapshot: Record<string, unknown>;
+    constraint_metadata: Record<string, unknown>;
+  }>;
+  auditReplay?: {
+    orderedEventIds: string[];
+    eventCounts: Record<string, number>;
+    ykiTaskFlow: Array<Record<string, unknown>>;
+  };
+  auditVerification?: {
+    ok: boolean;
+    issues: string[];
+  };
 };
 
 export async function getStoredPracticeSessionId() {

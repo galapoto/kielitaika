@@ -341,6 +341,34 @@ export type LearningDebugState = {
     stagnated: boolean;
     impact_label: string;
   }>;
+  auditTimeline: Array<{
+    event_id: string;
+    timestamp: string;
+    user_id: string;
+    session_id: string | null;
+    event_type: string;
+    decision_version: string;
+    policy_version: string;
+    input_snapshot: Record<string, unknown>;
+    output_snapshot: Record<string, unknown>;
+    constraint_metadata: Record<string, unknown>;
+  }>;
+  auditReplay: {
+    userId: string | null;
+    sessionId: string | null;
+    orderedEventIds: string[];
+    eventCounts: Record<string, number>;
+    decisionVersions: string[];
+    policyVersions: string[];
+    recommendationSequence: Array<Record<string, unknown>>;
+    ykiTaskFlow: Array<Record<string, unknown>>;
+    unitProgressFlow: Array<Record<string, unknown>>;
+    decisionsMade: Array<Record<string, unknown>>;
+  };
+  auditVerification: {
+    ok: boolean;
+    issues: string[];
+  };
   weightsUsed: Record<string, number>;
 };
 

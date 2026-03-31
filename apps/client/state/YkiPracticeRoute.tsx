@@ -67,6 +67,35 @@ export default function YkiPracticeRoute() {
     };
   }, [data?.sessionTrace]);
 
+  const auditTimeline = useMemo(() => {
+    return (
+      data?.auditTimeline?.slice(-10).map((event) => {
+        const taskId =
+          (event.output_snapshot.task_id as string | undefined) ??
+          (event.input_snapshot.task_id as string | undefined);
+        return `${event.timestamp} | ${event.event_type} | decision ${event.decision_version} | policy ${event.policy_version}${taskId ? ` | task ${taskId}` : ""}`;
+      }) ?? []
+    );
+  }, [data?.auditTimeline]);
+
+  const auditReplaySummary = useMemo(() => {
+    if (!data?.auditVerification) {
+      return [];
+    }
+
+    const counts = data.auditReplay
+      ? Object.entries(data.auditReplay.eventCounts)
+          .map(([key, value]) => `${key} ${value}`)
+          .join(", ")
+      : "";
+
+    return [
+      `Replay verification: ${data.auditVerification.ok ? "consistent" : "issues detected"}`,
+      counts ? `Audit counts: ${counts}` : "Audit counts unavailable.",
+      ...(data.auditVerification.issues ?? []).slice(0, 4),
+    ];
+  }, [data?.auditReplay, data?.auditVerification]);
+
   if (!hasHydrated || !user) {
     return (
       <Screen>
@@ -81,6 +110,8 @@ export default function YkiPracticeRoute() {
   return (
     <YkiPracticeScreen
       answer={answer}
+      auditReplaySummary={auditReplaySummary}
+      auditTimeline={auditTimeline}
       errorMessage={error?.message ?? null}
       latestResult={
         latestResult

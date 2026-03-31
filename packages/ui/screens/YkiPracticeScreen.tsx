@@ -36,6 +36,8 @@ type LatestResultView = {
 
 type Props = {
   answer: string;
+  auditReplaySummary: string[];
+  auditTimeline: string[];
   errorMessage: string | null;
   latestResult: LatestResultView | null;
   loading: boolean;
@@ -55,6 +57,8 @@ type Props = {
 
 export default function YkiPracticeScreen({
   answer,
+  auditReplaySummary,
+  auditTimeline,
   errorMessage,
   latestResult,
   loading,
@@ -170,6 +174,18 @@ export default function YkiPracticeScreen({
             ))}
           </Section>
         ) : null}
+
+        <Section>
+          <Text variant="title">Audit Timeline</Text>
+          {auditReplaySummary.length ? (
+            auditReplaySummary.map((item) => <Text key={item}>{item}</Text>)
+          ) : null}
+          {auditTimeline.length ? (
+            auditTimeline.map((item) => <Text key={item}>{item}</Text>)
+          ) : (
+            <Text tone="secondary">No audit events have been recorded for this session yet.</Text>
+          )}
+        </Section>
       </Box>
     </Screen>
   );

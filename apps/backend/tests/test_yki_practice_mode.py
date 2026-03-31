@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from audit.audit_service import reset_audit_store
 from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
 from learning.practice_service import generate_practice
 from learning.progress_service import get_unit_progress, record_practice_result, reset_progress_store
@@ -36,6 +37,7 @@ class YkiPracticeModeTests(unittest.TestCase):
     def setUp(self):
         reset_progress_store()
         reset_practice_sessions()
+        reset_audit_store()
         _history.clear()
 
     def test_weak_learner_gets_easier_focused_tasks(self):

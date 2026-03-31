@@ -52,6 +52,8 @@ type StagnatedUnit = {
 
 type Props = {
   adaptiveWeightChanges: string[];
+  auditReplaySummary: string[];
+  auditTimeline: string[];
   completedUnitIds: string[];
   contractViolations: string[];
   decisionVersion: string;
@@ -81,6 +83,8 @@ type Props = {
 
 export default function LearningScreen({
   adaptiveWeightChanges,
+  auditReplaySummary,
+  auditTimeline,
   completedUnitIds,
   contractViolations,
   decisionVersion,
@@ -255,6 +259,18 @@ export default function LearningScreen({
             recommendationRejections.map((item) => <Text key={item}>{item}</Text>)
           ) : (
             <Text tone="secondary">No recommendation rejections were recorded.</Text>
+          )}
+        </Section>
+
+        <Section>
+          <Text variant="title">Audit Timeline</Text>
+          {auditReplaySummary.length ? (
+            auditReplaySummary.map((item) => <Text key={item}>{item}</Text>)
+          ) : null}
+          {auditTimeline.length ? (
+            auditTimeline.map((item) => <Text key={item}>{item}</Text>)
+          ) : (
+            <Text tone="secondary">No audit events have been recorded yet.</Text>
           )}
         </Section>
 

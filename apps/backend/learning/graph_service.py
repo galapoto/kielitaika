@@ -1,3 +1,5 @@
+from audit.audit_service import get_user_events, record_event
+from audit.replay_engine import replay_user_journey
 from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
 from learning.decision_weights import get_decision_weights
 from learning.policy_engine import (
@@ -199,6 +201,7 @@ def adaptive_weight_modifier(
     base_weights: dict[str, float],
     module_progress: dict,
     user_id: str,
+    emit_audit: bool = True,
 ):
     module_outcomes = [
         outcome
@@ -280,6 +283,15 @@ def adaptive_weight_modifier(
         base_weights,
         factor_adjustments,
         yki_influence_bonus=yki_influence_bonus,
+        audit_context=(
+            {
+                "user_id": user_id,
+                "session_id": None,
+                "module_id": module["id"],
+            }
+            if emit_audit
+            else None
+        ),
     )
     effective_weights = constrained_policy["weights"]
     normalized_adjustments = constrained_policy["adjustments"]
@@ -344,6 +356,7 @@ def score_module(
     due_review_unit_ids,
     user_id: str,
     weight_overrides: dict | None = None,
+    emit_audit: bool = True,
 ):
     matched_weaknesses = [
         weak_pattern for weak_pattern in weak_patterns if weak_pattern in module["focusTags"]
@@ -384,6 +397,7 @@ def score_module(
         base_weights=base_weights,
         module_progress=module_progress,
         user_id=user_id,
+        emit_audit=emit_audit,
     )
     weights = adaptive_feedback["weights"]
     factor_scores = {
@@ -471,7 +485,12 @@ def score_module(
     }
 
 
-def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict | None = None):
+def list_modules_for_user(
+    user_id: str = DEFAULT_USER_ID,
+    weight_overrides: dict | None = None,
+    *,
+    emit_audit: bool = True,
+):
     progress = get_progress_history(user_id)
     weak_patterns = progress.get("weak_patterns", [])
     current_level = progress.get("current_level")
@@ -496,6 +515,7 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
             due_review_unit_ids,
             user_id,
             weight_overrides,
+            emit_audit,
         )
         for module in repository.list_modules()
     ]
@@ -508,6 +528,39 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
         )
     )
     suggested_modules = [module for module in scored_modules if module["suggested"]][:3]
+    if emit_audit:
+        record_event(
+            {
+                "user_id": user_id,
+                "session_id": None,
+                "event_type": "RECOMMENDATION_GENERATED",
+                "decision_version": DECISION_VERSION,
+                "policy_version": POLICY_VERSION,
+                "input_snapshot": {
+                    "current_level": current_level,
+                    "weak_patterns": weak_patterns,
+                    "low_mastery_unit_ids": sorted(low_mastery_unit_ids),
+                    "due_review_unit_ids": sorted(due_review_unit_ids),
+                    "ranking_seed": ranking_seed,
+                },
+                "output_snapshot": {
+                    "ranked_module_ids": [module["id"] for module in scored_modules],
+                    "suggested_module_ids": [module["id"] for module in suggested_modules],
+                    "score_summary": [
+                        {
+                            "module_id": module["id"],
+                            "suggestion_score": module["suggestionScore"],
+                            "final_score": module["scoreBreakdown"]["final_score"],
+                        }
+                        for module in scored_modules
+                    ],
+                },
+                "constraint_metadata": {
+                    "decision_policy_version": DECISION_POLICY_VERSION,
+                },
+            }
+        )
+
     for module in suggested_modules:
         register_recommendation_outcomes(
             user_id,
@@ -521,6 +574,32 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
                 if factor_name != "final_score" and values["factor_score"] > 0
             ],
             module["whyThisWasSelected"]["weights_used"],
+        )
+
+    if emit_audit:
+        record_event(
+            {
+                "user_id": user_id,
+                "session_id": None,
+                "event_type": "RECOMMENDATION_SERVED",
+                "decision_version": DECISION_VERSION,
+                "policy_version": POLICY_VERSION,
+                "input_snapshot": {
+                    "served_limit": 3,
+                    "decision_policy_version": DECISION_POLICY_VERSION,
+                },
+                "output_snapshot": {
+                    "served_module_ids": [module["id"] for module in suggested_modules],
+                    "served_unit_ids": [
+                        unit_id
+                        for module in suggested_modules
+                        for unit_id in get_recommended_unit_ids(module)
+                    ],
+                },
+                "constraint_metadata": {
+                    "ranking_seed": ranking_seed,
+                },
+            }
         )
 
     return {
@@ -539,7 +618,7 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID, weight_overrides: dict
 
 
 def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID, weight_overrides: dict | None = None):
-    module_listing = list_modules_for_user(user_id, weight_overrides)
+    module_listing = list_modules_for_user(user_id, weight_overrides, emit_audit=False)
     unit_progress = []
 
     for unit_id in repository.units:
@@ -586,6 +665,7 @@ def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID, weight_overrid
     recommendation_outcomes = get_recommendation_outcomes(user_id)
     recommendation_effectiveness = get_recommendation_effectiveness_summary(user_id)
     learning_signal_logs = get_learning_signal_logs(user_id)
+    audit_journey = replay_user_journey(user_id)
 
     return {
         "decisionVersion": DECISION_VERSION,
@@ -606,6 +686,9 @@ def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID, weight_overrid
         "ykiInfluenceLogs": [
             item for item in learning_signal_logs if item["signal_source"] == "yki_practice"
         ],
+        "auditTimeline": get_user_events(user_id),
+        "auditReplay": audit_journey["replay"],
+        "auditVerification": audit_journey["verification"],
         "weightsUsed": module_listing["weightsUsed"],
     }
 

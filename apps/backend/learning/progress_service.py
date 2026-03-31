@@ -1,7 +1,8 @@
 from dataclasses import asdict
 from datetime import datetime, timedelta, UTC
 
-from learning.decision_version import POLICY_VERSION
+from audit.audit_service import record_event
+from learning.decision_version import DECISION_VERSION, POLICY_VERSION
 from learning.policy_engine import (
     clamp_retry_count,
     get_policy_config,
@@ -429,6 +430,9 @@ def _update_recommendation_outcomes(
         if outcome.status not in {"active", "stagnated"}:
             continue
 
+        previous_status = outcome.status
+        previous_policy_stage = outcome.policy_stage
+
         outcome.subsequent_attempts += 1
         outcome.latest_mastery_score = mastery_score
         outcome.improvement_delta = _round_score(mastery_score - outcome.baseline_mastery_score)
@@ -472,6 +476,35 @@ def _update_recommendation_outcomes(
             "policy_stage": outcome.policy_stage,
             "signal_source": signal_source,
         }
+        if outcome.status == "stagnated" and (
+            previous_status != "stagnated" or previous_policy_stage != outcome.policy_stage
+        ):
+            record_event(
+                {
+                    "user_id": user_id,
+                    "session_id": None,
+                    "event_type": "STAGNATION_DETECTED",
+                    "decision_version": outcome.decision_version,
+                    "policy_version": outcome.policy_version,
+                    "input_snapshot": {
+                        "module_id": outcome.module_id,
+                        "unit_id": outcome.unit_id,
+                        "subsequent_attempts": outcome.subsequent_attempts,
+                        "signal_source": signal_source,
+                    },
+                    "output_snapshot": {
+                        "module_id": outcome.module_id,
+                        "unit_id": outcome.unit_id,
+                        "status": outcome.status,
+                        "retry_count": outcome.retry_count,
+                        "policy_stage": outcome.policy_stage,
+                        "improvement_delta": outcome.improvement_delta,
+                    },
+                    "constraint_metadata": {
+                        "policy_trace": outcome.policy_trace,
+                    },
+                }
+            )
         updated = True
 
     if updated:
@@ -675,6 +708,7 @@ def record_practice_result(
     now = _current_time()
     unit_progress = _get_or_create_unit_progress(user_id, unit_id)
     previous_mastery_score = unit_progress.mastery_score
+    previously_mastered = unit_progress.mastery_score >= 0.7
     unit_progress.attempts += 1
     unit_progress.correct_attempts += 1 if is_correct else 0
     unit_progress.last_attempt_at = now.isoformat()
@@ -717,11 +751,74 @@ def record_practice_result(
     signal_entry["stagnated"] = unit_progress.stagnated
 
     module_progress = _recalculate_module_progress(user_id, module_id)
+    serialized_unit_progress = _serialize_unit_progress(unit_progress)
+    serialized_module_progress = _serialize_module_progress(module_progress)
+    serialized_signal = _serialize_learning_signal_log(signal_entry)
+
+    record_event(
+        {
+            "user_id": user_id,
+            "session_id": signal_metadata.get("sessionId") if signal_metadata else None,
+            "event_type": "UNIT_ATTEMPTED",
+            "decision_version": signal_metadata.get("decisionVersion", DECISION_VERSION)
+            if signal_metadata
+            else DECISION_VERSION,
+            "policy_version": POLICY_VERSION,
+            "input_snapshot": {
+                "module_id": module_id,
+                "unit_id": unit_id,
+                "is_correct": is_correct,
+                "signal_source": signal_source,
+                "task_type": signal_metadata.get("taskType") if signal_metadata else None,
+                "task_section": signal_metadata.get("taskSection") if signal_metadata else None,
+            },
+            "output_snapshot": {
+                "module_id": module_id,
+                "unit_id": unit_id,
+                "attempts": serialized_unit_progress["attempts"],
+                "mastery_score": serialized_unit_progress["mastery_score"],
+                "mastery_level": serialized_unit_progress["mastery_level"],
+                "stagnated": serialized_unit_progress["stagnated"],
+            },
+            "constraint_metadata": {
+                "review_interval_days": serialized_unit_progress["review_interval_days"],
+                "next_review_at": serialized_unit_progress["next_review_at"],
+            },
+        }
+    )
+
+    if not previously_mastered and unit_progress.mastery_score >= 0.7:
+        record_event(
+            {
+                "user_id": user_id,
+                "session_id": signal_metadata.get("sessionId") if signal_metadata else None,
+                "event_type": "UNIT_COMPLETED",
+                "decision_version": signal_metadata.get("decisionVersion", DECISION_VERSION)
+                if signal_metadata
+                else DECISION_VERSION,
+                "policy_version": POLICY_VERSION,
+                "input_snapshot": {
+                    "module_id": module_id,
+                    "unit_id": unit_id,
+                    "signal_source": signal_source,
+                },
+                "output_snapshot": {
+                    "module_id": module_id,
+                    "unit_id": unit_id,
+                    "mastery_score": serialized_unit_progress["mastery_score"],
+                    "mastery_level": serialized_unit_progress["mastery_level"],
+                    "attempts": serialized_unit_progress["attempts"],
+                },
+                "constraint_metadata": {
+                    "previous_mastery_score": previous_mastery_score,
+                },
+            }
+        )
 
     return {
-        "unitProgress": _serialize_unit_progress(unit_progress),
-        "moduleProgress": _serialize_module_progress(module_progress),
-        "learningSignal": _serialize_learning_signal_log(signal_entry),
+        "unitProgress": serialized_unit_progress,
+        "moduleProgress": serialized_module_progress,
+        "learningSignal": serialized_signal,
     }
 
 

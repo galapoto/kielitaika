@@ -1,6 +1,7 @@
 from copy import deepcopy
 from hashlib import sha256
 
+from audit.audit_service import record_event
 from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
 
 POLICY_RULES = {
@@ -73,6 +74,7 @@ def clamp_adaptive_weights(
     suggested_adjustments: dict[str, float],
     *,
     yki_influence_bonus: float = 0.0,
+    audit_context: dict | None = None,
 ):
     adaptation_rules = POLICY_RULES["adaptation"]
     min_multiplier = adaptation_rules["weight_multiplier_min"]
@@ -125,7 +127,7 @@ def clamp_adaptive_weights(
         for factor in base_weights
     }
 
-    return {
+    constrained_policy = {
         "policy_version": POLICY_VERSION,
         "applied_constraints": applied_constraints,
         "clamped_values": clamped_values,
@@ -138,6 +140,42 @@ def clamp_adaptive_weights(
         },
         "yki_influence_bonus": capped_yki_bonus,
     }
+
+    if audit_context and audit_context.get("user_id"):
+        record_event(
+            {
+                "user_id": audit_context["user_id"],
+                "session_id": audit_context.get("session_id"),
+                "event_type": "POLICY_APPLIED",
+                "decision_version": DECISION_VERSION,
+                "policy_version": POLICY_VERSION,
+                "input_snapshot": {
+                    "module_id": audit_context.get("module_id"),
+                    "base_weights": {
+                        key: _round_score(value) for key, value in base_weights.items()
+                    },
+                    "suggested_adjustments": {
+                        key: _round_score(value)
+                        for key, value in suggested_adjustments.items()
+                    },
+                    "yki_influence_bonus": _round_score(yki_influence_bonus),
+                },
+                "output_snapshot": {
+                    "module_id": audit_context.get("module_id"),
+                    "weights": constrained_policy["weights"],
+                    "adjustments": constrained_policy["adjustments"],
+                    "yki_influence_bonus": constrained_policy["yki_influence_bonus"],
+                },
+                "constraint_metadata": {
+                    "decision_policy_version": DECISION_POLICY_VERSION,
+                    "applied_constraints": constrained_policy["applied_constraints"],
+                    "clamped_values": constrained_policy["clamped_values"],
+                    "rejected_changes": constrained_policy["rejected_changes"],
+                },
+            }
+        )
+
+    return constrained_policy
 
 
 def get_stagnation_policy():

@@ -1,5 +1,8 @@
 from dataclasses import asdict
+from hashlib import sha256
 
+from audit.audit_service import get_session_events, record_event
+from audit.replay_engine import replay_session, verify_replay_consistency
 from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
 from learning.policy_engine import is_exam_mode_locked
 from learning.progress_service import record_practice_result
@@ -11,6 +14,8 @@ from yki_practice.session_models import PracticeSession
 _practice_sessions: dict[str, PracticeSession] = {}
 _practice_history: dict[str, list[dict]] = {}
 _completed_session_ids: set[str] = set()
+_completed_audit_session_ids: set[str] = set()
+_presented_task_counts: dict[str, dict[str, int]] = {}
 _session_counter = 0
 
 
@@ -22,6 +27,10 @@ def _next_session_id():
 
 def _normalize_text(value):
     return (value or "").strip().lower()
+
+
+def _checksum_text(value: str):
+    return sha256((value or "").encode("utf-8")).hexdigest()[:12]
 
 
 def _build_evaluation(task: dict, answer: str):
@@ -230,6 +239,9 @@ def _serialize_session(session: PracticeSession):
         else None
     )
     completed_count = sum(1 for task in session.tasks if task.get("evaluation"))
+    audit_timeline = get_session_events(session.session_id)
+    audit_replay = replay_session(audit_timeline)
+    audit_verification = verify_replay_consistency(audit_timeline)
     return {
         **asdict(session),
         "currentTask": current_task,
@@ -241,6 +253,9 @@ def _serialize_session(session: PracticeSession):
         "policyVersion": session.policy_version,
         "decisionVersion": session.decision_version,
         "precomputedPlan": session.precomputed_plan,
+        "auditTimeline": audit_timeline,
+        "auditReplay": audit_replay,
+        "auditVerification": audit_verification,
     }
 
 
@@ -251,6 +266,76 @@ def _get_section_indices(tasks: list[dict], section: str):
 def _reset_task_state(task: dict):
     task["submittedAnswer"] = None
     task["evaluation"] = None
+
+
+def _record_task_presented(session: PracticeSession, trigger: str):
+    if session.current_task_index >= len(session.tasks):
+        return
+
+    task = session.tasks[session.current_task_index]
+    task_counts = _presented_task_counts.setdefault(session.session_id, {})
+    presentation_count = task_counts.get(task["id"], 0) + 1
+    task_counts[task["id"]] = presentation_count
+    record_event(
+        {
+            "user_id": session.user_id,
+            "session_id": session.session_id,
+            "event_type": "YKI_TASK_PRESENTED",
+            "decision_version": session.decision_version,
+            "policy_version": session.policy_version,
+            "input_snapshot": {
+                "task_index": session.current_task_index,
+                "trigger": trigger,
+                "presentation_count": presentation_count,
+            },
+            "output_snapshot": {
+                "task_id": task["id"],
+                "section": task["section"],
+                "related_learning_unit_id": task["relatedLearningUnitId"],
+                "difficulty_level": task.get("difficultyLevel"),
+                "task_selection_reason": task["taskSelectionReason"],
+            },
+            "constraint_metadata": {
+                "decision_policy_version": DECISION_POLICY_VERSION,
+                "exam_mode": session.exam_mode,
+            },
+        }
+    )
+
+
+def _record_session_completed_if_needed(session: PracticeSession, trigger: str):
+    if session.session_id in _completed_audit_session_ids:
+        return
+
+    is_complete = sum(1 for task in session.tasks if task.get("evaluation")) == len(session.tasks)
+    if not is_complete:
+        return
+
+    summary = _build_session_summary(session)
+    record_event(
+        {
+            "user_id": session.user_id,
+            "session_id": session.session_id,
+            "event_type": "YKI_SESSION_COMPLETED",
+            "decision_version": session.decision_version,
+            "policy_version": session.policy_version,
+            "input_snapshot": {
+                "trigger": trigger,
+                "result_count": len(session.results),
+            },
+            "output_snapshot": {
+                "completed_task_ids": [task["id"] for task in session.tasks],
+                "average_score": summary["averageScore"],
+                "recommended_focus": summary["recommended_focus"],
+                "improvement_trend": summary["improvement_trend"],
+            },
+            "constraint_metadata": {
+                "exam_mode": session.exam_mode,
+                "decision_policy_version": DECISION_POLICY_VERSION,
+            },
+        }
+    )
+    _completed_audit_session_ids.add(session.session_id)
 
 
 def start_practice_session(user_id: str = DEFAULT_USER_ID):
@@ -277,6 +362,37 @@ def start_practice_session(user_id: str = DEFAULT_USER_ID):
         session_trace=_build_session_trace(context, tasks),
     )
     _practice_sessions[session.session_id] = session
+    record_event(
+        {
+            "user_id": user_id,
+            "session_id": session.session_id,
+            "event_type": "YKI_SESSION_STARTED",
+            "decision_version": DECISION_VERSION,
+            "policy_version": POLICY_VERSION,
+            "input_snapshot": {
+                "focus_areas": context["focusAreas"],
+                "practice_level": context["practiceLevel"],
+            },
+            "output_snapshot": {
+                "exam_mode": session.exam_mode,
+                "precomputed_plan": session.precomputed_plan,
+                "tasks": [
+                    {
+                        "task_id": task["id"],
+                        "section": task["section"],
+                        "related_learning_unit_id": task["relatedLearningUnitId"],
+                        "difficulty_level": task["difficultyLevel"],
+                        "task_selection_reason": task["taskSelectionReason"],
+                    }
+                    for task in tasks
+                ],
+            },
+            "constraint_metadata": {
+                "decision_policy_version": DECISION_POLICY_VERSION,
+            },
+        }
+    )
+    _record_task_presented(session, "session_start")
     return _serialize_session(session)
 
 
@@ -300,10 +416,13 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
     if action == "advance":
         if current_task.get("evaluation"):
             session.current_task_index = min(session.current_task_index + 1, len(session.tasks))
+            _record_task_presented(session, "advance")
+            _record_session_completed_if_needed(session, "advance")
         return _serialize_session(session)
 
     if action == "retry_task":
         _reset_task_state(current_task)
+        _record_task_presented(session, "retry_task")
         return _serialize_session(session)
 
     if action == "retry_section":
@@ -314,6 +433,7 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
         for index in section_indices:
             _reset_task_state(session.tasks[index])
         session.current_task_index = section_indices[0]
+        _record_task_presented(session, "retry_section")
         return _serialize_session(session)
 
     evaluation = _build_evaluation(current_task, answer or "")
@@ -328,10 +448,39 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
         evaluation["isCorrect"],
         signal_source="yki_practice",
         signal_metadata={
+            "sessionId": session.session_id,
+            "decisionVersion": session.decision_version,
             "taskType": current_task["type"],
             "taskSection": current_task["section"],
             "difficultyLevel": current_task.get("difficultyLevel"),
         },
+    )
+    record_event(
+        {
+            "user_id": session.user_id,
+            "session_id": session.session_id,
+            "event_type": "YKI_RESPONSE_SUBMITTED",
+            "decision_version": session.decision_version,
+            "policy_version": session.policy_version,
+            "input_snapshot": {
+                "task_id": current_task["id"],
+                "section": current_task["section"],
+                "action": action,
+                "answer_length": len(answer or ""),
+                "answer_checksum": _checksum_text(answer or ""),
+            },
+            "output_snapshot": {
+                "task_id": current_task["id"],
+                "score": evaluation["score"],
+                "max_score": evaluation["maxScore"],
+                "is_correct": evaluation["isCorrect"],
+                "related_learning_unit_id": current_task["relatedLearningUnitId"],
+            },
+            "constraint_metadata": {
+                "exam_mode": session.exam_mode,
+                "decision_policy_version": DECISION_POLICY_VERSION,
+            },
+        }
     )
     session.results = [
         result for result in session.results if result["taskId"] != current_task["id"]
@@ -354,6 +503,9 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
 
     if action != "submit_only":
         session.current_task_index = min(session.current_task_index + 1, len(session.tasks))
+        _record_task_presented(session, "submit_and_next")
+
+    _record_session_completed_if_needed(session, action)
 
     return _serialize_session(session)
 
@@ -363,6 +515,8 @@ def reset_practice_sessions():
     _practice_sessions.clear()
     _practice_history.clear()
     _completed_session_ids.clear()
+    _completed_audit_session_ids.clear()
+    _presented_task_counts.clear()
     _session_counter = 0
 
 
