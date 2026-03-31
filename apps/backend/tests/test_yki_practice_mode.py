@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from audit.audit_service import reset_audit_store
 from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
+from learning.policy_engine import reset_policy_governance
 from learning.practice_service import generate_practice
 from learning.progress_service import get_unit_progress, record_practice_result, reset_progress_store
 from yki.storage import _history
@@ -35,6 +36,7 @@ def build_history_summary(level: str, weak_areas: list[str]):
 
 class YkiPracticeModeTests(unittest.TestCase):
     def setUp(self):
+        reset_policy_governance()
         reset_progress_store()
         reset_practice_sessions()
         reset_audit_store()

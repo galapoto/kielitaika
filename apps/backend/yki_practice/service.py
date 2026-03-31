@@ -3,7 +3,7 @@ from hashlib import sha256
 
 from audit.audit_service import get_session_events, record_event
 from audit.replay_engine import replay_session, verify_replay_consistency
-from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
+from learning.decision_version import get_decision_metadata
 from learning.policy_engine import is_exam_mode_locked
 from learning.progress_service import record_practice_result
 from learning.repository import repository
@@ -31,6 +31,10 @@ def _normalize_text(value):
 
 def _checksum_text(value: str):
     return sha256((value or "").encode("utf-8")).hexdigest()[:12]
+
+
+def _runtime_metadata():
+    return get_decision_metadata()
 
 
 def _build_evaluation(task: dict, answer: str):
@@ -174,10 +178,13 @@ def _record_completed_session_summary(session: PracticeSession):
 
 
 def _build_session_trace(context: dict, tasks: list[dict]):
+    metadata = _runtime_metadata()
     return {
-        "decision_version": DECISION_VERSION,
-        "policy_version": POLICY_VERSION,
-        "decision_policy_version": DECISION_POLICY_VERSION,
+        "decision_version": metadata["decision_version"],
+        "policy_version": metadata["policy_version"],
+        "decision_policy_version": metadata["decision_policy_version"],
+        "governance_version": metadata["governance_version"],
+        "change_reference": metadata["change_reference"],
         "exam_mode": is_exam_mode_locked(),
         "adaptiveContext": context,
         "tasks": [
@@ -225,6 +232,7 @@ def _serialize_session(session: PracticeSession):
             "task_ids": [task["id"] for task in session.tasks],
             "decision_version": session.decision_version,
             "policy_version": session.policy_version,
+            "governance_version": session.session_trace.get("governance_version") if session.session_trace else None,
             "exam_mode": session.exam_mode,
         }
     session_summary = _build_session_summary(session)
@@ -252,6 +260,8 @@ def _serialize_session(session: PracticeSession):
         "examMode": session.exam_mode,
         "policyVersion": session.policy_version,
         "decisionVersion": session.decision_version,
+        "governanceVersion": session.session_trace.get("governance_version") if session.session_trace else None,
+        "changeReference": session.session_trace.get("change_reference") if session.session_trace else None,
         "precomputedPlan": session.precomputed_plan,
         "auditTimeline": audit_timeline,
         "auditReplay": audit_replay,
@@ -273,6 +283,7 @@ def _record_task_presented(session: PracticeSession, trigger: str):
         return
 
     task = session.tasks[session.current_task_index]
+    metadata = _runtime_metadata()
     task_counts = _presented_task_counts.setdefault(session.session_id, {})
     presentation_count = task_counts.get(task["id"], 0) + 1
     task_counts[task["id"]] = presentation_count
@@ -281,8 +292,10 @@ def _record_task_presented(session: PracticeSession, trigger: str):
             "user_id": session.user_id,
             "session_id": session.session_id,
             "event_type": "YKI_TASK_PRESENTED",
-            "decision_version": session.decision_version,
-            "policy_version": session.policy_version,
+            "decision_version": metadata["decision_version"],
+            "policy_version": metadata["policy_version"],
+            "governance_version": metadata["governance_version"],
+            "change_reference": metadata["change_reference"],
             "input_snapshot": {
                 "task_index": session.current_task_index,
                 "trigger": trigger,
@@ -296,7 +309,7 @@ def _record_task_presented(session: PracticeSession, trigger: str):
                 "task_selection_reason": task["taskSelectionReason"],
             },
             "constraint_metadata": {
-                "decision_policy_version": DECISION_POLICY_VERSION,
+                "decision_policy_version": metadata["decision_policy_version"],
                 "exam_mode": session.exam_mode,
             },
         }
@@ -312,13 +325,16 @@ def _record_session_completed_if_needed(session: PracticeSession, trigger: str):
         return
 
     summary = _build_session_summary(session)
+    metadata = _runtime_metadata()
     record_event(
         {
             "user_id": session.user_id,
             "session_id": session.session_id,
             "event_type": "YKI_SESSION_COMPLETED",
-            "decision_version": session.decision_version,
-            "policy_version": session.policy_version,
+            "decision_version": metadata["decision_version"],
+            "policy_version": metadata["policy_version"],
+            "governance_version": metadata["governance_version"],
+            "change_reference": metadata["change_reference"],
             "input_snapshot": {
                 "trigger": trigger,
                 "result_count": len(session.results),
@@ -331,7 +347,7 @@ def _record_session_completed_if_needed(session: PracticeSession, trigger: str):
             },
             "constraint_metadata": {
                 "exam_mode": session.exam_mode,
-                "decision_policy_version": DECISION_POLICY_VERSION,
+                "decision_policy_version": metadata["decision_policy_version"],
             },
         }
     )
@@ -339,6 +355,7 @@ def _record_session_completed_if_needed(session: PracticeSession, trigger: str):
 
 
 def start_practice_session(user_id: str = DEFAULT_USER_ID):
+    metadata = _runtime_metadata()
     session_id = _next_session_id()
     context, tasks = build_practice_tasks(user_id, session_id)
     session = PracticeSession(
@@ -348,13 +365,15 @@ def start_practice_session(user_id: str = DEFAULT_USER_ID):
         focus_areas=context["focusAreas"],
         tasks=tasks,
         exam_mode=is_exam_mode_locked(),
-        policy_version=POLICY_VERSION,
-        decision_version=DECISION_VERSION,
+        policy_version=metadata["policy_version"],
+        decision_version=metadata["decision_version"],
         precomputed_plan={
             "task_ids": [task["id"] for task in tasks],
-            "decision_version": DECISION_VERSION,
-            "policy_version": POLICY_VERSION,
-            "decision_policy_version": DECISION_POLICY_VERSION,
+            "decision_version": metadata["decision_version"],
+            "policy_version": metadata["policy_version"],
+            "decision_policy_version": metadata["decision_policy_version"],
+            "governance_version": metadata["governance_version"],
+            "change_reference": metadata["change_reference"],
             "exam_mode": is_exam_mode_locked(),
             "deterministic_seed": context.get("deterministicSeed"),
         },
@@ -367,8 +386,10 @@ def start_practice_session(user_id: str = DEFAULT_USER_ID):
             "user_id": user_id,
             "session_id": session.session_id,
             "event_type": "YKI_SESSION_STARTED",
-            "decision_version": DECISION_VERSION,
-            "policy_version": POLICY_VERSION,
+            "decision_version": metadata["decision_version"],
+            "policy_version": metadata["policy_version"],
+            "governance_version": metadata["governance_version"],
+            "change_reference": metadata["change_reference"],
             "input_snapshot": {
                 "focus_areas": context["focusAreas"],
                 "practice_level": context["practiceLevel"],
@@ -388,7 +409,7 @@ def start_practice_session(user_id: str = DEFAULT_USER_ID):
                 ],
             },
             "constraint_metadata": {
-                "decision_policy_version": DECISION_POLICY_VERSION,
+                "decision_policy_version": metadata["decision_policy_version"],
             },
         }
     )
@@ -455,13 +476,16 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
             "difficultyLevel": current_task.get("difficultyLevel"),
         },
     )
+    metadata = _runtime_metadata()
     record_event(
         {
             "user_id": session.user_id,
             "session_id": session.session_id,
             "event_type": "YKI_RESPONSE_SUBMITTED",
-            "decision_version": session.decision_version,
-            "policy_version": session.policy_version,
+            "decision_version": metadata["decision_version"],
+            "policy_version": metadata["policy_version"],
+            "governance_version": metadata["governance_version"],
+            "change_reference": metadata["change_reference"],
             "input_snapshot": {
                 "task_id": current_task["id"],
                 "section": current_task["section"],
@@ -478,7 +502,7 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
             },
             "constraint_metadata": {
                 "exam_mode": session.exam_mode,
-                "decision_policy_version": DECISION_POLICY_VERSION,
+                "decision_policy_version": metadata["decision_policy_version"],
             },
         }
     )

@@ -18,6 +18,8 @@ type TaskView = {
 type TraceView = {
   decisionVersion: string;
   policyVersion: string;
+  governanceVersion: string;
+  changeReference: string;
   examMode: boolean;
   precomputedPlanSummary: string;
   tasks: Array<{
@@ -165,6 +167,8 @@ export default function YkiPracticeScreen({
             <Text variant="title">Session Trace</Text>
             <Text>Decision version: {trace.decisionVersion}</Text>
             <Text>Policy version: {trace.policyVersion}</Text>
+            <Text>Governance version: {trace.governanceVersion}</Text>
+            <Text tone="secondary">Change reference: {trace.changeReference}</Text>
             <Text>Exam mode: {trace.examMode ? "locked" : "adaptive"}</Text>
             <Text tone="secondary">Precomputed plan: {trace.precomputedPlanSummary}</Text>
             {trace.tasks.map((item) => (

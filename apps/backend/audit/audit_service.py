@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 from audit.audit_integrity import compute_event_hash, get_event_stream_key
 from audit.audit_models import AUDIT_EVENT_TYPES, AuditEvent, serialize_event
+from learning.decision_version import get_decision_metadata
 
 _audit_store: list[AuditEvent] = []
 _audit_enabled = True
@@ -20,6 +21,8 @@ def _next_event_id():
 
 
 def _coerce_event(event: AuditEvent | dict):
+    runtime_metadata = get_decision_metadata()
+
     if isinstance(event, AuditEvent):
         return AuditEvent(
             event_id=event.event_id or _next_event_id(),
@@ -27,8 +30,10 @@ def _coerce_event(event: AuditEvent | dict):
             user_id=event.user_id,
             session_id=event.session_id,
             event_type=event.event_type,
-            decision_version=event.decision_version,
-            policy_version=event.policy_version,
+            decision_version=event.decision_version or runtime_metadata["decision_version"],
+            policy_version=event.policy_version or runtime_metadata["policy_version"],
+            governance_version=event.governance_version or runtime_metadata["governance_version"],
+            change_reference=event.change_reference or runtime_metadata["change_reference"],
             input_snapshot=deepcopy(event.input_snapshot),
             output_snapshot=deepcopy(event.output_snapshot),
             constraint_metadata=deepcopy(event.constraint_metadata),
@@ -46,8 +51,10 @@ def _coerce_event(event: AuditEvent | dict):
         user_id=event["user_id"],
         session_id=event.get("session_id"),
         event_type=event_type,
-        decision_version=event["decision_version"],
-        policy_version=event["policy_version"],
+        decision_version=event.get("decision_version") or runtime_metadata["decision_version"],
+        policy_version=event.get("policy_version") or runtime_metadata["policy_version"],
+        governance_version=event.get("governance_version") or runtime_metadata["governance_version"],
+        change_reference=event.get("change_reference") or runtime_metadata["change_reference"],
         input_snapshot=deepcopy(event.get("input_snapshot") or {}),
         output_snapshot=deepcopy(event.get("output_snapshot") or {}),
         constraint_metadata=deepcopy(event.get("constraint_metadata") or {}),
@@ -96,6 +103,8 @@ def record_event(event: AuditEvent | dict):
         event_type=normalized_event.event_type,
         decision_version=normalized_event.decision_version,
         policy_version=normalized_event.policy_version,
+        governance_version=normalized_event.governance_version,
+        change_reference=normalized_event.change_reference,
         input_snapshot=deepcopy(normalized_event.input_snapshot),
         output_snapshot=deepcopy(normalized_event.output_snapshot),
         constraint_metadata=deepcopy(normalized_event.constraint_metadata),

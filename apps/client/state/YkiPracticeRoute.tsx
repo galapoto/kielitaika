@@ -56,7 +56,9 @@ export default function YkiPracticeRoute() {
     return {
       decisionVersion: data.sessionTrace.decision_version,
       examMode: data.examMode ?? data.sessionTrace.exam_mode ?? false,
+      governanceVersion: data.governanceVersion ?? data.sessionTrace.governance_version ?? "legacy_uncontrolled",
       policyVersion: data.sessionTrace.policy_version ?? "legacy",
+      changeReference: data.changeReference ?? data.sessionTrace.change_reference ?? "none",
       precomputedPlanSummary: data.precomputedPlan?.task_ids.join(", ") ?? "legacy session plan",
       tasks: data.sessionTrace.tasks.slice(0, 5).map((item) => ({
         difficultyLevel: item.difficulty_level,
@@ -92,6 +94,8 @@ export default function YkiPracticeRoute() {
 
     return [
       `Integrity status: ${integrity.integrityStatus}`,
+      `Governance version: ${data.governanceVersion ?? "legacy_uncontrolled"}`,
+      `Change reference: ${data.changeReference ?? "none"}`,
       `Replay verification: ${data.auditVerification.ok ? "consistent" : "issues detected"}`,
       `Hash chain length: ${integrity.chainLength}`,
       integrity.failureEventId

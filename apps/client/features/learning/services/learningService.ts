@@ -87,6 +87,8 @@ export type LearningModule = {
     decision_version: string;
     policy_version: string;
     decision_policy_version: string;
+    governance_version: string;
+    change_reference: string | null;
     weak_patterns_used: string[];
     mastery_score_used: {
       module_mastery_score: number;
@@ -181,12 +183,17 @@ export type LearningModulesData = {
   decisionVersion: string;
   policyVersion: string;
   decisionPolicyVersion: string;
+  governanceVersion: string;
+  changeReference: string | null;
 };
 
 export type LearningDebugState = {
   decisionVersion: string;
   policyVersion: string;
   decisionPolicyVersion: string;
+  governanceVersion: string;
+  changeReference: string | null;
+  governanceStatus: string;
   currentLevel: string | null;
   weakPatterns: string[];
   unitMastery: Array<{
@@ -205,6 +212,19 @@ export type LearningDebugState = {
     policy_version: string;
     decision_version: string;
     decision_policy_version: string;
+    governance_version: string;
+    change_reference: string | null;
+    governance_status: string;
+    lastApprovedChange: {
+      change_id: string;
+      change_type: string;
+      affected_component: string;
+      previous_version: string | null;
+      new_version: string;
+      justification: string;
+      actor_id: string;
+      timestamp: string;
+    } | null;
     rules: {
       adaptation: {
         weight_multiplier_min: number;
@@ -349,6 +369,8 @@ export type LearningDebugState = {
     event_type: string;
     decision_version: string;
     policy_version: string;
+    governance_version: string;
+    change_reference: string | null;
     previous_event_hash: string | null;
     event_hash: string | null;
     input_snapshot: Record<string, unknown>;

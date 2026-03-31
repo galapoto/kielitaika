@@ -98,11 +98,15 @@ export type YkiPracticeSession = {
   examMode?: boolean;
   policyVersion?: string;
   decisionVersion?: string;
+  governanceVersion?: string;
+  changeReference?: string | null;
   precomputedPlan?: {
     task_ids: string[];
     decision_version: string;
     policy_version: string;
     decision_policy_version: string;
+    governance_version?: string;
+    change_reference?: string | null;
     exam_mode: boolean;
     deterministic_seed: string;
   };
@@ -117,6 +121,8 @@ export type YkiPracticeSession = {
     decision_version: string;
     policy_version?: string;
     decision_policy_version?: string;
+    governance_version?: string;
+    change_reference?: string | null;
     exam_mode?: boolean;
     adaptiveContext: Record<string, unknown>;
     tasks: Array<{
@@ -154,6 +160,8 @@ export type YkiPracticeSession = {
     event_type: string;
     decision_version: string;
     policy_version: string;
+    governance_version: string;
+    change_reference: string | null;
     previous_event_hash: string | null;
     event_hash: string | null;
     input_snapshot: Record<string, unknown>;

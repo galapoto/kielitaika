@@ -20,6 +20,8 @@ def compute_event_hash(event: dict, previous_hash: str | None):
         "event_type": event.get("event_type"),
         "decision_version": event.get("decision_version"),
         "policy_version": event.get("policy_version"),
+        "governance_version": event.get("governance_version"),
+        "change_reference": event.get("change_reference"),
         "input_snapshot": event.get("input_snapshot") or {},
         "output_snapshot": event.get("output_snapshot") or {},
         "constraint_metadata": event.get("constraint_metadata") or {},

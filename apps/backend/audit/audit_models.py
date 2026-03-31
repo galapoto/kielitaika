@@ -37,6 +37,8 @@ class AuditEvent:
     event_type: AuditEventType
     decision_version: str
     policy_version: str
+    governance_version: str
+    change_reference: str | None
     input_snapshot: dict = field(default_factory=dict)
     output_snapshot: dict = field(default_factory=dict)
     constraint_metadata: dict = field(default_factory=dict)

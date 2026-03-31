@@ -9,6 +9,7 @@ from audit.audit_service import get_session_events, get_user_events, reset_audit
 from audit.audit_integrity import verify_audit_integrity
 from audit.replay_engine import replay_session, verify_replay_consistency
 from learning.graph_service import list_modules_for_user
+from learning.policy_engine import reset_policy_governance
 from learning.practice_service import generate_practice
 from learning.progress_service import record_practice_result, reset_progress_store
 from yki.storage import _history
@@ -18,6 +19,7 @@ from yki_practice.service import reset_practice_sessions
 
 class AuditReplayTests(unittest.TestCase):
     def setUp(self):
+        reset_policy_governance()
         reset_progress_store()
         reset_practice_sessions()
         reset_audit_store()

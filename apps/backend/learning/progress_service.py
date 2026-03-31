@@ -2,10 +2,9 @@ from dataclasses import asdict
 from datetime import datetime, timedelta, UTC
 
 from audit.audit_service import record_event
-from learning.decision_version import DECISION_VERSION, POLICY_VERSION
+from learning.decision_version import get_decision_metadata
 from learning.policy_engine import (
     clamp_retry_count,
-    get_policy_config,
     get_stagnation_policy,
     resolve_stagnation_stage,
 )
@@ -19,11 +18,6 @@ _recommendation_outcome_store: list[RecommendationOutcome] = []
 _learning_signal_log_store: list[dict] = []
 MAX_REVIEW_INTERVAL_DAYS = 7
 RECENT_MASTERY_WEIGHTS = [0.2, 0.3, 0.6]
-_POLICY_CONFIG = get_policy_config()
-_STAGNATION_POLICY = get_stagnation_policy()
-STAGNATION_ATTEMPT_THRESHOLD = _STAGNATION_POLICY["threshold_attempts"]
-STAGNATION_IMPROVEMENT_EPSILON = _STAGNATION_POLICY["improvement_epsilon"]
-STAGNATION_RETRY_LIMIT = _STAGNATION_POLICY["retry_limit"]
 MAX_SIGNAL_HISTORY = 8
 
 
@@ -64,13 +58,30 @@ def _parse_timestamp(value: str | None):
         return None
 
 
-def get_stagnation_config():
+def _get_runtime_metadata():
+    return get_decision_metadata()
+
+
+def _get_stagnation_settings():
+    policy = get_stagnation_policy()
     return {
-        "attemptThreshold": STAGNATION_ATTEMPT_THRESHOLD,
-        "improvementEpsilon": STAGNATION_IMPROVEMENT_EPSILON,
-        "retryLimit": STAGNATION_RETRY_LIMIT,
-        "policyVersion": POLICY_VERSION,
-        "escalationPath": _STAGNATION_POLICY["escalation_path"],
+        "attempt_threshold": policy["threshold_attempts"],
+        "improvement_epsilon": policy["improvement_epsilon"],
+        "retry_limit": policy["retry_limit"],
+        "escalation_path": policy["escalation_path"],
+    }
+
+
+def get_stagnation_config():
+    settings = _get_stagnation_settings()
+    metadata = _get_runtime_metadata()
+    return {
+        "attemptThreshold": settings["attempt_threshold"],
+        "improvementEpsilon": settings["improvement_epsilon"],
+        "retryLimit": settings["retry_limit"],
+        "policyVersion": metadata["policy_version"],
+        "governanceVersion": metadata["governance_version"],
+        "escalationPath": settings["escalation_path"],
     }
 
 
@@ -246,6 +257,7 @@ def _sync_unit_stagnation(user_id: str, unit_id: str):
 
 def _serialize_unit_progress(progress: UserUnitProgress):
     now = _current_time()
+    metadata = _get_runtime_metadata()
     progress.post_recommendation_performance = get_post_recommendation_performance(
         progress.user_id,
         progress.unit_id,
@@ -253,7 +265,8 @@ def _serialize_unit_progress(progress: UserUnitProgress):
     return {
         **asdict(progress),
         "signal_history": _get_recent_signal_history(progress),
-        "policy_version": POLICY_VERSION,
+        "policy_version": metadata["policy_version"],
+        "governance_version": metadata["governance_version"],
         "mastery_level": get_mastery_label(progress.mastery_score),
         **_build_review_metadata(progress, now),
     }
@@ -339,6 +352,7 @@ def _get_effectiveness_impact_label(
     improvement_delta: float = 0.0,
     stagnated: bool = False,
 ):
+    settings = _get_stagnation_settings()
     if stagnated:
         return "stagnated"
     if effectiveness_score >= 0.2:
@@ -347,7 +361,7 @@ def _get_effectiveness_impact_label(
         return "positive"
     if improvement_delta < 0:
         return "ineffective"
-    if abs(improvement_delta) <= STAGNATION_IMPROVEMENT_EPSILON:
+    if abs(improvement_delta) <= settings["improvement_epsilon"]:
         return "neutral"
     return "positive"
 
@@ -372,6 +386,7 @@ def register_recommendation_outcomes(
     weights_used: dict[str, float],
 ):
     now = _current_time().isoformat()
+    settings = _get_stagnation_settings()
 
     for unit_id in unit_ids:
         progress = _get_or_create_unit_progress(user_id, unit_id)
@@ -406,7 +421,7 @@ def register_recommendation_outcomes(
                 attempt_history=[],
                 policy_trace={
                     "policy_version": policy_version,
-                    "stagnation_retry_limit": STAGNATION_RETRY_LIMIT,
+                    "stagnation_retry_limit": settings["retry_limit"],
                 },
             )
         )
@@ -423,6 +438,7 @@ def _update_recommendation_outcomes(
     recorded_at: datetime,
 ):
     updated = False
+    settings = _get_stagnation_settings()
 
     for outcome in _recommendation_outcome_store:
         if outcome.user_id != user_id or outcome.unit_id != unit_id:
@@ -450,8 +466,8 @@ def _update_recommendation_outcomes(
             }
         )
         if (
-            outcome.subsequent_attempts >= STAGNATION_ATTEMPT_THRESHOLD
-            and abs(outcome.improvement_delta) <= STAGNATION_IMPROVEMENT_EPSILON
+            outcome.subsequent_attempts >= settings["attempt_threshold"]
+            and abs(outcome.improvement_delta) <= settings["improvement_epsilon"]
         ):
             outcome.status = "stagnated"
             outcome.retry_count = clamp_retry_count(outcome.retry_count + 1)
@@ -460,18 +476,18 @@ def _update_recommendation_outcomes(
             outcome.status = "completed"
             outcome.retry_count = 0
             outcome.policy_stage = resolve_stagnation_stage(0)
-        elif outcome.subsequent_attempts >= STAGNATION_ATTEMPT_THRESHOLD and outcome.improvement_delta < 0:
+        elif outcome.subsequent_attempts >= settings["attempt_threshold"] and outcome.improvement_delta < 0:
             outcome.status = "completed"
             outcome.retry_count = clamp_retry_count(outcome.retry_count + 1)
-            if outcome.retry_count >= STAGNATION_RETRY_LIMIT:
-                outcome.policy_stage = resolve_stagnation_stage(STAGNATION_RETRY_LIMIT + 1)
+            if outcome.retry_count >= settings["retry_limit"]:
+                outcome.policy_stage = resolve_stagnation_stage(settings["retry_limit"] + 1)
             else:
                 outcome.policy_stage = resolve_stagnation_stage(outcome.retry_count)
-        if outcome.status == "stagnated" and outcome.retry_count >= STAGNATION_RETRY_LIMIT:
-            outcome.policy_stage = resolve_stagnation_stage(STAGNATION_RETRY_LIMIT + 1)
+        if outcome.status == "stagnated" and outcome.retry_count >= settings["retry_limit"]:
+            outcome.policy_stage = resolve_stagnation_stage(settings["retry_limit"] + 1)
         outcome.policy_trace = {
             "policy_version": outcome.policy_version,
-            "retry_limit": STAGNATION_RETRY_LIMIT,
+            "retry_limit": settings["retry_limit"],
             "retry_count": outcome.retry_count,
             "policy_stage": outcome.policy_stage,
             "signal_source": signal_source,
@@ -535,6 +551,7 @@ def get_learning_signal_logs(user_id: str = DEFAULT_USER_ID):
 
 def get_stagnated_units(user_id: str = DEFAULT_USER_ID):
     stagnated_units = []
+    metadata = _get_runtime_metadata()
 
     for unit_id in repository.units:
         progress = _unit_progress_store.get((user_id, unit_id))
@@ -581,7 +598,8 @@ def get_stagnated_units(user_id: str = DEFAULT_USER_ID):
                 "switchDifficultyTo": switch_difficulty_to,
                 "retryCount": progress.stagnation_retry_count,
                 "policyStage": progress.stagnation_stage,
-                "policyVersion": POLICY_VERSION,
+                "policyVersion": metadata["policy_version"],
+                "governanceVersion": metadata["governance_version"],
             }
         )
 
@@ -754,16 +772,19 @@ def record_practice_result(
     serialized_unit_progress = _serialize_unit_progress(unit_progress)
     serialized_module_progress = _serialize_module_progress(module_progress)
     serialized_signal = _serialize_learning_signal_log(signal_entry)
+    metadata = _get_runtime_metadata()
 
     record_event(
         {
             "user_id": user_id,
             "session_id": signal_metadata.get("sessionId") if signal_metadata else None,
             "event_type": "UNIT_ATTEMPTED",
-            "decision_version": signal_metadata.get("decisionVersion", DECISION_VERSION)
+            "decision_version": signal_metadata.get("decisionVersion", metadata["decision_version"])
             if signal_metadata
-            else DECISION_VERSION,
-            "policy_version": POLICY_VERSION,
+            else metadata["decision_version"],
+            "policy_version": metadata["policy_version"],
+            "governance_version": metadata["governance_version"],
+            "change_reference": metadata["change_reference"],
             "input_snapshot": {
                 "module_id": module_id,
                 "unit_id": unit_id,
@@ -793,10 +814,12 @@ def record_practice_result(
                 "user_id": user_id,
                 "session_id": signal_metadata.get("sessionId") if signal_metadata else None,
                 "event_type": "UNIT_COMPLETED",
-                "decision_version": signal_metadata.get("decisionVersion", DECISION_VERSION)
+                "decision_version": signal_metadata.get("decisionVersion", metadata["decision_version"])
                 if signal_metadata
-                else DECISION_VERSION,
-                "policy_version": POLICY_VERSION,
+                else metadata["decision_version"],
+                "policy_version": metadata["policy_version"],
+                "governance_version": metadata["governance_version"],
+                "change_reference": metadata["change_reference"],
                 "input_snapshot": {
                     "module_id": module_id,
                     "unit_id": unit_id,

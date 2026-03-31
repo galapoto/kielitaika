@@ -2,9 +2,25 @@ from copy import deepcopy
 from hashlib import sha256
 
 from audit.audit_service import record_event
-from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
+from governance.approval_service import record_approval, reset_approval_store
+from governance.change_log_service import (
+    activate_change,
+    ensure_governed_component,
+    get_governance_debug_snapshot,
+    get_active_policy_rules,
+    get_last_approved_change,
+    register_change,
+    register_policy_candidate,
+    reset_change_log_store,
+)
+from learning.decision_version import (
+    DECISION_VERSION,
+    GOVERNED_POLICY_COMPONENT,
+    POLICY_VERSION,
+    get_decision_metadata,
+)
 
-POLICY_RULES = {
+DEFAULT_POLICY_RULES = {
     "adaptation": {
         "weight_multiplier_min": 0.8,
         "weight_multiplier_max": 1.2,
@@ -44,13 +60,76 @@ def _normalize_weights(weights: dict[str, float]):
     }
 
 
+def _get_policy_rules():
+    ensure_governed_component(
+        component=GOVERNED_POLICY_COMPONENT,
+        decision_version=DECISION_VERSION,
+        policy_version=POLICY_VERSION,
+        rules=DEFAULT_POLICY_RULES,
+    )
+    active_rules = get_active_policy_rules(GOVERNED_POLICY_COMPONENT)
+    return deepcopy(active_rules or DEFAULT_POLICY_RULES)
+
+
+def _increment_version(version: str):
+    parts = version.split(".")
+    major, minor, patch = (parts + ["0", "0", "0"])[:3]
+    return f"{major}.{minor}.{int(patch) + 1}"
+
+
 def get_policy_config():
+    metadata = get_decision_metadata()
+    governance = get_governance_debug_snapshot(GOVERNED_POLICY_COMPONENT)
     return {
-        "policy_version": POLICY_VERSION,
-        "decision_version": DECISION_VERSION,
-        "decision_policy_version": DECISION_POLICY_VERSION,
-        "rules": deepcopy(POLICY_RULES),
+        "policy_version": metadata["policy_version"],
+        "decision_version": metadata["decision_version"],
+        "decision_policy_version": metadata["decision_policy_version"],
+        "governance_version": metadata["governance_version"],
+        "change_reference": metadata["change_reference"],
+        "governance_status": metadata["governance_status"],
+        "rules": _get_policy_rules(),
+        "lastApprovedChange": governance["lastApprovedChange"],
     }
+
+
+def propose_policy_change(actor_id: str, justification: str, updated_rules: dict):
+    metadata = get_decision_metadata()
+    new_version = _increment_version(metadata["policy_version"])
+    change_record = register_change(
+        actor_id=actor_id,
+        change_type="POLICY_UPDATE",
+        affected_component=GOVERNED_POLICY_COMPONENT,
+        previous_version=metadata["policy_version"],
+        new_version=new_version,
+        justification=justification,
+        metadata={"governance_version": metadata["governance_version"]},
+    )
+    register_policy_candidate(change_record["change_id"], updated_rules)
+    return change_record
+
+
+def approve_policy_change(change_id: str, approver_id: str, approved: bool = True):
+    return record_approval(change_id, approver_id, approved)
+
+
+def activate_policy_change(change_id: str):
+    activate_change(change_id, decision_version=DECISION_VERSION)
+    return get_policy_config()
+
+
+def get_last_approved_policy_change():
+    return get_last_approved_change(GOVERNED_POLICY_COMPONENT)
+
+
+def reset_policy_governance():
+    reset_approval_store()
+    reset_change_log_store()
+    ensure_governed_component(
+        component=GOVERNED_POLICY_COMPONENT,
+        decision_version=DECISION_VERSION,
+        policy_version=POLICY_VERSION,
+        rules=DEFAULT_POLICY_RULES,
+    )
 
 
 def build_deterministic_seed(*parts):
@@ -65,7 +144,7 @@ def deterministic_order_key(seed: str, *parts):
 
 
 def clamp_yki_influence_bonus(suggested_bonus: float):
-    cap = POLICY_RULES["adaptation"]["yki_influence_max_bonus"]
+    cap = _get_policy_rules()["adaptation"]["yki_influence_max_bonus"]
     return max(0.0, min(cap, _round_score(suggested_bonus)))
 
 
@@ -76,7 +155,8 @@ def clamp_adaptive_weights(
     yki_influence_bonus: float = 0.0,
     audit_context: dict | None = None,
 ):
-    adaptation_rules = POLICY_RULES["adaptation"]
+    adaptation_rules = _get_policy_rules()["adaptation"]
+    metadata = get_decision_metadata()
     min_multiplier = adaptation_rules["weight_multiplier_min"]
     max_multiplier = adaptation_rules["weight_multiplier_max"]
     max_adjustment = adaptation_rules["max_weight_adjustment"]
@@ -84,7 +164,6 @@ def clamp_adaptive_weights(
     clamped_values = []
     rejected_changes = []
     constrained_weights = {}
-    clamped_adjustments = {}
 
     capped_yki_bonus = clamp_yki_influence_bonus(yki_influence_bonus)
     if capped_yki_bonus != _round_score(yki_influence_bonus):
@@ -110,7 +189,6 @@ def clamp_adaptive_weights(
             )
 
         constrained_weights[factor] = constrained_weight
-        clamped_adjustments[factor] = _round_score(constrained_weight - base_weight)
 
         if suggested_adjustment != allowed_adjustment:
             clamped_values.append(
@@ -128,7 +206,9 @@ def clamp_adaptive_weights(
     }
 
     constrained_policy = {
-        "policy_version": POLICY_VERSION,
+        "policy_version": metadata["policy_version"],
+        "governance_version": metadata["governance_version"],
+        "change_reference": metadata["change_reference"],
         "applied_constraints": applied_constraints,
         "clamped_values": clamped_values,
         "rejected_changes": rejected_changes,
@@ -147,8 +227,10 @@ def clamp_adaptive_weights(
                 "user_id": audit_context["user_id"],
                 "session_id": audit_context.get("session_id"),
                 "event_type": "POLICY_APPLIED",
-                "decision_version": DECISION_VERSION,
-                "policy_version": POLICY_VERSION,
+                "decision_version": metadata["decision_version"],
+                "policy_version": metadata["policy_version"],
+                "governance_version": metadata["governance_version"],
+                "change_reference": metadata["change_reference"],
                 "input_snapshot": {
                     "module_id": audit_context.get("module_id"),
                     "base_weights": {
@@ -167,7 +249,9 @@ def clamp_adaptive_weights(
                     "yki_influence_bonus": constrained_policy["yki_influence_bonus"],
                 },
                 "constraint_metadata": {
-                    "decision_policy_version": DECISION_POLICY_VERSION,
+                    "decision_policy_version": metadata["decision_policy_version"],
+                    "governance_version": metadata["governance_version"],
+                    "change_reference": metadata["change_reference"],
                     "applied_constraints": constrained_policy["applied_constraints"],
                     "clamped_values": constrained_policy["clamped_values"],
                     "rejected_changes": constrained_policy["rejected_changes"],
@@ -179,11 +263,11 @@ def clamp_adaptive_weights(
 
 
 def get_stagnation_policy():
-    return deepcopy(POLICY_RULES["stagnation"])
+    return deepcopy(_get_policy_rules()["stagnation"])
 
 
 def resolve_stagnation_stage(retry_count: int):
-    escalation_path = POLICY_RULES["stagnation"]["escalation_path"]
+    escalation_path = _get_policy_rules()["stagnation"]["escalation_path"]
     if retry_count < 0:
         retry_count = 0
     if retry_count >= len(escalation_path):
@@ -192,9 +276,17 @@ def resolve_stagnation_stage(retry_count: int):
 
 
 def clamp_retry_count(retry_count: int):
-    retry_limit = POLICY_RULES["stagnation"]["retry_limit"]
+    retry_limit = _get_policy_rules()["stagnation"]["retry_limit"]
     return max(0, min(retry_limit, int(retry_count)))
 
 
 def is_exam_mode_locked():
-    return bool(POLICY_RULES["yki"]["exam_mode_locked"])
+    return bool(_get_policy_rules()["yki"]["exam_mode_locked"])
+
+
+ensure_governed_component(
+    component=GOVERNED_POLICY_COMPONENT,
+    decision_version=DECISION_VERSION,
+    policy_version=POLICY_VERSION,
+    rules=DEFAULT_POLICY_RULES,
+)

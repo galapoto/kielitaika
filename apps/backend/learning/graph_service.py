@@ -1,6 +1,6 @@
 from audit.audit_service import get_user_events, record_event
 from audit.replay_engine import replay_user_journey
-from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
+from learning.decision_version import get_decision_metadata
 from learning.decision_weights import get_decision_weights
 from learning.policy_engine import (
     build_deterministic_seed,
@@ -23,7 +23,6 @@ from learning.repository import repository
 from yki.session_store import DEFAULT_USER_ID, get_progress_history
 
 LEVEL_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"]
-POLICY_CONFIG = get_policy_config()
 
 
 def get_level_rank(level: str | None):
@@ -203,6 +202,8 @@ def adaptive_weight_modifier(
     user_id: str,
     emit_audit: bool = True,
 ):
+    metadata = get_decision_metadata()
+    policy_config = get_policy_config()
     module_outcomes = [
         outcome
         for outcome in get_recommendation_outcomes(user_id)
@@ -240,7 +241,7 @@ def adaptive_weight_modifier(
     retry_logic = None
     variation_unit_ids = []
     yki_influence_bonus = min(
-        POLICY_CONFIG["rules"]["yki"]["max_influence_contribution"],
+        policy_config["rules"]["yki"]["max_influence_contribution"],
         _round_score(
             sum(
                 item["yki_influence_count"]
@@ -297,7 +298,9 @@ def adaptive_weight_modifier(
     normalized_adjustments = constrained_policy["adjustments"]
 
     return {
-        "policyVersion": POLICY_VERSION,
+        "policyVersion": metadata["policy_version"],
+        "governanceVersion": metadata["governance_version"],
+        "changeReference": metadata["change_reference"],
         "weights": effective_weights,
         "adjustments": normalized_adjustments,
         "rawAdjustments": constrained_policy["raw_adjustments"],
@@ -358,6 +361,7 @@ def score_module(
     weight_overrides: dict | None = None,
     emit_audit: bool = True,
 ):
+    metadata = get_decision_metadata()
     matched_weaknesses = [
         weak_pattern for weak_pattern in weak_patterns if weak_pattern in module["focusTags"]
     ]
@@ -426,9 +430,11 @@ def score_module(
         adaptive_feedback=adaptive_feedback,
     )
     why_this_was_selected = {
-        "decision_version": DECISION_VERSION,
-        "policy_version": POLICY_VERSION,
-        "decision_policy_version": DECISION_POLICY_VERSION,
+        "decision_version": metadata["decision_version"],
+        "policy_version": metadata["policy_version"],
+        "decision_policy_version": metadata["decision_policy_version"],
+        "governance_version": metadata["governance_version"],
+        "change_reference": metadata["change_reference"],
         "weak_patterns_used": matched_weaknesses,
         "mastery_score_used": {
             "module_mastery_score": module_progress["mastery_score"],
@@ -491,6 +497,7 @@ def list_modules_for_user(
     *,
     emit_audit: bool = True,
 ):
+    metadata = get_decision_metadata()
     progress = get_progress_history(user_id)
     weak_patterns = progress.get("weak_patterns", [])
     current_level = progress.get("current_level")
@@ -502,7 +509,7 @@ def list_modules_for_user(
     ranking_seed = build_deterministic_seed(
         "learning-recommendations",
         user_id,
-        DECISION_POLICY_VERSION,
+        metadata["decision_policy_version"],
         current_level or "none",
         ",".join(sorted(weak_patterns)),
     )
@@ -534,8 +541,10 @@ def list_modules_for_user(
                 "user_id": user_id,
                 "session_id": None,
                 "event_type": "RECOMMENDATION_GENERATED",
-                "decision_version": DECISION_VERSION,
-                "policy_version": POLICY_VERSION,
+                "decision_version": metadata["decision_version"],
+                "policy_version": metadata["policy_version"],
+                "governance_version": metadata["governance_version"],
+                "change_reference": metadata["change_reference"],
                 "input_snapshot": {
                     "current_level": current_level,
                     "weak_patterns": weak_patterns,
@@ -556,7 +565,7 @@ def list_modules_for_user(
                     ],
                 },
                 "constraint_metadata": {
-                    "decision_policy_version": DECISION_POLICY_VERSION,
+                    "decision_policy_version": metadata["decision_policy_version"],
                 },
             }
         )
@@ -566,8 +575,8 @@ def list_modules_for_user(
             user_id,
             module["id"],
             get_recommended_unit_ids(module),
-            DECISION_VERSION,
-            POLICY_VERSION,
+            metadata["decision_version"],
+            metadata["policy_version"],
             [
                 factor_name
                 for factor_name, values in module["scoreBreakdown"].items()
@@ -582,11 +591,13 @@ def list_modules_for_user(
                 "user_id": user_id,
                 "session_id": None,
                 "event_type": "RECOMMENDATION_SERVED",
-                "decision_version": DECISION_VERSION,
-                "policy_version": POLICY_VERSION,
+                "decision_version": metadata["decision_version"],
+                "policy_version": metadata["policy_version"],
+                "governance_version": metadata["governance_version"],
+                "change_reference": metadata["change_reference"],
                 "input_snapshot": {
                     "served_limit": 3,
-                    "decision_policy_version": DECISION_POLICY_VERSION,
+                    "decision_policy_version": metadata["decision_policy_version"],
                 },
                 "output_snapshot": {
                     "served_module_ids": [module["id"] for module in suggested_modules],
@@ -611,13 +622,17 @@ def list_modules_for_user(
         "dueReviewUnitIds": sorted(due_review_unit_ids),
         "stagnatedUnitIds": [item["unitId"] for item in stagnated_units],
         "weightsUsed": get_decision_weights(weight_overrides),
-        "decisionVersion": DECISION_VERSION,
-        "policyVersion": POLICY_VERSION,
-        "decisionPolicyVersion": DECISION_POLICY_VERSION,
+        "decisionVersion": metadata["decision_version"],
+        "policyVersion": metadata["policy_version"],
+        "decisionPolicyVersion": metadata["decision_policy_version"],
+        "governanceVersion": metadata["governance_version"],
+        "changeReference": metadata["change_reference"],
     }
 
 
 def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID, weight_overrides: dict | None = None):
+    metadata = get_decision_metadata()
+    policy_config = get_policy_config()
     module_listing = list_modules_for_user(user_id, weight_overrides, emit_audit=False)
     unit_progress = []
 
@@ -668,15 +683,19 @@ def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID, weight_overrid
     audit_journey = replay_user_journey(user_id)
 
     return {
-        "decisionVersion": DECISION_VERSION,
-        "policyVersion": POLICY_VERSION,
-        "decisionPolicyVersion": DECISION_POLICY_VERSION,
+        "decisionVersion": metadata["decision_version"],
+        "policyVersion": metadata["policy_version"],
+        "decisionPolicyVersion": metadata["decision_policy_version"],
+        "governanceVersion": metadata["governance_version"],
+        "changeReference": metadata["change_reference"],
+        "governanceStatus": metadata["governance_status"],
         "currentLevel": module_listing["currentLevel"],
         "weakPatterns": module_listing["weakPatterns"],
         "unitMastery": unit_progress,
         "dueReviewUnits": due_review_units,
         "stagnationConfig": get_stagnation_config(),
-        "policyConfig": POLICY_CONFIG,
+        "policyConfig": policy_config,
+        "lastApprovedChange": policy_config["lastApprovedChange"],
         "stagnatedUnits": stagnated_units,
         "regressionFlags": regression_flags,
         "recommendationReasoning": recommendation_reasoning,

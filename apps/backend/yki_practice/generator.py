@@ -1,4 +1,4 @@
-from learning.decision_version import DECISION_POLICY_VERSION, DECISION_VERSION, POLICY_VERSION
+from learning.decision_version import get_decision_metadata
 from learning.policy_engine import build_deterministic_seed, deterministic_order_key
 from learning.repository import repository
 from learning.progress_service import get_due_review_units, get_low_mastery_unit_ids
@@ -91,12 +91,13 @@ def _build_fallback_units(practice_level: str):
 
 
 def select_practice_units(user_id: str = DEFAULT_USER_ID, session_id: str | None = None):
+    metadata = get_decision_metadata()
     context = build_adaptive_context(user_id)
     deterministic_seed = build_deterministic_seed(
         "yki-practice-plan",
         user_id,
         session_id or "preview",
-        DECISION_POLICY_VERSION,
+        metadata["decision_policy_version"],
     )
     prioritized_ids = context["dueReviewUnitIds"] + [
         unit_id
@@ -138,8 +139,10 @@ def select_practice_units(user_id: str = DEFAULT_USER_ID, session_id: str | None
                 break
 
     context["deterministicSeed"] = deterministic_seed
-    context["policyVersion"] = POLICY_VERSION
-    context["decisionVersion"] = DECISION_VERSION
+    context["policyVersion"] = metadata["policy_version"]
+    context["decisionVersion"] = metadata["decision_version"]
+    context["governanceVersion"] = metadata["governance_version"]
+    context["changeReference"] = metadata["change_reference"]
     return context, selected_units[: len(SECTION_SEQUENCE)]
 
 

@@ -172,9 +172,14 @@ export default function LearningRoute() {
     const adaptationRules = state.debugState.policyConfig.rules.adaptation;
     const stagnationRules = state.debugState.policyConfig.rules.stagnation;
     const ykiRules = state.debugState.policyConfig.rules.yki;
+    const lastApprovedChange = state.debugState.policyConfig.lastApprovedChange;
 
     return [
       `Policy ${state.debugState.policyVersion}: weight multipliers ${adaptationRules.weight_multiplier_min.toFixed(2)}-${adaptationRules.weight_multiplier_max.toFixed(2)}, max adjustment ${adaptationRules.max_weight_adjustment.toFixed(2)}`,
+      `Governance ${state.debugState.governanceVersion}: ${state.debugState.governanceStatus}`,
+      lastApprovedChange
+        ? `Last approved change ${lastApprovedChange.change_id}: ${lastApprovedChange.change_type} to ${lastApprovedChange.new_version} because ${lastApprovedChange.justification}`
+        : "Last approved change: none",
       `Stagnation threshold ${stagnationRules.threshold_attempts} attempts, retry limit ${stagnationRules.retry_limit}, path ${stagnationRules.escalation_path.join(" -> ")}`,
       `YKI exam mode locked ${ykiRules.exam_mode_locked ? "yes" : "no"}, max influence ${ykiRules.max_influence_contribution.toFixed(2)}`,
     ];
