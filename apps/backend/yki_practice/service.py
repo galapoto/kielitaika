@@ -176,13 +176,14 @@ def _build_session_trace(context: dict, tasks: list[dict]):
                 "difficulty_level": task["difficultyLevel"],
                 "user_performance": None,
                 "feedback_generated": None,
+                "learning_influence": None,
             }
             for task in tasks
         ],
     }
 
 
-def _update_session_trace(session: PracticeSession, task: dict, evaluation: dict):
+def _update_session_trace(session: PracticeSession, task: dict, evaluation: dict, learning_progress: dict | None):
     if not session.session_trace:
         return
 
@@ -201,6 +202,7 @@ def _update_session_trace(session: PracticeSession, task: dict, evaluation: dict
             "ruleApplies": evaluation["ruleApplies"],
             "linkedLearningUnitId": evaluation["relatedLearningUnitId"],
         }
+        trace_entry["learning_influence"] = learning_progress["learningSignal"] if learning_progress else None
         return
 
 
@@ -297,6 +299,12 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
             "module_id": current_task["relatedModuleId"],
         },
         evaluation["isCorrect"],
+        signal_source="yki_practice",
+        signal_metadata={
+            "taskType": current_task["type"],
+            "taskSection": current_task["section"],
+            "difficultyLevel": current_task.get("difficultyLevel"),
+        },
     )
     session.results = [
         result for result in session.results if result["taskId"] != current_task["id"]
@@ -312,9 +320,10 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
             "relatedLearningUnitId": current_task["relatedLearningUnitId"],
             "linkedLearningUnit": evaluation["linkedLearningUnit"],
             "learningProgress": learning_progress,
+            "learningSignal": learning_progress["learningSignal"] if learning_progress else None,
         }
     )
-    _update_session_trace(session, current_task, evaluation)
+    _update_session_trace(session, current_task, evaluation, learning_progress)
 
     if action != "submit_only":
         session.current_task_index = min(session.current_task_index + 1, len(session.tasks))

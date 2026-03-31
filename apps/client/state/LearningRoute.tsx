@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 
+import { getApiContractViolations } from "@core/api/apiClient";
 import Screen from "@ui/components/layout/Screen";
 import Section from "@ui/components/layout/Section";
 import Text from "@ui/components/primitives/Text";
@@ -35,6 +36,7 @@ export default function LearningRoute() {
   });
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [completedUnitIds, setCompletedUnitIds] = useState<string[]>([]);
+  const [stagnationActionMessage, setStagnationActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     void storageService.get(COMPLETED_UNITS_KEY).then((value) => {
@@ -107,6 +109,33 @@ export default function LearningRoute() {
   }, [user]);
 
   const recommendedUnits = useMemo(() => {
+    const suggestedModules = state.modulesData?.suggestedModules ?? [];
+    if (suggestedModules.length) {
+      return suggestedModules.map((module) => {
+        const preferredUnitId =
+          module.stagnatedUnitIds?.[0] ??
+          module.dueReviewUnitIds?.[0] ??
+          module.lowMasteryUnitIds?.[0] ??
+          module.unitIds[0];
+        const preferredUnit = module.units.find((unit) => unit.id === preferredUnitId) ?? module.units[0];
+        const matchingProgress = state.debugState?.unitMastery.find(
+          (item) => item.unit.id === preferredUnit?.id,
+        )?.progress;
+
+        return {
+          id: preferredUnit?.id ?? module.id,
+          masteryLabel: matchingProgress?.mastery_level ?? "improving",
+          moduleTitle: module.title,
+          stagnated: Boolean(module.stagnatedUnitIds?.length),
+          suggestionReason: module.suggestionReason ?? "Recommended from the adaptive learning graph.",
+          title: preferredUnit?.title ?? module.title,
+          urgencyLabel:
+            matchingProgress?.urgency ??
+            (module.stagnatedUnitIds?.length ? "stagnated" : "adaptive"),
+        };
+      });
+    }
+
     if (!state.debugState) {
       return [];
     }
@@ -114,10 +143,13 @@ export default function LearningRoute() {
     return state.debugState.dueReviewUnits.map((item) => ({
       id: item.unit.id,
       masteryLabel: item.progress.mastery_level,
+      moduleTitle: item.unit.moduleIds[0] ?? "review",
+      stagnated: Boolean(item.progress.stagnated),
+      suggestionReason: item.progress.stagnation_reason ?? "Unit is due for review.",
       title: item.unit.title,
       urgencyLabel: item.urgency,
     }));
-  }, [state.debugState]);
+  }, [state.debugState, state.modulesData]);
 
   const factorContributionSummary = useMemo(() => {
     const factorAverages = state.debugState?.recommendationEffectiveness.factorAverages;
@@ -128,7 +160,7 @@ export default function LearningRoute() {
 
     return Object.entries(factorAverages).map(
       ([key, value]) =>
-        `${key}: avg ${value.average_effectiveness.toFixed(2)} across ${value.samples} samples (${value.impact_label})`,
+        `${key}: avg effectiveness ${value.average_effectiveness.toFixed(2)}, avg delta ${value.average_improvement_delta.toFixed(2)} across ${value.samples} samples (${value.impact_label}, stagnated ${value.stagnated_count})`,
     );
   }, [state.debugState]);
 
@@ -138,6 +170,16 @@ export default function LearningRoute() {
     }
 
     return state.debugState.recommendationReasoning.slice(0, 5).map((item) => ({
+      adaptiveSummary:
+        item.whyThisWasSelected?.adaptive_weight_modifier
+          ? [
+              `adaptive ${Object.entries(item.whyThisWasSelected.adaptive_weight_modifier.adjustments)
+                .filter(([, value]) => value !== 0)
+                .map(([key, value]) => `${key} ${value >= 0 ? "+" : ""}${value.toFixed(2)}`)
+                .join(", ") || "no changes"}`,
+              `retry ${item.whyThisWasSelected.adaptive_weight_modifier.retryLogic ?? "none"}`,
+            ].join(" | ")
+          : "Adaptive weighting unavailable",
       finalScore: item.scoreBreakdown?.final_score ?? 0,
       moduleId: item.moduleId,
       title: item.title,
@@ -153,6 +195,76 @@ export default function LearningRoute() {
     }));
   }, [state.debugState]);
 
+  const adaptiveWeightChanges = useMemo(() => {
+    if (!state.debugState) {
+      return [];
+    }
+
+    return state.debugState.recommendationReasoning
+      .flatMap((item) => {
+        const adaptive = item.whyThisWasSelected?.adaptive_weight_modifier;
+        if (!adaptive) {
+          return [];
+        }
+
+        const changedFactors = Object.entries(adaptive.adjustments)
+          .filter(([, value]) => value !== 0)
+          .map(([key, value]) => `${key} ${value >= 0 ? "+" : ""}${value.toFixed(2)}`);
+
+        if (!changedFactors.length && !adaptive.reasoning.length) {
+          return [];
+        }
+
+        return [
+          `${item.title}: ${changedFactors.join(", ") || "no factor delta"}${adaptive.reasoning.length ? ` | ${adaptive.reasoning.join(" ")}` : ""}`,
+        ];
+      })
+      .slice(0, 6);
+  }, [state.debugState]);
+
+  const recommendationRejections = useMemo(() => {
+    if (!state.debugState) {
+      return [];
+    }
+
+    return state.debugState.recommendationReasoning
+      .filter((item) => item.recommendationRejectedBecause.length)
+      .flatMap((item) =>
+        item.recommendationRejectedBecause.map(
+          (reason) => `${item.title}: ${reason}`,
+        ),
+      )
+      .slice(0, 8);
+  }, [state.debugState]);
+
+  const selectedStagnatedUnit = useMemo(() => {
+    if (!state.debugState?.stagnatedUnits.length) {
+      return null;
+    }
+
+    return (
+      state.debugState.stagnatedUnits.find((item) => item.unitId === selectedUnitId) ??
+      state.debugState.stagnatedUnits[0]
+    );
+  }, [selectedUnitId, state.debugState]);
+
+  const ykiInfluenceLogs = useMemo(() => {
+    return (
+      state.debugState?.ykiInfluenceLogs.slice(0, 6).map(
+        (item) =>
+          `${item.unit_id}: ${item.task_section ?? "task"} ${item.task_type ?? "response"} ${item.is_correct ? "improved" : "missed"} at ${item.difficulty_level ?? "medium"} difficulty (delta ${item.improvement_delta.toFixed(2)})`,
+      ) ?? []
+    );
+  }, [state.debugState]);
+
+  const contractViolations = useMemo(
+    () =>
+      getApiContractViolations().map(
+        (item) => `${item.path}: ${item.details}`,
+      ),
+    [state.debugState, state.modulesData],
+  );
+
   async function handleMarkComplete() {
     if (!selectedUnitId || completedUnitIds.includes(selectedUnitId)) {
       return;
@@ -161,6 +273,36 @@ export default function LearningRoute() {
     const nextCompleted = [...completedUnitIds, selectedUnitId];
     setCompletedUnitIds(nextCompleted);
     await storageService.set(COMPLETED_UNITS_KEY, nextCompleted);
+  }
+
+  function handleUseRetrySuggestion() {
+    if (!selectedStagnatedUnit) {
+      return;
+    }
+
+    setSelectedUnitId(selectedStagnatedUnit.unitId);
+    setStagnationActionMessage(selectedStagnatedUnit.retrySuggestion);
+  }
+
+  function handleTryAlternativeUnit() {
+    if (!selectedStagnatedUnit?.alternativeUnit?.id) {
+      return;
+    }
+
+    setSelectedUnitId(selectedStagnatedUnit.alternativeUnit.id);
+    setStagnationActionMessage(
+      `Switched focus to ${selectedStagnatedUnit.alternativeUnit.title} as an alternative support unit.`,
+    );
+  }
+
+  function handleSwitchDifficulty() {
+    if (!selectedStagnatedUnit) {
+      return;
+    }
+
+    setStagnationActionMessage(
+      `Next retry should switch ${selectedStagnatedUnit.title} to ${selectedStagnatedUnit.switchDifficultyTo} difficulty.`,
+    );
   }
 
   if (!hasHydrated || !user) {
@@ -176,7 +318,9 @@ export default function LearningRoute() {
 
   return (
     <LearningScreen
+      adaptiveWeightChanges={adaptiveWeightChanges}
       completedUnitIds={completedUnitIds}
+      contractViolations={contractViolations}
       decisionVersion={state.debugState?.decisionVersion ?? state.modulesData?.decisionVersion ?? "unknown"}
       errorMessage={state.errorMessage}
       factorContributionSummary={factorContributionSummary}
@@ -192,18 +336,40 @@ export default function LearningRoute() {
         void handleMarkComplete();
       }}
       onRefresh={() => {
+        setStagnationActionMessage(null);
         void load();
       }}
       onSelectUnit={setSelectedUnitId}
+      onSwitchDifficulty={handleSwitchDifficulty}
+      onTryAlternativeUnit={handleTryAlternativeUnit}
+      onUseRetrySuggestion={handleUseRetrySuggestion}
+      recommendationRejections={recommendationRejections}
       rawRecommendationOutcomes={state.debugState?.recommendationOutcomes.slice(0, 5).map((item) => ({
         effectivenessScore: item.effectiveness_score,
         improvementDelta: item.improvement_delta,
+        impactLabel: item.impact_label,
         status: item.status,
         unitId: item.unit_id,
       })) ?? []}
       recommendedUnits={recommendedUnits}
       recommendationTrace={recommendationTrace}
       selectedUnitId={selectedUnitId}
+      selectedStagnatedUnit={
+        selectedStagnatedUnit
+          ? {
+              alternativeUnitTitle: selectedStagnatedUnit.alternativeUnit?.title ?? null,
+              attempts: selectedStagnatedUnit.attempts,
+              masteryScore: selectedStagnatedUnit.masteryScore,
+              stagnationReason: selectedStagnatedUnit.stagnationReason,
+              retrySuggestion: selectedStagnatedUnit.retrySuggestion,
+              switchDifficultyTo: selectedStagnatedUnit.switchDifficultyTo,
+              title: selectedStagnatedUnit.title,
+              unitId: selectedStagnatedUnit.unitId,
+            }
+          : null
+      }
+      stagnationActionMessage={stagnationActionMessage}
+      ykiInfluenceLogs={ykiInfluenceLogs}
     />
   );
 }

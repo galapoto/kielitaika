@@ -40,7 +40,28 @@ export type LearningUnitProgressSummary = {
   days_overdue: number;
   recent_mistake: boolean;
   regression_detected: boolean;
+  stagnated: boolean;
+  stagnation_reason: string | null;
+  stagnation_detected_at: string | null;
   previous_mastery_score: number;
+  yki_influence_count: number;
+  signal_history: Array<{
+    user_id: string;
+    module_id: string;
+    unit_id: string;
+    signal_source: string;
+    is_correct: boolean;
+    task_type: string | null;
+    task_section: string | null;
+    difficulty_level: string | null;
+    recorded_at: string;
+    previous_mastery_score: number;
+    updated_mastery_score: number;
+    improvement_delta: number;
+    effectiveness_score: number;
+    stagnated: boolean;
+    impact_label: string;
+  }>;
 };
 
 export type LearningModule = {
@@ -57,9 +78,12 @@ export type LearningModule = {
   dueReviewUnitIds?: string[];
   recentMistakeUnitIds?: string[];
   regressionUnitIds?: string[];
+  stagnatedUnitIds?: string[];
   suggested?: boolean;
   suggestionReason?: string | null;
+  recommendationRejectedBecause?: string[];
   whyThisWasSelected?: {
+    decision_version: string;
     weak_patterns_used: string[];
     mastery_score_used: {
       module_mastery_score: number;
@@ -71,8 +95,31 @@ export type LearningModule = {
     };
     regression_flag: boolean;
     regression_unit_ids: string[];
+    stagnated_unit_ids: string[];
     difficulty_adjustment: string;
     weights_used: Record<string, number>;
+    base_weights: Record<string, number>;
+    adaptive_weight_modifier: {
+      weights: Record<string, number>;
+      adjustments: Record<string, number>;
+      rawAdjustments: Record<string, number>;
+      averageEffectiveness: number;
+      averageImprovementDelta: number;
+      attemptHistoryDepth: number;
+      measuredOutcomeCount: number;
+      stagnatedUnitIds: string[];
+      retryLogic: string | null;
+      variationUnitIds: string[];
+      rejectionReasons: string[];
+      reasoning: string[];
+      moduleOutcomeStatuses: Array<{
+        unitId: string;
+        status: string;
+        effectivenessScore: number;
+        improvementDelta: number;
+      }>;
+      ykiInfluenceCount: number;
+    };
   };
   scoreBreakdown?: {
     weak_pattern: {
@@ -118,6 +165,7 @@ export type LearningModulesData = {
   weakPatterns: string[];
   lowMasteryUnitIds: string[];
   dueReviewUnitIds: string[];
+  stagnatedUnitIds: string[];
   weightsUsed: Record<string, number>;
   decisionVersion: string;
 };
@@ -131,6 +179,20 @@ export type LearningDebugState = {
     progress: LearningUnitProgressSummary;
   }>;
   dueReviewUnits: DueReviewUnit[];
+  stagnationConfig: {
+    attemptThreshold: number;
+    improvementEpsilon: number;
+  };
+  stagnatedUnits: Array<{
+    unitId: string;
+    title: string;
+    attempts: number;
+    masteryScore: number;
+    stagnationReason: string | null;
+    retrySuggestion: string;
+    alternativeUnit: LearningUnit | null;
+    switchDifficultyTo: "easy" | "medium" | "hard";
+  }>;
   regressionFlags: Array<{
     unitId: string;
     title: string;
@@ -145,6 +207,7 @@ export type LearningDebugState = {
       suggestionScore: number;
       scoreBreakdown: LearningModule["scoreBreakdown"];
       whyThisWasSelected: LearningModule["whyThisWasSelected"];
+      recommendationRejectedBecause: string[];
     }>;
   recommendationOutcomes: Array<{
     user_id: string;
@@ -160,16 +223,29 @@ export type LearningDebugState = {
     status: string;
     factors_used: string[];
     weights_used: Record<string, number>;
+    attempt_history: Array<{
+      attempt_number: number;
+      mastery_score: number;
+      improvement_delta: number;
+      signal_source: string;
+      task_type: string | null;
+      task_section: string | null;
+      difficulty_level: string | null;
+      recorded_at: string;
+    }>;
     impact_label: string;
   }>;
   recommendationEffectiveness: {
     overallAverageEffectiveness: number;
     measuredOutcomeCount: number;
+    stagnatedOutcomeCount: number;
     factorAverages: Record<
       string,
       {
         average_effectiveness: number;
+        average_improvement_delta: number;
         samples: number;
+        stagnated_count: number;
         impact_label: string;
       }
     >;
@@ -181,6 +257,7 @@ export type LearningDebugState = {
       improvementDelta: number;
       effectivenessScore: number;
       impactLabel: string;
+      status: string;
     }>;
   };
   improvementTrends: Array<{
@@ -191,6 +268,24 @@ export type LearningDebugState = {
     improvementDelta: number;
     effectivenessScore: number;
     impactLabel: string;
+    status: string;
+  }>;
+  ykiInfluenceLogs: Array<{
+    user_id: string;
+    module_id: string;
+    unit_id: string;
+    signal_source: string;
+    is_correct: boolean;
+    task_type: string | null;
+    task_section: string | null;
+    difficulty_level: string | null;
+    recorded_at: string;
+    previous_mastery_score: number;
+    updated_mastery_score: number;
+    improvement_delta: number;
+    effectiveness_score: number;
+    stagnated: boolean;
+    impact_label: string;
   }>;
   weightsUsed: Record<string, number>;
 };

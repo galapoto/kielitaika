@@ -145,6 +145,7 @@ class YkiPracticeModeTests(unittest.TestCase):
 
         self.assertEqual(updated_trace["user_performance"]["score"], 2)
         self.assertIn("whyWrong", updated_trace["feedback_generated"])
+        self.assertEqual(updated_trace["learning_influence"]["signal_source"], "yki_practice")
 
     def test_retry_section_resets_progress_without_exam_locking(self):
         user_id = "practice-retry"
@@ -159,6 +160,18 @@ class YkiPracticeModeTests(unittest.TestCase):
         self.assertEqual(reset_session["results"], [])
         self.assertFalse(reset_session["isComplete"])
         self.assertEqual(get_yki_practice(session["session_id"])["currentTask"]["id"], first_task["id"])
+
+    def test_yki_result_includes_learning_signal_feedback(self):
+        user_id = "practice-learning-link"
+        session = start_yki_practice(user_id)
+        current_task = session["currentTask"]
+
+        updated = submit_yki_practice(session["session_id"], current_task["correctAnswer"], "submit_only")
+        latest_result = updated["results"][-1]
+
+        self.assertEqual(latest_result["learningSignal"]["signal_source"], "yki_practice")
+        self.assertEqual(latest_result["learningSignal"]["task_section"], current_task["section"])
+        self.assertIsNotNone(latest_result["learningProgress"])
 
 
 if __name__ == "__main__":

@@ -11,9 +11,12 @@ from learning.graph_service import get_user_learning_debug_state, list_modules_f
 from learning.practice_service import generate_practice, generate_practice_from_weakness
 from learning.progress_service import (
     get_due_review_units,
+    get_learning_signal_logs,
     get_module_progress,
     get_recommendation_effectiveness_summary,
     get_recommendation_outcomes,
+    get_stagnated_units,
+    get_stagnation_config,
     get_unit_progress,
     record_practice_result,
     reset_progress_store,
@@ -247,6 +250,7 @@ class ProgressServiceTests(unittest.TestCase):
         self.assertIn("difficulty_adjustment", traced_module["whyThisWasSelected"])
         self.assertIn("mastery_score_used", traced_module["whyThisWasSelected"])
         self.assertIn("scoreBreakdown", traced_module)
+        self.assertIn("adaptive_weight_modifier", traced_module["whyThisWasSelected"])
         self.assertEqual(debug_state["decisionVersion"], DECISION_VERSION)
 
     def test_same_inputs_keep_recommendation_scores_stable(self):
@@ -386,6 +390,81 @@ class ProgressServiceTests(unittest.TestCase):
             summary["factorAverages"]["due_review"]["impact_label"],
             "ineffective",
         )
+
+    def test_stagnation_detection_marks_units_and_exposes_debug_config(self):
+        user_id = "progress-test-stagnation"
+        practice = generate_practice("module-daily-life-routines")
+        exercise = next(
+            item for item in practice["exercises"] if item["unit_id"] == "vocab-aamu"
+        )
+
+        list_modules_for_user(user_id)
+        record_practice_result(user_id, exercise, False)
+        record_practice_result(user_id, exercise, False)
+        third = record_practice_result(user_id, exercise, False)
+
+        unit_progress = get_unit_progress("vocab-aamu", user_id)
+        debug_state = get_user_learning_debug_state(user_id)
+        stagnated_units = get_stagnated_units(user_id)
+        config = get_stagnation_config()
+
+        self.assertTrue(unit_progress["stagnated"])
+        self.assertEqual(third["unitProgress"]["stagnated"], True)
+        self.assertEqual(stagnated_units[0]["unitId"], "vocab-aamu")
+        self.assertEqual(debug_state["stagnationConfig"]["attemptThreshold"], config["attemptThreshold"])
+        self.assertTrue(debug_state["stagnatedUnits"])
+
+    def test_adaptive_feedback_changes_recommendation_weights_after_effective_results(self):
+        user_id = "progress-test-adaptive-feedback"
+        list_modules_for_user(user_id)
+        practice = generate_practice("module-daily-life-routines")
+        exercise = next(
+            item for item in practice["exercises"] if item["unit_id"] == "vocab-aamu"
+        )
+
+        record_practice_result(user_id, exercise, True)
+
+        modules = list_modules_for_user(user_id)
+        traced_module = next(
+            item for item in modules["modules"] if item["id"] == "module-daily-life-routines"
+        )
+        adaptive_modifier = traced_module["whyThisWasSelected"]["adaptive_weight_modifier"]
+
+        self.assertGreater(
+            adaptive_modifier["weights"]["low_mastery"],
+            traced_module["whyThisWasSelected"]["base_weights"]["low_mastery"],
+        )
+        self.assertGreater(adaptive_modifier["averageEffectiveness"], 0.0)
+        self.assertTrue(adaptive_modifier["reasoning"])
+
+    def test_yki_signals_are_logged_for_learning_debug(self):
+        user_id = "progress-test-yki-signal"
+        practice = generate_practice("module-work-and-study-communication")
+        exercise = next(
+            item
+            for item in practice["exercises"]
+            if item["unit_id"] == "grammar-object-cases"
+        )
+
+        record_practice_result(
+            user_id,
+            exercise,
+            False,
+            signal_source="yki_practice",
+            signal_metadata={
+                "taskType": "guided_text",
+                "taskSection": "writing",
+                "difficultyLevel": "medium",
+            },
+        )
+
+        unit_progress = get_unit_progress("grammar-object-cases", user_id)
+        yki_logs = get_learning_signal_logs(user_id)
+        debug_state = get_user_learning_debug_state(user_id)
+
+        self.assertEqual(unit_progress["yki_influence_count"], 1)
+        self.assertEqual(yki_logs[0]["signal_source"], "yki_practice")
+        self.assertTrue(debug_state["ykiInfluenceLogs"])
 
 
 if __name__ == "__main__":

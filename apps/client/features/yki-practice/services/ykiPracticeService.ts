@@ -67,7 +67,18 @@ export type YkiPracticeResult = {
       mastery_level: string;
       review_interval_days: number;
       regression_detected: boolean;
+      stagnated: boolean;
     };
+  } | null;
+  learningSignal?: {
+    signal_source: string;
+    task_type: string | null;
+    task_section: string | null;
+    difficulty_level: string | null;
+    improvement_delta: number;
+    effectiveness_score: number;
+    stagnated: boolean;
+    impact_label: string;
   } | null;
 };
 
@@ -110,6 +121,16 @@ export type YkiPracticeSession = {
         whyWrong: string;
         ruleApplies: string | null;
         linkedLearningUnitId: string;
+      } | null;
+      learning_influence: {
+        signal_source: string;
+        task_type: string | null;
+        task_section: string | null;
+        difficulty_level: string | null;
+        improvement_delta: number;
+        effectiveness_score: number;
+        stagnated: boolean;
+        impact_label: string;
       } | null;
     }>;
   };
