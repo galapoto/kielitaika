@@ -1,31 +1,32 @@
-export const colors = {
-  background: "#0b1c2c",
-  surface: "#102a43",
-  primary: "#2bb0ed",
-  text: "#ffffff",
-  muted: "#a0aec0",
-  error: "#ff4d4f",
-};
+import { colors as colorTokens } from "./colors";
+import { spacing as spacingTokens } from "./spacing";
+import { typography as typographyTokens } from "./typography";
 
-export const spacing = {
-  xs: 4,
+export const colors = {
+  background: colorTokens.background,
+  surface: colorTokens.surface,
+  primary: colorTokens.accent,
+  text: colorTokens.textPrimary,
+  muted: colorTokens.placeholder,
+  error: "#b42318",
+  border: colorTokens.border,
+} as const;
+
+export const spacing = spacingTokens;
+
+export const typography = {
+  family: typographyTokens.family,
+  weight: typographyTokens.weight,
+  size: {
+    sm: typographyTokens.size.label,
+    md: typographyTokens.size.body,
+    lg: typographyTokens.size.title,
+    xl: typographyTokens.size.title,
+  },
+} as const;
+
+export const radius = {
   sm: 8,
   md: 16,
   lg: 24,
-  xl: 32,
-};
-
-export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 16,
-};
-
-export const typography = {
-  size: {
-    sm: 14,
-    md: 16,
-    lg: 20,
-    xl: 24,
-  },
-};
+} as const;

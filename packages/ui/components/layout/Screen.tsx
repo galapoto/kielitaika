@@ -1,20 +1,24 @@
-import type { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import type { PropsWithChildren } from "react";
+import { StyleSheet } from "react-native";
 
-import { colors, spacing } from "../../theme/tokens";
+import { colors } from "../../theme/colors";
+import { spacing } from "../../theme/spacing";
+import Box from "../primitives/Box";
 
-type Props = {
-  children: ReactNode;
-};
+type Props = PropsWithChildren;
 
 export default function Screen({ children }: Props) {
-  return <View style={styles.container}>{children}</View>;
+  return (
+    <Box background="background" flex={1} padding="md" style={styles.container}>
+      {children}
+    </Box>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: colors.background,
-    padding: spacing.md,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.lg,
   },
 });

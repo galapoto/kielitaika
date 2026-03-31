@@ -1,18 +1,20 @@
-import type { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import type { PropsWithChildren } from "react";
+import { StyleSheet } from "react-native";
 
-type Props = {
-  children: ReactNode;
-};
+import Box from "../primitives/Box";
+
+type Props = PropsWithChildren;
 
 export default function Center({ children }: Props) {
-  return <View style={styles.center}>{children}</View>;
+  return (
+    <Box alignItems="center" flex={1} justifyContent="center" style={styles.center}>
+      {children}
+    </Box>
+  );
 }
 
 const styles = StyleSheet.create({
   center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    width: "100%",
   },
 });

@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 
 import { storageService } from "@core/services/storageService";
+import Button from "@ui/components/primitives/Button";
+import Text from "@ui/components/primitives/Text";
+import Center from "@ui/components/layout/Center";
+import Screen from "@ui/components/layout/Screen";
+import Section from "@ui/components/layout/Section";
 
 const RUNTIME_KEY = "runtime_foundation_status";
 
 export default function Index() {
+  const router = useRouter();
   const [storageValue, setStorageValue] = useState<string>("loading");
 
   useEffect(() => {
@@ -29,14 +34,14 @@ export default function Index() {
   }, []);
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", gap: 12 }}>
-      <Text>KieliTaika RN App</Text>
-      <Text>@core storageService: {storageValue}</Text>
-      <Link href="/auth" asChild>
-        <Pressable>
-          <Text>Go to Auth</Text>
-        </Pressable>
-      </Link>
-    </View>
+    <Screen>
+      <Center>
+        <Section>
+          <Text variant="title">KieliTaika RN App</Text>
+          <Text tone="secondary">@core storageService: {storageValue}</Text>
+          <Button label="Go to Auth" onPress={() => router.push("/auth")} />
+        </Section>
+      </Center>
+    </Screen>
   );
 }
