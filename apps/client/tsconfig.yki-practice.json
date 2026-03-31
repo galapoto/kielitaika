@@ -16,22 +16,6 @@
       ]
     }
   },
-  "include": [
-    "app/learning/**/*",
-    "app/practice.tsx",
-    "app/yki.tsx",
-    "app/yki-practice.tsx",
-    "features/learning/**/*",
-    "features/practice/**/*",
-    "features/yki/**/*",
-    "features/yki-practice/**/*"
-  ],
-  "exclude": [
-    "features/auth",
-    "features/home",
-    "features/voice",
-    "shared",
-    "dist-web-prod",
-    "node_modules"
-  ]
+  "include": ["features/yki-practice/**/*"],
+  "exclude": ["node_modules", "dist-web-prod"]
 }

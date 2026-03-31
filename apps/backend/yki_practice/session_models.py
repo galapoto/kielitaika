@@ -11,3 +11,4 @@ class PracticeSession:
     current_task_index: int = 0
     results: list[dict] = field(default_factory=list)
     session_summary: dict | None = None
+    session_trace: dict | None = None

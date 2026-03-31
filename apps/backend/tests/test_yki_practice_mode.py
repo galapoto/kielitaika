@@ -127,6 +127,22 @@ class YkiPracticeModeTests(unittest.TestCase):
         self.assertTrue(active_session["sessionSummary"]["strengths"])
         self.assertTrue(active_session["sessionSummary"]["weaknesses"])
         self.assertTrue(active_session["sessionSummary"]["recommended_focus"])
+        self.assertTrue(active_session["sessionTrace"]["tasks"])
+
+    def test_session_trace_records_selection_and_feedback(self):
+        user_id = "practice-trace"
+        session = start_yki_practice(user_id)
+        first_trace = session["sessionTrace"]["tasks"][0]
+
+        self.assertTrue(first_trace["task_selection_reason"])
+        self.assertIsNotNone(first_trace["difficulty_level"])
+        self.assertIsNone(first_trace["user_performance"])
+
+        updated = submit_yki_practice(session["session_id"], "wrong answer", "submit_only")
+        updated_trace = updated["sessionTrace"]["tasks"][0]
+
+        self.assertEqual(updated_trace["user_performance"]["score"], 2)
+        self.assertIn("whyWrong", updated_trace["feedback_generated"])
 
     def test_retry_section_resets_progress_without_exam_locking(self):
         user_id = "practice-retry"

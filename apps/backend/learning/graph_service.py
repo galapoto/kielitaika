@@ -46,6 +46,33 @@ def build_suggestion_reason(
     return None
 
 
+def resolve_difficulty_adjustment(
+    *,
+    current_level: str | None,
+    module_level: str,
+    matched_weaknesses,
+    prioritized_unit_ids,
+    review_due_unit_ids,
+    regression_flag: bool,
+):
+    if regression_flag or review_due_unit_ids or prioritized_unit_ids:
+        return "support_lowered"
+    if matched_weaknesses:
+        return "targeted_support"
+
+    level_distance = get_level_distance(current_level, module_level)
+    if current_level is None:
+        return "baseline"
+    if level_distance == 0:
+        return "level_aligned"
+
+    module_rank = get_level_rank(module_level)
+    current_rank = get_level_rank(current_level)
+    if module_rank is not None and current_rank is not None and module_rank > current_rank:
+        return "stretch"
+    return "review_aligned"
+
+
 def score_module(
     module,
     weak_patterns,
@@ -68,6 +95,11 @@ def score_module(
         unit_id for unit_id in module_progress["recent_mistake_unit_ids"]
         if unit_id in module["unitIds"]
     ]
+    regression_unit_ids = [
+        item["unit_id"]
+        for item in module_progress["unit_progress"]
+        if item["unit_id"] in module["unitIds"] and item["regression_detected"]
+    ]
     weakness_score = len(matched_weaknesses) * 10
     mastery_score = len(prioritized_unit_ids) * 15
     review_score = len(review_due_unit_ids) * 20
@@ -81,6 +113,28 @@ def score_module(
         level_score = max(0, 3 - level_distance)
 
     suggestion_score = weakness_score + mastery_score + review_score + recent_mistake_score + level_score
+    difficulty_adjustment = resolve_difficulty_adjustment(
+        current_level=current_level,
+        module_level=module["level"],
+        matched_weaknesses=matched_weaknesses,
+        prioritized_unit_ids=prioritized_unit_ids,
+        review_due_unit_ids=review_due_unit_ids,
+        regression_flag=bool(regression_unit_ids),
+    )
+    why_this_was_selected = {
+        "weak_patterns_used": matched_weaknesses,
+        "mastery_score_used": {
+            "module_mastery_score": module_progress["mastery_score"],
+            "low_mastery_unit_ids": prioritized_unit_ids,
+        },
+        "due_review_used": {
+            "unit_ids": review_due_unit_ids,
+            "count": len(review_due_unit_ids),
+        },
+        "regression_flag": bool(regression_unit_ids),
+        "regression_unit_ids": regression_unit_ids,
+        "difficulty_adjustment": difficulty_adjustment,
+    }
 
     return {
         **module,
@@ -89,6 +143,7 @@ def score_module(
         "dueReviewUnitIds": review_due_unit_ids,
         "recentMistakeUnitIds": recent_mistake_unit_ids,
         "matchedWeaknesses": matched_weaknesses,
+        "regressionUnitIds": regression_unit_ids,
         "suggested": (
             bool(matched_weaknesses)
             or level_score > 0
@@ -104,6 +159,15 @@ def score_module(
             review_due_unit_ids,
             recent_mistake_unit_ids,
         ),
+        "whyThisWasSelected": why_this_was_selected,
+        "suggestionScoreBreakdown": {
+            "weakness": weakness_score,
+            "mastery": mastery_score,
+            "review": review_score,
+            "recentMistake": recent_mistake_score,
+            "level": level_score,
+            "total": suggestion_score,
+        },
         "suggestionScore": suggestion_score,
     }
 
@@ -143,6 +207,60 @@ def list_modules_for_user(user_id: str = DEFAULT_USER_ID):
         "weakPatterns": weak_patterns,
         "lowMasteryUnitIds": list(low_mastery_unit_ids),
         "dueReviewUnitIds": list(due_review_unit_ids),
+    }
+
+
+def get_user_learning_debug_state(user_id: str = DEFAULT_USER_ID):
+    module_listing = list_modules_for_user(user_id)
+    unit_progress = []
+
+    for unit_id in repository.units:
+        unit = repository.get_unit(unit_id)
+        progress = get_module_progress(unit["moduleIds"][0], user_id)["unit_progress"]
+        unit_state = next((item for item in progress if item["unit_id"] == unit_id), None)
+        if not unit or unit_state is None:
+            continue
+
+        unit_progress.append(
+            {
+                "unit": unit,
+                "progress": unit_state,
+            }
+        )
+
+    unit_progress.sort(key=lambda item: (item["unit"]["title"], item["unit"]["id"]))
+    due_review_units = get_due_review_units(user_id)
+    regression_flags = [
+        {
+            "unitId": item["unit"]["id"],
+            "title": item["unit"]["title"],
+            "previousMasteryScore": item["progress"]["previous_mastery_score"],
+            "masteryScore": item["progress"]["mastery_score"],
+        }
+        for item in unit_progress
+        if item["progress"]["regression_detected"]
+    ]
+
+    recommendation_reasoning = [
+        {
+            "moduleId": module["id"],
+            "title": module["title"],
+            "suggested": module["suggested"],
+            "suggestionReason": module["suggestionReason"],
+            "suggestionScore": module["suggestionScore"],
+            "suggestionScoreBreakdown": module["suggestionScoreBreakdown"],
+            "whyThisWasSelected": module["whyThisWasSelected"],
+        }
+        for module in module_listing["modules"]
+    ]
+
+    return {
+        "currentLevel": module_listing["currentLevel"],
+        "weakPatterns": module_listing["weakPatterns"],
+        "unitMastery": unit_progress,
+        "dueReviewUnits": due_review_units,
+        "regressionFlags": regression_flags,
+        "recommendationReasoning": recommendation_reasoning,
     }
 
 

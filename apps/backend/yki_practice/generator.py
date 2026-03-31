@@ -131,6 +131,27 @@ def select_practice_units(user_id: str = DEFAULT_USER_ID):
     return context, selected_units[: len(SECTION_SEQUENCE)]
 
 
+def build_task_selection_reason(unit: dict, section: str, context: dict):
+    reasons = [f"Section {section} mapped to unit {unit['id']}."]
+
+    if unit["id"] in context["dueReviewUnitIds"]:
+        reasons.append("Unit is due for review.")
+    if unit["id"] in context["lowMasteryUnitIds"]:
+        reasons.append("Unit has low recent mastery.")
+    if unit["id"] in context["focusAreas"]:
+        reasons.append("Unit is part of the current adaptive focus.")
+
+    difficulty_level = unit.get("difficultyLevel") or "medium"
+    if difficulty_level == context["preferredDifficulty"]:
+        reasons.append(f"Difficulty matches preferred {difficulty_level} level.")
+    else:
+        reasons.append(
+            f"Difficulty {difficulty_level} was chosen against preferred {context['preferredDifficulty']} to preserve section coverage."
+        )
+
+    return " ".join(reasons)
+
+
 def _normalize_choice(text: str):
     return text.strip().lower()
 
@@ -156,6 +177,7 @@ def _build_reading_task(unit: dict, index: int):
         "timeLimitSeconds": SECTION_TIME_LIMITS["reading"],
         "relatedLearningUnitId": unit["id"],
         "relatedModuleId": unit["moduleIds"][0],
+        "difficultyLevel": unit.get("difficultyLevel") or "medium",
     }
 
 
@@ -177,6 +199,7 @@ def _build_listening_task(unit: dict, index: int):
         "timeLimitSeconds": SECTION_TIME_LIMITS["listening"],
         "relatedLearningUnitId": unit["id"],
         "relatedModuleId": unit["moduleIds"][0],
+        "difficultyLevel": unit.get("difficultyLevel") or "medium",
     }
 
 
@@ -193,6 +216,7 @@ def _build_writing_task(unit: dict, index: int):
         "timeLimitSeconds": SECTION_TIME_LIMITS["writing"],
         "relatedLearningUnitId": unit["id"],
         "relatedModuleId": unit["moduleIds"][0],
+        "difficultyLevel": unit.get("difficultyLevel") or "medium",
     }
 
 
@@ -209,6 +233,7 @@ def _build_speaking_task(unit: dict, index: int):
         "timeLimitSeconds": SECTION_TIME_LIMITS["speaking"],
         "relatedLearningUnitId": unit["id"],
         "relatedModuleId": unit["moduleIds"][0],
+        "difficultyLevel": unit.get("difficultyLevel") or "medium",
     }
 
 
@@ -220,5 +245,9 @@ def build_practice_tasks(user_id: str = DEFAULT_USER_ID):
         _build_writing_task,
         _build_speaking_task,
     ]
-    tasks = [builder(unit, index) for index, (builder, unit) in enumerate(zip(builders, units), start=1)]
+    tasks = []
+    for index, (builder, unit) in enumerate(zip(builders, units), start=1):
+        task = builder(unit, index)
+        task["taskSelectionReason"] = build_task_selection_reason(unit, task["section"], context)
+        tasks.append(task)
     return context, tasks

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from learning.adapter import (
+    get_learning_debug_state,
     get_learning_due_review,
     get_learning_modules,
     get_learning_module_progress,
@@ -148,6 +149,11 @@ def learning_progress_module(module_id: str):
         return failure("MODULE_NOT_FOUND")
 
     return success(progress)
+
+
+@app.get("/api/v1/debug/user-learning-state")
+def debug_user_learning_state():
+    return success(get_learning_debug_state())
 
 
 @app.get("/api/v1/yki")

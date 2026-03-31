@@ -162,6 +162,46 @@ def _record_completed_session_summary(session: PracticeSession):
     _completed_session_ids.add(session.session_id)
 
 
+def _build_session_trace(context: dict, tasks: list[dict]):
+    return {
+        "adaptiveContext": context,
+        "tasks": [
+            {
+                "taskId": task["id"],
+                "section": task["section"],
+                "relatedLearningUnitId": task["relatedLearningUnitId"],
+                "task_selection_reason": task["taskSelectionReason"],
+                "difficulty_level": task["difficultyLevel"],
+                "user_performance": None,
+                "feedback_generated": None,
+            }
+            for task in tasks
+        ],
+    }
+
+
+def _update_session_trace(session: PracticeSession, task: dict, evaluation: dict):
+    if not session.session_trace:
+        return
+
+    for trace_entry in session.session_trace["tasks"]:
+        if trace_entry["taskId"] != task["id"]:
+            continue
+
+        trace_entry["user_performance"] = {
+            "score": evaluation["score"],
+            "maxScore": evaluation["maxScore"],
+            "isCorrect": evaluation["isCorrect"],
+        }
+        trace_entry["feedback_generated"] = {
+            "explanation": evaluation["explanation"],
+            "whyWrong": evaluation["whyWrong"],
+            "ruleApplies": evaluation["ruleApplies"],
+            "linkedLearningUnitId": evaluation["relatedLearningUnitId"],
+        }
+        return
+
+
 def _serialize_session(session: PracticeSession):
     session_summary = _build_session_summary(session)
     session.session_summary = session_summary
@@ -181,6 +221,7 @@ def _serialize_session(session: PracticeSession):
         "completedTaskCount": completed_count,
         "isComplete": is_complete,
         "sessionSummary": session_summary,
+        "sessionTrace": session.session_trace,
     }
 
 
@@ -202,6 +243,7 @@ def start_practice_session(user_id: str = DEFAULT_USER_ID):
         focus_areas=context["focusAreas"],
         tasks=tasks,
         results=[],
+        session_trace=_build_session_trace(context, tasks),
     )
     _practice_sessions[session.session_id] = session
     return _serialize_session(session)
@@ -270,6 +312,7 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
             "learningProgress": learning_progress,
         }
     )
+    _update_session_trace(session, current_task, evaluation)
 
     if action != "submit_only":
         session.current_task_index = min(session.current_task_index + 1, len(session.tasks))

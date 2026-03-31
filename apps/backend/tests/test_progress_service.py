@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from learning.graph_service import list_modules_for_user
+from learning.graph_service import get_user_learning_debug_state, list_modules_for_user
 from learning.practice_service import generate_practice, generate_practice_from_weakness
 from learning.progress_service import (
     get_due_review_units,
@@ -188,6 +188,10 @@ class ProgressServiceTests(unittest.TestCase):
             "grammar-object-cases",
             modules["suggestedModules"][0]["dueReviewUnitIds"],
         )
+        self.assertEqual(
+            modules["suggestedModules"][0]["whyThisWasSelected"]["due_review_used"]["unit_ids"],
+            ["grammar-object-cases"],
+        )
         self.assertEqual(recommended_practice["exercises"][0]["unit_id"], "grammar-object-cases")
 
     def test_mastered_units_appear_less_in_recommendations(self):
@@ -206,6 +210,36 @@ class ProgressServiceTests(unittest.TestCase):
 
         self.assertEqual(unit_progress["mastery_level"], "mastered")
         self.assertNotIn("module-work-and-study-communication", suggested_ids)
+
+    def test_debug_state_exposes_mastery_regression_and_reasoning(self):
+        user_id = "progress-test-debug"
+        practice = generate_practice("module-daily-life-routines")
+        exercise = next(
+            item for item in practice["exercises"] if item["unit_id"] == "vocab-aamu"
+        )
+
+        record_practice_result(user_id, exercise, True)
+        record_practice_result(user_id, exercise, True)
+        record_practice_result(user_id, exercise, True)
+        record_practice_result(user_id, exercise, False)
+
+        debug_state = get_user_learning_debug_state(user_id)
+        traced_module = next(
+            item
+            for item in debug_state["recommendationReasoning"]
+            if item["moduleId"] == "module-daily-life-routines"
+        )
+        traced_unit = next(
+            item
+            for item in debug_state["unitMastery"]
+            if item["unit"]["id"] == "vocab-aamu"
+        )
+
+        self.assertEqual(traced_unit["progress"]["unit_id"], "vocab-aamu")
+        self.assertTrue(debug_state["regressionFlags"])
+        self.assertIn("difficulty_adjustment", traced_module["whyThisWasSelected"])
+        self.assertIn("mastery_score_used", traced_module["whyThisWasSelected"])
+        self.assertIn("suggestionScoreBreakdown", traced_module)
 
 
 if __name__ == "__main__":

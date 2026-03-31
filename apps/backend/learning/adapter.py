@@ -1,4 +1,9 @@
-from learning.graph_service import get_related_units, get_unit, list_modules_for_user
+from learning.graph_service import (
+    get_related_units,
+    get_unit,
+    get_user_learning_debug_state,
+    list_modules_for_user,
+)
 from learning.practice_service import generate_practice, generate_practice_from_weakness
 from learning.progress_service import (
     get_due_review_units,
@@ -43,3 +48,7 @@ def get_learning_module_progress(module_id: str, user_id: str = DEFAULT_USER_ID)
 
 def get_learning_due_review(user_id: str = DEFAULT_USER_ID):
     return get_due_review_units(user_id)
+
+
+def get_learning_debug_state(user_id: str = DEFAULT_USER_ID):
+    return get_user_learning_debug_state(user_id)

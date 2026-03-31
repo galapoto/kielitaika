@@ -56,8 +56,31 @@ export type LearningModule = {
   lowMasteryUnitIds?: string[];
   dueReviewUnitIds?: string[];
   recentMistakeUnitIds?: string[];
+  regressionUnitIds?: string[];
   suggested?: boolean;
   suggestionReason?: string | null;
+  whyThisWasSelected?: {
+    weak_patterns_used: string[];
+    mastery_score_used: {
+      module_mastery_score: number;
+      low_mastery_unit_ids: string[];
+    };
+    due_review_used: {
+      unit_ids: string[];
+      count: number;
+    };
+    regression_flag: boolean;
+    regression_unit_ids: string[];
+    difficulty_adjustment: string;
+  };
+  suggestionScoreBreakdown?: {
+    weakness: number;
+    mastery: number;
+    review: number;
+    recentMistake: number;
+    level: number;
+    total: number;
+  };
 };
 
 export type DueReviewUnit = {
@@ -74,6 +97,31 @@ export type LearningModulesData = {
   weakPatterns: string[];
   lowMasteryUnitIds: string[];
   dueReviewUnitIds: string[];
+};
+
+export type LearningDebugState = {
+  currentLevel: string | null;
+  weakPatterns: string[];
+  unitMastery: Array<{
+    unit: LearningUnit;
+    progress: LearningUnitProgressSummary;
+  }>;
+  dueReviewUnits: DueReviewUnit[];
+  regressionFlags: Array<{
+    unitId: string;
+    title: string;
+    previousMasteryScore: number;
+    masteryScore: number;
+  }>;
+  recommendationReasoning: Array<{
+    moduleId: string;
+    title: string;
+    suggested: boolean;
+    suggestionReason: string | null;
+    suggestionScore: number;
+    suggestionScoreBreakdown: LearningModule["suggestionScoreBreakdown"];
+    whyThisWasSelected: LearningModule["whyThisWasSelected"];
+  }>;
 };
 
 export type RelatedUnitsData = {
@@ -99,4 +147,8 @@ export async function getRelatedUnits(unitId: string) {
 
 export async function getDueReviewUnits() {
   return (await apiClient("/api/v1/learning/review/due")) as ApiResponse<DueReviewUnitsData>;
+}
+
+export async function getLearningDebugState() {
+  return (await apiClient("/api/v1/debug/user-learning-state")) as ApiResponse<LearningDebugState>;
 }
