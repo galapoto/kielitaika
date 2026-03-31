@@ -8,6 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test:controlled-contracts": "node tests/controlled_ui_contract_validation.test.cjs",
+    "test:ui-cutover": "node tests/ui_cutover_enforcement.test.cjs",
     "typecheck:yki-practice": "tsc --noEmit -p tsconfig.yki-practice.json",
     "typecheck:learning": "tsc --noEmit -p tsconfig.learning.json",
     "validate:yki-practice": "timeout 30s tsc --noEmit -p tsconfig.yki-practice.json",

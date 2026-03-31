@@ -20,6 +20,7 @@ import Text from "@ui/primitives/Text";
 
 import { useAppFlowStore } from "./appFlowStore";
 import AuthRoute from "./AuthRoute";
+import FeatureEntryRoute from "./FeatureEntryRoute";
 import HomeRoute from "./HomeRoute";
 import LearningRoute from "./LearningRoute";
 import { useNetworkStore } from "./networkStore";
@@ -75,6 +76,17 @@ function isTransportError(code?: string) {
 
 function toRequestedScreen(screen: GuardedScreen | RequestedScreen): RequestedScreen {
   return screen === "home" ? "root" : screen;
+}
+
+function isFeatureEntryScreen(
+  screen: GuardedScreen | RequestedScreen,
+): screen is "daily-practice" | "professional-finnish" | "speaking-practice" | "yki-exam" {
+  return (
+    screen === "daily-practice" ||
+    screen === "professional-finnish" ||
+    screen === "speaking-practice" ||
+    screen === "yki-exam"
+  );
 }
 
 async function validateLearningGuard(): Promise<LearningGuardResult> {
@@ -431,6 +443,15 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       return;
     }
 
+    if (isFeatureEntryScreen(persistedNavigation.value.activeScreen)) {
+      router.replace(getPathForScreen(persistedNavigation.value.activeScreen));
+      await resolveAndPersist(
+        persistedNavigation.value.activeScreen,
+        persistedNavigation.value.requestedScreen,
+      );
+      return;
+    }
+
     if (persistedNavigation.value.activeScreen === "yki-practice") {
       await restoreYkiSession();
       return;
@@ -492,6 +513,12 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       }
 
       await resolveAndPersist("learning", target);
+      return;
+    }
+
+    if (isFeatureEntryScreen(target)) {
+      router.replace(getPathForScreen(target));
+      await resolveAndPersist(target, target);
       return;
     }
 
@@ -577,6 +604,13 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
 
       router.replace(getPathForScreen("learning"));
       await resolveAndPersist("learning", screen);
+      return;
+    }
+
+    if (isFeatureEntryScreen(screen)) {
+      clearNavigationError();
+      router.replace(getPathForScreen(screen));
+      await resolveAndPersist(screen, screen);
       return;
     }
 
@@ -697,6 +731,23 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     );
   }
 
+  if (activeScreen !== "error" && isFeatureEntryScreen(activeScreen)) {
+    return (
+      <FeatureEntryRoute
+        screen={activeScreen}
+        onBack={() => {
+          navigateBack();
+        }}
+        onOpenLearning={() => {
+          void navigateTo("learning");
+        }}
+        onOpenYkiPractice={() => {
+          void navigateTo("yki-practice");
+        }}
+      />
+    );
+  }
+
   if (activeScreen === "yki-practice") {
     return (
       <YkiPracticeRoute
@@ -709,11 +760,23 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
 
   return (
     <HomeRoute
+      onOpenDailyPractice={() => {
+        void navigateTo("daily-practice");
+      }}
+      onOpenProfessionalFinnish={() => {
+        void navigateTo("professional-finnish");
+      }}
+      onOpenSpeakingPractice={() => {
+        void navigateTo("speaking-practice");
+      }}
       onLogout={() => {
         void handleLogout();
       }}
       onOpenLearning={() => {
         void navigateTo("learning");
+      }}
+      onOpenYkiExam={() => {
+        void navigateTo("yki-exam");
       }}
       onOpenYkiPractice={() => {
         void navigateTo("yki-practice");

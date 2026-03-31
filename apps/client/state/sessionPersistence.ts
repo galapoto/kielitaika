@@ -76,11 +76,29 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isGuardedScreen(value: unknown): value is GuardedScreen {
-  return value === "auth" || value === "home" || value === "learning" || value === "yki-practice";
+  return (
+    value === "auth" ||
+    value === "daily-practice" ||
+    value === "home" ||
+    value === "learning" ||
+    value === "professional-finnish" ||
+    value === "speaking-practice" ||
+    value === "yki-exam" ||
+    value === "yki-practice"
+  );
 }
 
 function isRequestedScreen(value: unknown): value is RequestedScreen {
-  return value === "auth" || value === "learning" || value === "root" || value === "yki-practice";
+  return (
+    value === "auth" ||
+    value === "daily-practice" ||
+    value === "learning" ||
+    value === "professional-finnish" ||
+    value === "root" ||
+    value === "speaking-practice" ||
+    value === "yki-exam" ||
+    value === "yki-practice"
+  );
 }
 
 function hasVersionedEnvelope(

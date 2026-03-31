@@ -1,5 +1,22 @@
-export type RequestedScreen = "auth" | "learning" | "root" | "yki-practice";
-export type AppScreen = "auth" | "error" | "home" | "learning" | "yki-practice";
+export type RequestedScreen =
+  | "auth"
+  | "daily-practice"
+  | "learning"
+  | "professional-finnish"
+  | "root"
+  | "speaking-practice"
+  | "yki-exam"
+  | "yki-practice";
+export type AppScreen =
+  | "auth"
+  | "daily-practice"
+  | "error"
+  | "home"
+  | "learning"
+  | "professional-finnish"
+  | "speaking-practice"
+  | "yki-exam"
+  | "yki-practice";
 export type GuardedScreen = Exclude<AppScreen, "error">;
 
 export type NavigationErrorCode =
@@ -35,10 +52,26 @@ export const screenRegistry: Record<
     path: "/",
     requiresAuth: true,
   },
+  "daily-practice": {
+    path: "/daily-practice",
+    requiresAuth: true,
+  },
   learning: {
     path: "/learning",
     requiresAuth: true,
     requiresLearningGuard: true,
+  },
+  "professional-finnish": {
+    path: "/professional-finnish",
+    requiresAuth: true,
+  },
+  "speaking-practice": {
+    path: "/speaking-practice",
+    requiresAuth: true,
+  },
+  "yki-exam": {
+    path: "/yki-exam",
+    requiresAuth: true,
   },
   "yki-practice": {
     path: "/yki-practice",

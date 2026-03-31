@@ -13,16 +13,24 @@ type HomeUser = {
 type Props = {
   debugAvailable: boolean;
   user: HomeUser;
+  onOpenDailyPractice: () => void;
+  onOpenProfessionalFinnish: () => void;
+  onOpenSpeakingPractice: () => void;
   onLogout: () => void;
   onOpenLearning: () => void;
+  onOpenYkiExam: () => void;
   onOpenYkiPractice: () => void;
 };
 
 export default function HomeScreen({
   debugAvailable,
   user,
+  onOpenDailyPractice,
+  onOpenProfessionalFinnish,
+  onOpenSpeakingPractice,
   onLogout,
   onOpenLearning,
+  onOpenYkiExam,
   onOpenYkiPractice,
 }: Props) {
   return (
@@ -42,6 +50,10 @@ export default function HomeScreen({
           <Stack gap="xs">
             <Text variant="title">Runtime Flows</Text>
             <Button label="Open Learning" onPress={onOpenLearning} />
+            <Button label="Daily Practice" onPress={onOpenDailyPractice} tone="surface" />
+            <Button label="Professional Finnish" onPress={onOpenProfessionalFinnish} tone="surface" />
+            <Button label="Speaking Practice" onPress={onOpenSpeakingPractice} tone="surface" />
+            <Button label="YKI Exam" onPress={onOpenYkiExam} tone="surface" />
             <Button label="Open YKI Practice" onPress={onOpenYkiPractice} />
             {debugAvailable ? (
               <Text tone="muted">Learning debug visibility is available.</Text>
