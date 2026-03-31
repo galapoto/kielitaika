@@ -43,6 +43,8 @@ type Props = {
   auditTimeline: string[];
   canAdvance: boolean;
   changeReference: string | null;
+  certificationSummary: string[];
+  certificationTraceReference: string | null;
   completionState: {
     completed_task_count: number;
     status: "active" | "awaiting_advance" | "completed";
@@ -83,6 +85,8 @@ export default function YkiPracticeScreen({
   auditTimeline,
   canAdvance,
   changeReference,
+  certificationSummary,
+  certificationTraceReference,
   completionState,
   errorMessage,
   governanceStatus,
@@ -211,7 +215,13 @@ export default function YkiPracticeScreen({
           <Card>
             <Stack gap="xs">
               <Text variant="title">Session Complete</Text>
-              <Text tone="muted">The governed playback plan has been completed.</Text>
+              <Text tone="muted">The governed playback plan has been completed and sealed.</Text>
+              {certificationTraceReference ? (
+                <Text tone="muted">Trace reference: {certificationTraceReference}</Text>
+              ) : null}
+              {certificationSummary.map((item) => (
+                <Text key={item}>{item}</Text>
+              ))}
               <Button label="Back Home" onPress={onBack} />
             </Stack>
           </Card>

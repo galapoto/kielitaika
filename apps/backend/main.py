@@ -29,7 +29,12 @@ from yki.adapter import (
     start_exam,
 )
 from yki.session_store import DEFAULT_USER_ID
-from yki_practice.adapter import get_yki_practice, start_yki_practice, submit_yki_practice
+from yki_practice.adapter import (
+    get_yki_certification,
+    get_yki_practice,
+    start_yki_practice,
+    submit_yki_practice,
+)
 
 app = FastAPI()
 
@@ -390,6 +395,28 @@ def yki_start(request: Request):
         session,
         event_type="YKI_EXAM_SESSION_STARTED",
         session_id=session.get("session_id") if isinstance(session, dict) else None,
+    )
+
+
+@app.get("/api/v1/yki/certification/{session_id}")
+def yki_certification(session_id: str, request: Request):
+    certification = get_yki_certification(session_id)
+
+    if not certification:
+        return _failure_response(
+            request,
+            "CERTIFICATION_NOT_FOUND",
+            event_type="YKI_CERTIFICATION_LOADED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        certification,
+        event_type="YKI_CERTIFICATION_LOADED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
     )
 
 

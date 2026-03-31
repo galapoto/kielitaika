@@ -3,12 +3,18 @@ from hashlib import sha256
 
 from audit.audit_service import get_session_events, record_event
 from audit.replay_engine import replay_session, verify_replay_consistency
+from audit.verification_engine import verify_certification
 from learning.decision_version import get_decision_metadata
 from learning.policy_engine import is_exam_mode_locked
 from learning.progress_service import record_practice_result
 from learning.repository import repository
 from utils.hash_utils import deterministic_hash
 from yki.session_store import DEFAULT_USER_ID
+from yki_practice.certification_service import (
+    create_certification_record,
+    export_certification,
+    reset_certification_store,
+)
 from yki_practice.generator import build_adaptive_context, build_practice_tasks
 from yki_practice.session_models import PracticeSession
 
@@ -309,6 +315,7 @@ def _serialize_session(session: PracticeSession):
     audit_timeline = get_session_events(session.session_id)
     audit_replay = replay_session(audit_timeline)
     audit_verification = verify_replay_consistency(audit_timeline)
+    certification_export = export_certification(session.session_id)
     return {
         **asdict(session),
         "currentTask": current_task,
@@ -329,6 +336,14 @@ def _serialize_session(session: PracticeSession):
         "auditTimeline": audit_timeline,
         "auditReplay": audit_replay,
         "auditVerification": audit_verification,
+        "certification": (
+            {
+                **certification_export,
+                "verification": verify_certification(session.session_id),
+            }
+            if certification_export
+            else None
+        ),
     }
 
 
@@ -423,6 +438,13 @@ def _record_session_completed_if_needed(session: PracticeSession, trigger: str):
         }
     )
     _completed_audit_session_ids.add(session.session_id)
+    create_certification_record(
+        session_id=session.session_id,
+        user_id=session.user_id,
+        final_score=summary["averageScore"],
+        session_hash=_session_hash(session),
+        task_sequence_hash=_task_sequence_hash(session),
+    )
 
 
 def start_practice_session(user_id: str = DEFAULT_USER_ID):
@@ -504,8 +526,11 @@ def submit_practice_answer(session_id: str, answer: str | None, action: str = "s
     if not session:
         return None
 
+    if export_certification(session_id):
+        return {"error": "SESSION_CERTIFIED"}
+
     if session.current_task_index >= len(session.tasks):
-        return _serialize_session(session)
+        return {"error": "SESSION_CERTIFIED"}
 
     current_task = session.tasks[session.current_task_index]
     allowed_action = _next_allowed_action(session, current_task)
@@ -610,7 +635,19 @@ def reset_practice_sessions():
     _completed_audit_session_ids.clear()
     _presented_task_counts.clear()
     _session_counter = 0
+    reset_certification_store()
 
 
 def get_adaptive_focus_preview(user_id: str = DEFAULT_USER_ID):
     return build_adaptive_context(user_id)
+
+
+def get_practice_certification(session_id: str):
+    certification = export_certification(session_id)
+    if not certification:
+        return None
+
+    return {
+        **certification,
+        "verification": verify_certification(session_id),
+    }

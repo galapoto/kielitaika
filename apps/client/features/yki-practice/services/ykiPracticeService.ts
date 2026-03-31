@@ -1,5 +1,6 @@
 import { apiClient, ContractViolationError } from "@core/api/apiClient";
 import {
+  validateYkiCertificationPayload,
   validateYkiPracticeSessionPayload,
 } from "@core/api/governedResponseValidation";
 import {
@@ -97,6 +98,60 @@ export type YkiPracticeSessionSummary = {
   improvement_trend: string;
   recommended_focus: string[];
   averageScore: number;
+};
+
+export type YkiCertificationExport = {
+  certification_record: {
+    session_id: string;
+    user_id: string | null;
+    completion_timestamp: string;
+    final_score: number;
+    session_hash: string;
+    task_sequence_hash: string;
+    audit_event_range: {
+      event_count: number;
+      first_event_id: string;
+      last_event_id: string;
+    };
+    contract_version: string;
+    certification_version: string;
+  };
+  final_result_hash: string;
+  replay_reference: {
+    session_id: string;
+    audit_event_range: {
+      event_count: number;
+      first_event_id: string;
+      last_event_id: string;
+    };
+    contract_version: string;
+  };
+  verification_instructions: string[];
+  verification: {
+    ok: boolean;
+    status: string;
+    issues: string[];
+    integrity: {
+      ok: boolean;
+      integrityStatus: string;
+      chainLength: number;
+      failureIndex: number | null;
+      failureEventId: string | null;
+      failureReason: string | null;
+      legacyEventCount: number;
+      streamKey: string | null;
+    };
+    recomputed: {
+      session_hash: string | null;
+      task_sequence_hash: string | null;
+      audit_event_range: {
+        event_count: number;
+        first_event_id: string;
+        last_event_id: string;
+      } | null;
+      final_result_hash: string | null;
+    };
+  };
 };
 
 export type YkiPracticeSession = {
@@ -228,6 +283,7 @@ export type YkiPracticeSession = {
       streamKey: string | null;
     };
   };
+  certification?: YkiCertificationExport | null;
 };
 
 type PersistedSessionFailure = {
@@ -435,6 +491,46 @@ export async function getStoredPracticeSessionId() {
 
 export async function clearPracticeSession() {
   await clearPersistedYkiSession();
+}
+
+export async function getPracticeCertification(sessionId: string) {
+  let response: ApiResponse<YkiCertificationExport>;
+
+  try {
+    response = (await apiClient(`/api/v1/yki/certification/${sessionId}`, {}, {
+      sessionId,
+      validateData: (payload) =>
+        validateYkiCertificationPayload(payload as Record<string, unknown>) as YkiCertificationExport,
+    })) as ApiResponse<YkiCertificationExport>;
+  } catch (error) {
+    if (error instanceof ContractViolationError) {
+      return {
+        ok: false,
+        data: null,
+        error: {
+          code: error.code,
+          message: error.code,
+          traceReference: null,
+        },
+      } satisfies ApiResponse<YkiCertificationExport>;
+    }
+
+    throw error;
+  }
+
+  if (!response.ok || !response.data) {
+    return {
+      ok: false,
+      data: null,
+      error: normalizeError(response.error),
+    } satisfies ApiResponse<YkiCertificationExport>;
+  }
+
+  return {
+    ok: true,
+    data: response.data,
+    error: null,
+  } satisfies ApiResponse<YkiCertificationExport>;
 }
 
 export async function startPracticeSession() {

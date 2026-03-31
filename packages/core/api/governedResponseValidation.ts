@@ -722,6 +722,56 @@ const linkedLearningUnitSchema = objectSchema({
   difficultyLevel: enumSchema(["easy", "medium", "hard"]),
 });
 
+const auditEventRangeSchema = objectSchema({
+  event_count: numberSchema,
+  first_event_id: stringSchema,
+  last_event_id: stringSchema,
+});
+
+const certificationVerificationSchema = objectSchema({
+  ok: booleanSchema,
+  status: stringSchema,
+  issues: arraySchema(stringSchema),
+  integrity: objectSchema({
+    ok: booleanSchema,
+    integrityStatus: stringSchema,
+    chainLength: numberSchema,
+    failureIndex: nullableSchema(numberSchema),
+    failureEventId: nullableSchema(stringSchema),
+    failureReason: nullableSchema(stringSchema),
+    legacyEventCount: numberSchema,
+    streamKey: nullableSchema(stringSchema),
+  }),
+  recomputed: objectSchema({
+    session_hash: nullableSchema(stringSchema),
+    task_sequence_hash: nullableSchema(stringSchema),
+    audit_event_range: nullableSchema(auditEventRangeSchema),
+    final_result_hash: nullableSchema(stringSchema),
+  }),
+});
+
+const certificationExportSchema = objectSchema({
+  certification_record: objectSchema({
+    session_id: stringSchema,
+    user_id: nullableSchema(stringSchema),
+    completion_timestamp: stringSchema,
+    final_score: numberSchema,
+    session_hash: stringSchema,
+    task_sequence_hash: stringSchema,
+    audit_event_range: auditEventRangeSchema,
+    contract_version: stringSchema,
+    certification_version: stringSchema,
+  }),
+  final_result_hash: stringSchema,
+  replay_reference: objectSchema({
+    session_id: stringSchema,
+    audit_event_range: auditEventRangeSchema,
+    contract_version: stringSchema,
+  }),
+  verification_instructions: arraySchema(stringSchema),
+  verification: certificationVerificationSchema,
+});
+
 const ykiPracticeEvaluationSchema = objectSchema({
   score: numberSchema,
   maxScore: numberSchema,
@@ -939,7 +989,9 @@ const ykiPracticeSessionSchema = objectSchema(
       }),
     }),
   },
-  {},
+  {
+    certification: nullableSchema(certificationExportSchema),
+  },
 );
 
 const authStatusSchema = objectSchema({
@@ -1096,6 +1148,11 @@ export function validateRelatedUnitsPayload<T extends Record<string, unknown>>(p
 
 export function validateDueReviewUnitsPayload<T extends Record<string, unknown>>(payload: T) {
   validateSchema(payload, dueReviewUnitsDataSchema, "dueReviewUnits");
+  return payload;
+}
+
+export function validateYkiCertificationPayload<T extends Record<string, unknown>>(payload: T) {
+  validateSchema(payload, certificationExportSchema, "ykiCertification");
   return payload;
 }
 
