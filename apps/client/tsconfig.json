@@ -2,7 +2,15 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "types": ["node", "react"],
     "paths": {
+      "react": ["node_modules/@types/react/index.d.ts"],
+      "react-native": ["node_modules/react-native/types/index.d.ts"],
+      "@react-native-async-storage/async-storage": [
+        "node_modules/@react-native-async-storage/async-storage/lib/typescript/index.d.ts"
+      ],
       "@core/*": [
         "../../packages/core/*"
       ],
@@ -12,6 +20,7 @@
     }
   },
   "include": [
-    "app/**/*"
+    "app/**/*",
+    "state/**/*"
   ]
 }

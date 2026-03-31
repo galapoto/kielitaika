@@ -7,6 +7,8 @@ export { default as Input } from "./components/primitives/Input";
 export { default as Text } from "./components/primitives/Text";
 export { default as AuthScreen } from "./screens/AuthScreen";
 export { default as HomeScreen } from "./screens/HomeScreen";
+export { default as LearningScreen } from "./screens/LearningScreen";
+export { default as YkiPracticeScreen } from "./screens/YkiPracticeScreen";
 export { colors } from "./theme/colors";
 export { spacing } from "./theme/spacing";
 export { typography } from "./theme/typography";

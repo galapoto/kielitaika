@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
+import { env } from "@core/config/env";
 import { setAuthToken } from "@core/api/apiClient";
+import { mockLogin } from "@core/services/authService";
 import { storageService } from "@core/services/storageService";
 import type { AuthUser } from "@core/services/authService";
 
@@ -39,6 +41,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } catch {
       // Fall through to a cleared auth state if persisted data is missing or invalid.
+    }
+
+    if (env.AUTO_MOCK_AUTH_ENABLED) {
+      const mockSession = await mockLogin();
+      await storageService.set(AUTH_SESSION_KEY, mockSession);
+      setAuthToken(mockSession.token);
+      set({
+        hasHydrated: true,
+        token: mockSession.token,
+        user: mockSession.user,
+      });
+      return;
     }
 
     setAuthToken(null);

@@ -1,10 +1,10 @@
-import AuthScreen from "@ui/screens/AuthScreen";
-import HomeScreen from "@ui/screens/HomeScreen";
 import Center from "@ui/components/layout/Center";
 import Screen from "@ui/components/layout/Screen";
 import Section from "@ui/components/layout/Section";
 import Text from "@ui/components/primitives/Text";
 
+import AuthRoute from "./AuthRoute";
+import HomeRoute from "./HomeRoute";
 import { useAuthStore } from "./authStore";
 
 export default function AppShell() {
@@ -25,8 +25,8 @@ export default function AppShell() {
   }
 
   if (user) {
-    return <HomeScreen />;
+    return <HomeRoute />;
   }
 
-  return <AuthScreen />;
+  return <AuthRoute />;
 }

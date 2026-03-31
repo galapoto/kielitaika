@@ -1,4 +1,3 @@
-import { useState } from "react";
 import Button from "../components/primitives/Button";
 import Input from "../components/primitives/Input";
 import Text from "../components/primitives/Text";
@@ -6,31 +5,28 @@ import Center from "../components/layout/Center";
 import Screen from "../components/layout/Screen";
 import Section from "../components/layout/Section";
 import { StyleSheet } from "react-native";
-import { authService } from "@core/services/authService";
-import { setAuthToken } from "@core/api/apiClient";
-import { useAuthStore } from "../../../apps/client/state/authStore";
 
-export default function AuthScreen() {
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+type Props = {
+  email: string;
+  password: string;
+  errorMessage: string | null;
+  fallbackEnabled: boolean;
+  submitting: boolean;
+  onEmailChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onSubmit: () => void;
+};
 
-  async function handleLogin() {
-    setSubmitting(true);
-    setErrorMessage(null);
-
-    try {
-      const session = await authService.login(email.trim(), password);
-      await setAuth(session.user, session.token);
-      setAuthToken(session.token);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "LOGIN_FAILED");
-    } finally {
-      setSubmitting(false);
-    }
-  }
+export default function AuthScreen({
+  email,
+  password,
+  errorMessage,
+  fallbackEnabled,
+  submitting,
+  onEmailChange,
+  onPasswordChange,
+  onSubmit,
+}: Props) {
 
   return (
     <Screen>
@@ -40,17 +36,22 @@ export default function AuthScreen() {
           <Text tone="secondary">
             Sign in to switch the app shell into the authenticated home state.
           </Text>
+          {fallbackEnabled ? (
+            <Text tone="secondary">
+              Mock auth fallback is active until the backend login endpoint is available.
+            </Text>
+          ) : null}
           <Input
             autoCapitalize="none"
             autoCorrect={false}
             editable={!submitting}
-            onChangeText={setEmail}
+            onChangeText={onEmailChange}
             placeholder="Email"
             value={email}
           />
           <Input
             editable={!submitting}
-            onChangeText={setPassword}
+            onChangeText={onPasswordChange}
             placeholder="Password"
             secureTextEntry
             value={password}
@@ -59,9 +60,7 @@ export default function AuthScreen() {
           <Button
             disabled={submitting || !email.trim() || !password}
             label={submitting ? "Signing In..." : "Sign In"}
-            onPress={() => {
-              void handleLogin();
-            }}
+            onPress={onSubmit}
           />
         </Section>
       </Center>
