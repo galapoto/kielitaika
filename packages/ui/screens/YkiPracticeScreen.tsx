@@ -1,9 +1,10 @@
-import Box from "../components/primitives/Box";
-import Button from "../components/primitives/Button";
-import Input from "../components/primitives/Input";
-import Text from "../components/primitives/Text";
-import Screen from "../components/layout/Screen";
-import Section from "../components/layout/Section";
+import Button from "../primitives/Button";
+import Card from "../primitives/Card";
+import Row from "../primitives/Row";
+import Input from "../primitives/Input";
+import ScreenContainer from "../primitives/ScreenContainer";
+import Stack from "../primitives/Stack";
+import Text from "../primitives/Text";
 
 type TaskView = {
   guidance?: string;
@@ -60,6 +61,17 @@ type Props = {
   onSubmit: () => void;
 };
 
+function MetadataRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Row justify="space-between">
+      <Text variant="caption" tone="muted">
+        {label}
+      </Text>
+      <Text variant="caption">{value}</Text>
+    </Row>
+  );
+}
+
 export default function YkiPracticeScreen({
   answer,
   auditReplaySummary,
@@ -85,118 +97,149 @@ export default function YkiPracticeScreen({
 }: Props) {
   if (loading) {
     return (
-      <Screen>
-        <Section>
-          <Text variant="title">YKI Practice</Text>
-          <Text tone="secondary">Loading governed session...</Text>
-        </Section>
-      </Screen>
+      <ScreenContainer center>
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">YKI Practice</Text>
+            <Text tone="muted">Loading governed session...</Text>
+          </Stack>
+        </Card>
+      </ScreenContainer>
     );
   }
 
   if (errorMessage) {
     return (
-      <Screen>
-        <Section>
-          <Text variant="title">YKI Practice</Text>
-          <Text>{errorMessage}</Text>
+      <ScreenContainer center>
+        <Stack gap="sm">
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">YKI Practice</Text>
+              <Text tone="error">{errorMessage}</Text>
+            </Stack>
+          </Card>
           <Button label="Retry" onPress={onRefresh} />
-          <Button label="Back" onPress={onBack} />
-        </Section>
-      </Screen>
+          <Button label="Back" onPress={onBack} tone="surface" />
+        </Stack>
+      </ScreenContainer>
     );
   }
 
   if (!sessionId || !trace || !policyVersion) {
     return (
-      <Screen>
-        <Section>
-          <Text variant="title">YKI Practice</Text>
-          <Text tone="secondary">No active governed practice session.</Text>
+      <ScreenContainer center>
+        <Stack gap="sm">
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">YKI Practice</Text>
+              <Text tone="muted">No active governed practice session.</Text>
+            </Stack>
+          </Card>
           <Button label="Start Session" onPress={onStart} />
-          <Button label="Back Home" onPress={onBack} />
-        </Section>
-      </Screen>
+          <Button label="Back Home" onPress={onBack} tone="surface" />
+        </Stack>
+      </ScreenContainer>
     );
   }
 
   return (
-    <Screen>
-      <Box gap="md">
-        <Section>
-          <Text variant="title">YKI Practice</Text>
-          <Text>Session: {sessionId}</Text>
-          <Text>Policy version: {policyVersion}</Text>
-          <Text>Governance status: {governanceStatus}</Text>
-          <Text tone="secondary">Change reference: {changeReference ?? "none"}</Text>
-          {untrustedStateMessage ? <Text>{untrustedStateMessage}</Text> : null}
-          {notice ? <Text tone="secondary">{notice}</Text> : null}
-          <Button label="Refresh Session" onPress={onRefresh} />
-          <Button label="Back Home" onPress={onBack} />
-        </Section>
+    <ScreenContainer>
+      <Stack gap="sm">
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">YKI Practice</Text>
+            <MetadataRow label="Session" value={sessionId} />
+            <MetadataRow label="Policy version" value={policyVersion} />
+            <MetadataRow label="Governance status" value={governanceStatus} />
+            {changeReference ? <MetadataRow label="Change reference" value={changeReference} /> : null}
+            {untrustedStateMessage ? <Text tone="error">{untrustedStateMessage}</Text> : null}
+            {notice ? <Text tone="muted">{notice}</Text> : null}
+          </Stack>
+        </Card>
+
+        <Card>
+          <Stack gap="xs">
+            <Button label="Refresh Session" onPress={onRefresh} />
+            <Button label="Back Home" onPress={onBack} tone="surface" />
+          </Stack>
+        </Card>
 
         {task ? (
-          <Section>
-            <Text variant="title">{task.title}</Text>
-            <Text>Section: {task.section}</Text>
-            <Text>{task.prompt}</Text>
-            {task.question ? <Text>{task.question}</Text> : null}
-            {task.guidance ? <Text tone="secondary">{task.guidance}</Text> : null}
-            {task.options?.length ? (
-              <Box gap="sm">
-                {task.options.map((option) => (
-                  <Button key={option} label={option} onPress={() => onAnswerChange(option)} />
-                ))}
-              </Box>
-            ) : null}
-            <Input multiline onChangeText={onAnswerChange} placeholder="Write your answer" value={answer} />
-            {!canAdvance ? <Button label="Submit Answer" onPress={onSubmit} /> : null}
-            {canAdvance ? <Button label="Continue Playback" onPress={onAdvance} /> : null}
-          </Section>
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">{task.title}</Text>
+              <MetadataRow label="Section" value={task.section} />
+              <Text>{task.prompt}</Text>
+              {task.question ? <Text>{task.question}</Text> : null}
+              {task.guidance ? <Text tone="muted">{task.guidance}</Text> : null}
+              {task.options?.length ? (
+                <Stack gap="xs">
+                  {task.options.map((option) => (
+                    <Button key={option} label={option} onPress={() => onAnswerChange(option)} tone="surface" />
+                  ))}
+                </Stack>
+              ) : null}
+              <Input multiline onChangeText={onAnswerChange} placeholder="Write your answer" value={answer} />
+              {!canAdvance ? <Button label="Submit Answer" onPress={onSubmit} /> : null}
+              {canAdvance ? <Button label="Continue Playback" onPress={onAdvance} /> : null}
+            </Stack>
+          </Card>
         ) : (
-          <Section>
-            <Text variant="title">Session Complete</Text>
-            <Text tone="secondary">The governed playback plan has been completed.</Text>
-            <Button label="Start Session" onPress={onStart} />
-          </Section>
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Session Complete</Text>
+              <Text tone="muted">The governed playback plan has been completed.</Text>
+              <Button label="Start Session" onPress={onStart} />
+            </Stack>
+          </Card>
         )}
 
         {latestResult ? (
-          <Section>
-            <Text variant="title">Latest Result</Text>
-            <Text>Score: {latestResult.score}</Text>
-            <Text>{latestResult.explanation}</Text>
-            <Text tone="secondary">{latestResult.whyWrong}</Text>
-          </Section>
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Latest Result</Text>
+              <MetadataRow label="Score" value={`${latestResult.score}`} />
+              <Text>{latestResult.explanation}</Text>
+              <Text tone="muted">{latestResult.whyWrong}</Text>
+            </Stack>
+          </Card>
         ) : null}
 
-        <Section>
-          <Text variant="title">Session Trace</Text>
-          <Text>Decision version: {trace.decisionVersion}</Text>
-          <Text>Policy version: {trace.policyVersion}</Text>
-          <Text>Governance version: {trace.governanceVersion}</Text>
-          <Text tone="secondary">Change reference: {trace.changeReference ?? "none"}</Text>
-          <Text>Exam mode: {trace.examMode ? "locked" : "adaptive"}</Text>
-          <Text tone="secondary">Precomputed plan: {trace.precomputedPlanSummary}</Text>
-          {trace.tasks.map((item) => (
-            <Text key={item.taskId}>
-              {item.taskId}: {item.reason} ({item.difficultyLevel}) unit {item.relatedLearningUnitId}
-            </Text>
-          ))}
-        </Section>
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">Session Trace</Text>
+            <MetadataRow label="Decision version" value={trace.decisionVersion} />
+            <MetadataRow label="Policy version" value={trace.policyVersion} />
+            <MetadataRow label="Governance version" value={trace.governanceVersion} />
+            <MetadataRow label="Exam mode" value={trace.examMode ? "locked" : "adaptive"} />
+            {trace.changeReference ? (
+              <MetadataRow label="Change reference" value={trace.changeReference} />
+            ) : null}
+            <Text tone="muted">Precomputed plan: {trace.precomputedPlanSummary}</Text>
+            {trace.tasks.map((item) => (
+              <Text key={item.taskId}>
+                {item.taskId}: {item.reason} ({item.difficultyLevel}) unit {item.relatedLearningUnitId}
+              </Text>
+            ))}
+          </Stack>
+        </Card>
 
-        <Section>
-          <Text variant="title">Audit Timeline</Text>
-          {auditReplaySummary.length ? (
-            auditReplaySummary.map((item) => <Text key={item}>{item}</Text>)
-          ) : null}
-          {auditTimeline.length ? (
-            auditTimeline.map((item) => <Text key={item}>{item}</Text>)
-          ) : (
-            <Text tone="secondary">No audit events have been recorded for this session yet.</Text>
-          )}
-        </Section>
-      </Box>
-    </Screen>
+        {auditReplaySummary.length || auditTimeline.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Audit Timeline</Text>
+              {auditReplaySummary.map((item) => (
+                <Text key={item}>{item}</Text>
+              ))}
+              {auditTimeline.map((item) => (
+                <Text key={item} tone="muted">
+                  {item}
+                </Text>
+              ))}
+            </Stack>
+          </Card>
+        ) : null}
+      </Stack>
+    </ScreenContainer>
   );
 }

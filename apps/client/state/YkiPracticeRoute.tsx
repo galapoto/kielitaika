@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 
-import Screen from "@ui/components/layout/Screen";
-import Section from "@ui/components/layout/Section";
-import Text from "@ui/components/primitives/Text";
+import Card from "@ui/primitives/Card";
+import ScreenContainer from "@ui/primitives/ScreenContainer";
+import Stack from "@ui/primitives/Stack";
+import Text from "@ui/primitives/Text";
 import YkiPracticeScreen from "@ui/screens/YkiPracticeScreen";
 
 import useYkiPractice from "../features/yki-practice/hooks/useYkiPractice";
@@ -113,12 +114,16 @@ export default function YkiPracticeRoute() {
 
   if (!hasHydrated || !user) {
     return (
-      <Screen>
-        <Section>
-          <Text variant="title">YKI Practice</Text>
-          <Text tone="secondary">Preparing your practice session...</Text>
-        </Section>
-      </Screen>
+      <ScreenContainer center>
+        <Stack gap="sm">
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">YKI Practice</Text>
+              <Text tone="muted">Preparing your practice session...</Text>
+            </Stack>
+          </Card>
+        </Stack>
+      </ScreenContainer>
     );
   }
 

@@ -1,23 +1,9 @@
 import type { PropsWithChildren } from "react";
-import type { StyleProp, ViewStyle } from "react-native";
 
-import Box from "../primitives/Box";
+import Card from "../../primitives/Card";
 
-type Props = PropsWithChildren<{
-  style?: StyleProp<ViewStyle>;
-}>;
+type Props = PropsWithChildren;
 
-export default function Section({ children, style }: Props) {
-  return (
-    <Box
-      background="surface"
-      border="default"
-      gap="sm"
-      padding="md"
-      radius="md"
-      style={style}
-    >
-      {children}
-    </Box>
-  );
+export default function Section({ children }: Props) {
+  return <Card>{children}</Card>;
 }

@@ -1,10 +1,9 @@
-import Button from "../components/primitives/Button";
-import Input from "../components/primitives/Input";
-import Text from "../components/primitives/Text";
-import Center from "../components/layout/Center";
-import Screen from "../components/layout/Screen";
-import Section from "../components/layout/Section";
-import { StyleSheet } from "react-native";
+import Button from "../primitives/Button";
+import Card from "../primitives/Card";
+import Input from "../primitives/Input";
+import ScreenContainer from "../primitives/ScreenContainer";
+import Stack from "../primitives/Stack";
+import Text from "../primitives/Text";
 
 type Props = {
   email: string;
@@ -27,49 +26,44 @@ export default function AuthScreen({
   onPasswordChange,
   onSubmit,
 }: Props) {
-
   return (
-    <Screen>
-      <Center>
-        <Section style={styles.section}>
-          <Text variant="title">Auth</Text>
-          <Text tone="secondary">
-            Sign in to switch the app shell into the authenticated home state.
-          </Text>
-          {fallbackEnabled ? (
-            <Text tone="secondary">
-              Mock auth fallback is active until the backend login endpoint is available.
+    <ScreenContainer center>
+      <Stack align="center" gap="sm">
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">Auth</Text>
+            <Text tone="muted">
+              Sign in to switch the app shell into the authenticated home state.
             </Text>
-          ) : null}
-          <Input
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!submitting}
-            onChangeText={onEmailChange}
-            placeholder="Email"
-            value={email}
-          />
-          <Input
-            editable={!submitting}
-            onChangeText={onPasswordChange}
-            placeholder="Password"
-            secureTextEntry
-            value={password}
-          />
-          {errorMessage ? <Text>{errorMessage}</Text> : null}
-          <Button
-            disabled={submitting || !email.trim() || !password}
-            label={submitting ? "Signing In..." : "Sign In"}
-            onPress={onSubmit}
-          />
-        </Section>
-      </Center>
-    </Screen>
+            {fallbackEnabled ? (
+              <Text tone="muted">
+                Mock auth fallback is active until the backend login endpoint is available.
+              </Text>
+            ) : null}
+            <Input
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!submitting}
+              onChangeText={onEmailChange}
+              placeholder="Email"
+              value={email}
+            />
+            <Input
+              editable={!submitting}
+              onChangeText={onPasswordChange}
+              placeholder="Password"
+              secureTextEntry
+              value={password}
+            />
+            {errorMessage ? <Text tone="error">{errorMessage}</Text> : null}
+            <Button
+              disabled={submitting || !email.trim() || !password}
+              label={submitting ? "Signing In..." : "Sign In"}
+              onPress={onSubmit}
+            />
+          </Stack>
+        </Card>
+      </Stack>
+    </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  section: {
-    width: "100%",
-  },
-});

@@ -1,8 +1,8 @@
-import Box from "../components/primitives/Box";
-import Screen from "../components/layout/Screen";
-import Section from "../components/layout/Section";
-import Button from "../components/primitives/Button";
-import Text from "../components/primitives/Text";
+import Button from "../primitives/Button";
+import Card from "../primitives/Card";
+import ScreenContainer from "../primitives/ScreenContainer";
+import Stack from "../primitives/Stack";
+import Text from "../primitives/Text";
 
 type HomeUser = {
   email: string;
@@ -25,26 +25,31 @@ export default function HomeScreen({
   onOpenLearning,
   onOpenYkiPractice,
 }: Props) {
-
   return (
-    <Screen>
-      <Box flex={1} gap="md" justifyContent="center">
-        <Section>
-          <Text variant="title">Home</Text>
-          <Text tone="secondary">Authenticated session ready.</Text>
-          <Text>Name: {user.name}</Text>
-          <Text>Email: {user.email}</Text>
-          <Text>User ID: {user.id}</Text>
-        </Section>
+    <ScreenContainer center>
+      <Stack gap="sm">
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">Home</Text>
+            <Text tone="muted">Authenticated session ready.</Text>
+            <Text>Name: {user.name}</Text>
+            <Text>Email: {user.email}</Text>
+            <Text>User ID: {user.id}</Text>
+          </Stack>
+        </Card>
 
-        <Section>
-          <Text variant="title">Runtime Flows</Text>
-          <Button label="Open Learning" onPress={onOpenLearning} />
-          <Button label="Open YKI Practice" onPress={onOpenYkiPractice} />
-          {debugAvailable ? <Text tone="secondary">Learning debug visibility is available.</Text> : null}
-          <Button label="Log Out" onPress={onLogout} />
-        </Section>
-      </Box>
-    </Screen>
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">Runtime Flows</Text>
+            <Button label="Open Learning" onPress={onOpenLearning} />
+            <Button label="Open YKI Practice" onPress={onOpenYkiPractice} />
+            {debugAvailable ? (
+              <Text tone="muted">Learning debug visibility is available.</Text>
+            ) : null}
+            <Button label="Log Out" onPress={onLogout} tone="surface" />
+          </Stack>
+        </Card>
+      </Stack>
+    </ScreenContainer>
   );
 }

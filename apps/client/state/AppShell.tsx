@@ -1,7 +1,7 @@
-import Center from "@ui/components/layout/Center";
-import Screen from "@ui/components/layout/Screen";
-import Section from "@ui/components/layout/Section";
-import Text from "@ui/components/primitives/Text";
+import Card from "@ui/primitives/Card";
+import ScreenContainer from "@ui/primitives/ScreenContainer";
+import Stack from "@ui/primitives/Stack";
+import Text from "@ui/primitives/Text";
 
 import AuthRoute from "./AuthRoute";
 import HomeRoute from "./HomeRoute";
@@ -13,14 +13,16 @@ export default function AppShell() {
 
   if (!hasHydrated) {
     return (
-      <Screen>
-        <Center>
-          <Section>
-            <Text variant="title">KieliTaika</Text>
-            <Text tone="secondary">Restoring session...</Text>
-          </Section>
-        </Center>
-      </Screen>
+      <ScreenContainer center>
+        <Stack gap="sm">
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">KieliTaika</Text>
+              <Text tone="muted">Restoring session...</Text>
+            </Stack>
+          </Card>
+        </Stack>
+      </ScreenContainer>
     );
   }
 

@@ -76,7 +76,7 @@ export default function useYkiPractice() {
   }
 
   async function handleSessionAction(
-    action: "submit_only" | "advance" | "retry_task" | "retry_section",
+    action: "submit_only" | "advance",
     answer?: string,
   ) {
     const res = await submitPracticeTask(action, answer);
@@ -93,12 +93,7 @@ export default function useYkiPractice() {
       ...current,
       data: res.data,
       error: null,
-      notice:
-        action === "retry_task"
-          ? "Task reset."
-          : action === "retry_section"
-            ? "Section reset."
-            : null,
+      notice: null,
     }));
   }
 
@@ -116,8 +111,6 @@ export default function useYkiPractice() {
     refreshSession: hydrate,
     submitAnswer: (answer: string) => handleSessionAction("submit_only", answer),
     advanceTask: () => handleSessionAction("advance"),
-    retryTask: () => handleSessionAction("retry_task"),
-    retrySection: () => handleSessionAction("retry_section"),
     clearSession: clearPracticeSession,
   };
 }

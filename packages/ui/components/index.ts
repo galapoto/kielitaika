@@ -5,3 +5,7 @@ export { default as Box } from "./primitives/Box";
 export { default as Text } from "./primitives/Text";
 export { default as Button } from "./primitives/Button";
 export { default as Input } from "./primitives/Input";
+export { default as Card } from "../primitives/Card";
+export { default as Row } from "../primitives/Row";
+export { default as ScreenContainer } from "../primitives/ScreenContainer";
+export { default as Stack } from "../primitives/Stack";

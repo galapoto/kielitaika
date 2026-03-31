@@ -1,20 +1,13 @@
 import type { PropsWithChildren } from "react";
-import { StyleSheet } from "react-native";
 
-import Box from "../primitives/Box";
+import Stack from "../../primitives/Stack";
 
 type Props = PropsWithChildren;
 
 export default function Center({ children }: Props) {
   return (
-    <Box alignItems="center" flex={1} justifyContent="center" style={styles.center}>
+    <Stack align="center" fill justify="center">
       {children}
-    </Box>
+    </Stack>
   );
 }
-
-const styles = StyleSheet.create({
-  center: {
-    width: "100%",
-  },
-});

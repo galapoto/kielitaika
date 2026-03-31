@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 
 import { getApiContractViolations } from "@core/api/apiClient";
-import Screen from "@ui/components/layout/Screen";
-import Section from "@ui/components/layout/Section";
-import Text from "@ui/components/primitives/Text";
+import Card from "@ui/primitives/Card";
+import ScreenContainer from "@ui/primitives/ScreenContainer";
+import Stack from "@ui/primitives/Stack";
+import Text from "@ui/primitives/Text";
 import LearningScreen from "@ui/screens/LearningScreen";
 import {
   getLearningDebugState,
@@ -296,23 +297,31 @@ export default function LearningRoute() {
 
   if (!hasHydrated || !user) {
     return (
-      <Screen>
-        <Section>
-          <Text variant="title">Learning</Text>
-          <Text tone="secondary">Preparing your learning workspace...</Text>
-        </Section>
-      </Screen>
+      <ScreenContainer center>
+        <Stack gap="sm">
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Learning</Text>
+              <Text tone="muted">Preparing your learning workspace...</Text>
+            </Stack>
+          </Card>
+        </Stack>
+      </ScreenContainer>
     );
   }
 
   if (!state.loading && !state.errorMessage && (!state.modulesData || !state.debugState)) {
     return (
-      <Screen>
-        <Section>
-          <Text variant="title">Learning</Text>
-          <Text>CONTRACT_VIOLATION</Text>
-        </Section>
-      </Screen>
+      <ScreenContainer center>
+        <Stack gap="sm">
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Learning</Text>
+              <Text tone="error">CONTRACT_VIOLATION</Text>
+            </Stack>
+          </Card>
+        </Stack>
+      </ScreenContainer>
     );
   }
 

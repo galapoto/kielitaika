@@ -1,8 +1,9 @@
-import Box from "../components/primitives/Box";
-import Button from "../components/primitives/Button";
-import Text from "../components/primitives/Text";
-import Screen from "../components/layout/Screen";
-import Section from "../components/layout/Section";
+import Button from "../primitives/Button";
+import Card from "../primitives/Card";
+import Row from "../primitives/Row";
+import ScreenContainer from "../primitives/ScreenContainer";
+import Stack from "../primitives/Stack";
+import Text from "../primitives/Text";
 
 type RecommendedModule = {
   id: string;
@@ -77,6 +78,29 @@ type Props = {
   onRefresh: () => void;
 };
 
+function MetadataRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Row justify="space-between">
+      <Text variant="caption" tone="muted">
+        {label}
+      </Text>
+      <Text variant="caption">{value}</Text>
+    </Row>
+  );
+}
+
+function TextList({ items, tone = "default" }: { items: string[]; tone?: "default" | "muted" }) {
+  return (
+    <Stack gap="xxs">
+      {items.map((item) => (
+        <Text key={item} tone={tone}>
+          {item}
+        </Text>
+      ))}
+    </Stack>
+  );
+}
+
 export default function LearningScreen({
   adaptiveWeightChanges,
   auditReplaySummary,
@@ -105,191 +129,214 @@ export default function LearningScreen({
 }: Props) {
   if (loading) {
     return (
-      <Screen>
-        <Section>
-          <Text variant="title">Learning</Text>
-          <Text tone="secondary">Loading governed learning state...</Text>
-        </Section>
-      </Screen>
+      <ScreenContainer center>
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">Learning</Text>
+            <Text tone="muted">Loading governed learning state...</Text>
+          </Stack>
+        </Card>
+      </ScreenContainer>
     );
   }
 
   if (errorMessage) {
     return (
-      <Screen>
-        <Section>
-          <Text variant="title">Learning</Text>
-          <Text>{errorMessage}</Text>
+      <ScreenContainer center>
+        <Stack gap="sm">
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Learning</Text>
+              <Text tone="error">{errorMessage}</Text>
+            </Stack>
+          </Card>
           <Button label="Retry" onPress={onRefresh} />
-          <Button label="Back" onPress={onBack} />
-        </Section>
-      </Screen>
+          <Button label="Back" onPress={onBack} tone="surface" />
+        </Stack>
+      </ScreenContainer>
     );
   }
 
   return (
-    <Screen>
-      <Box gap="md">
-        <Section>
-          <Text variant="title">Learning</Text>
-          <Text>Decision version: {decisionVersion}</Text>
-          <Text>Policy version: {policyVersion}</Text>
-          <Text>Governance version: {governanceVersion}</Text>
-          <Text tone="secondary">Change reference: {changeReference ?? "none"}</Text>
-          <Text tone="secondary">Governance status: {governanceStatus}</Text>
-          {untrustedStateMessage ? <Text>{untrustedStateMessage}</Text> : null}
-          <Button label="Refresh Learning" onPress={onRefresh} />
-          <Button label="Back Home" onPress={onBack} />
-        </Section>
+    <ScreenContainer>
+      <Stack gap="sm">
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">Learning</Text>
+            <MetadataRow label="Decision version" value={decisionVersion} />
+            <MetadataRow label="Policy version" value={policyVersion} />
+            <MetadataRow label="Governance version" value={governanceVersion} />
+            <MetadataRow label="Governance status" value={governanceStatus} />
+            {changeReference ? (
+              <MetadataRow label="Change reference" value={changeReference} />
+            ) : null}
+            {untrustedStateMessage ? <Text tone="error">{untrustedStateMessage}</Text> : null}
+          </Stack>
+        </Card>
 
-        <Section>
-          <Text variant="title">Policy Controls</Text>
-          {policySummary.map((item) => (
-            <Text key={item}>{item}</Text>
-          ))}
-          {policyConstraintLogs.length ? (
-            policyConstraintLogs.map((item) => <Text key={item}>{item}</Text>)
-          ) : (
-            <Text tone="secondary">No policy clamps were applied to the current governed output.</Text>
-          )}
-        </Section>
+        <Card>
+          <Stack gap="xs">
+            <Button label="Refresh Learning" onPress={onRefresh} />
+            <Button label="Back Home" onPress={onBack} tone="surface" />
+          </Stack>
+        </Card>
 
-        <Section>
-          <Text variant="title">Recommended Modules</Text>
-          {recommendedModules.length ? (
-            recommendedModules.map((module) => (
-              <Box key={module.id} gap="sm">
-                <Text>{module.title}</Text>
-                <Text tone="secondary">{module.suggestionReason ?? "No suggestion reason was returned."}</Text>
-                <Text tone="secondary">Low mastery units: {module.lowMasteryUnitIds.join(", ") || "none"}</Text>
-                <Text tone="secondary">Due review units: {module.dueReviewUnitIds.join(", ") || "none"}</Text>
-                <Text tone="secondary">Stagnated units: {module.stagnatedUnitIds.join(", ") || "none"}</Text>
-                {module.recommendationRejectedBecause.length ? (
-                  <Text tone="secondary">
-                    Rejections: {module.recommendationRejectedBecause.join(", ")}
-                  </Text>
-                ) : null}
-              </Box>
-            ))
-          ) : (
-            <Text tone="secondary">The backend returned no governed module recommendations.</Text>
-          )}
-        </Section>
+        {policySummary.length || policyConstraintLogs.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Policy Controls</Text>
+              {policySummary.length ? <TextList items={policySummary} /> : null}
+              {policyConstraintLogs.length ? (
+                <TextList items={policyConstraintLogs} tone="muted" />
+              ) : null}
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">Stagnation State</Text>
-          {stagnatedUnits.length ? (
-            stagnatedUnits.map((unit) => (
-              <Text key={unit.unitId}>
-                {unit.title}: attempts {unit.attempts}, mastery {unit.masteryScore.toFixed(2)}, retry {unit.retryCount}, policy {unit.policyStage}, next difficulty {unit.switchDifficultyTo}, suggestion {unit.retrySuggestion}
-                {unit.alternativeUnitTitle ? `, alternative ${unit.alternativeUnitTitle}` : ""}
-                {unit.stagnationReason ? `, reason ${unit.stagnationReason}` : ""}
-              </Text>
-            ))
-          ) : (
-            <Text tone="secondary">No stagnated units are currently governed for escalation.</Text>
-          )}
-        </Section>
+        {recommendedModules.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Recommended Modules</Text>
+              {recommendedModules.map((module) => (
+                <Card key={module.id} tone="surfaceMuted">
+                  <Stack gap="xxs">
+                    <Text variant="bodyStrong">{module.title}</Text>
+                    {module.suggestionReason ? <Text tone="muted">{module.suggestionReason}</Text> : null}
+                    {module.lowMasteryUnitIds.length ? (
+                      <Text tone="muted">Low mastery units: {module.lowMasteryUnitIds.join(", ")}</Text>
+                    ) : null}
+                    {module.dueReviewUnitIds.length ? (
+                      <Text tone="muted">Due review units: {module.dueReviewUnitIds.join(", ")}</Text>
+                    ) : null}
+                    {module.stagnatedUnitIds.length ? (
+                      <Text tone="muted">Stagnated units: {module.stagnatedUnitIds.join(", ")}</Text>
+                    ) : null}
+                    {module.recommendationRejectedBecause.length ? (
+                      <Text tone="muted">
+                        Rejections: {module.recommendationRejectedBecause.join(", ")}
+                      </Text>
+                    ) : null}
+                  </Stack>
+                </Card>
+              ))}
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">Effectiveness</Text>
-          {factorContributionSummary.length ? (
-            factorContributionSummary.map((item) => <Text key={item}>{item}</Text>)
-          ) : (
-            <Text tone="secondary">Effectiveness data is still calibrating.</Text>
-          )}
-        </Section>
+        {stagnatedUnits.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Stagnation State</Text>
+              {stagnatedUnits.map((unit) => (
+                <Text key={unit.unitId}>
+                  {unit.title}: attempts {unit.attempts}, mastery {unit.masteryScore.toFixed(2)}, retry {unit.retryCount}, policy {unit.policyStage}, next difficulty {unit.switchDifficultyTo}, suggestion {unit.retrySuggestion}
+                  {unit.alternativeUnitTitle ? `, alternative ${unit.alternativeUnitTitle}` : ""}
+                  {unit.stagnationReason ? `, reason ${unit.stagnationReason}` : ""}
+                </Text>
+              ))}
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">Recommendation Trace</Text>
-          {recommendationTrace.length ? (
-            recommendationTrace.map((item) => (
-              <Box key={item.moduleId} gap="sm">
-                <Text>{item.title}</Text>
-                <Text tone="secondary">Final score: {item.finalScore.toFixed(2)}</Text>
-                <Text tone="secondary">{item.weightedFactors}</Text>
-                <Text tone="secondary">{item.adaptiveSummary}</Text>
-              </Box>
-            ))
-          ) : (
-            <Text tone="secondary">No recommendation trace is available.</Text>
-          )}
-        </Section>
+        {factorContributionSummary.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Effectiveness</Text>
+              <TextList items={factorContributionSummary} />
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">Adaptive Weight Changes</Text>
-          {adaptiveWeightChanges.length ? (
-            adaptiveWeightChanges.map((item) => <Text key={item}>{item}</Text>)
-          ) : (
-            <Text tone="secondary">No adaptive weight adjustments were applied yet.</Text>
-          )}
-        </Section>
+        {recommendationTrace.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Recommendation Trace</Text>
+              {recommendationTrace.map((item) => (
+                <Card key={item.moduleId} tone="surfaceMuted">
+                  <Stack gap="xxs">
+                    <Text variant="bodyStrong">{item.title}</Text>
+                    <Text tone="muted">Final score: {item.finalScore.toFixed(2)}</Text>
+                    <Text tone="muted">{item.weightedFactors}</Text>
+                    <Text tone="muted">{item.adaptiveSummary}</Text>
+                  </Stack>
+                </Card>
+              ))}
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">Recommendation Rejections</Text>
-          {recommendationRejections.length ? (
-            recommendationRejections.map((item) => <Text key={item}>{item}</Text>)
-          ) : (
-            <Text tone="secondary">No recommendation rejections were recorded.</Text>
-          )}
-        </Section>
+        {adaptiveWeightChanges.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Adaptive Weight Changes</Text>
+              <TextList items={adaptiveWeightChanges} />
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">Audit Timeline</Text>
-          {auditReplaySummary.length ? (
-            auditReplaySummary.map((item) => <Text key={item}>{item}</Text>)
-          ) : null}
-          {auditTimeline.length ? (
-            auditTimeline.map((item) => <Text key={item}>{item}</Text>)
-          ) : (
-            <Text tone="secondary">No audit events have been recorded yet.</Text>
-          )}
-        </Section>
+        {recommendationRejections.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Recommendation Rejections</Text>
+              <TextList items={recommendationRejections} />
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">Raw Outcomes</Text>
-          {rawRecommendationOutcomes.length ? (
-            rawRecommendationOutcomes.map((item) => (
-              <Text key={`${item.unitId}-${item.status}`}>
-                {item.unitId}: effectiveness {item.effectivenessScore.toFixed(2)}, delta {item.improvementDelta.toFixed(2)}, status {item.status}, impact {item.impactLabel}
-              </Text>
-            ))
-          ) : (
-            <Text tone="secondary">No measured outcomes yet.</Text>
-          )}
-        </Section>
+        {auditReplaySummary.length || auditTimeline.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Audit Timeline</Text>
+              {auditReplaySummary.length ? <TextList items={auditReplaySummary} /> : null}
+              {auditTimeline.length ? <TextList items={auditTimeline} tone="muted" /> : null}
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">Improvement Trends</Text>
-          {improvementTrends.length ? (
-            improvementTrends.map((item) => (
-              <Text key={`${item.unitId}-${item.impactLabel}`}>
-                {item.unitId}: {item.impactLabel}, delta {item.improvementDelta.toFixed(2)}, effectiveness {item.effectivenessScore.toFixed(2)}
-              </Text>
-            ))
-          ) : (
-            <Text tone="secondary">No improvement trends available.</Text>
-          )}
-        </Section>
+        {rawRecommendationOutcomes.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Raw Outcomes</Text>
+              {rawRecommendationOutcomes.map((item) => (
+                <Text key={`${item.unitId}-${item.status}`}>
+                  {item.unitId}: effectiveness {item.effectivenessScore.toFixed(2)}, delta {item.improvementDelta.toFixed(2)}, status {item.status}, impact {item.impactLabel}
+                </Text>
+              ))}
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">YKI Influence Logs</Text>
-          {ykiInfluenceLogs.length ? (
-            ykiInfluenceLogs.map((item) => <Text key={item}>{item}</Text>)
-          ) : (
-            <Text tone="secondary">No YKI influence has been recorded yet.</Text>
-          )}
-        </Section>
+        {improvementTrends.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Improvement Trends</Text>
+              {improvementTrends.map((item) => (
+                <Text key={`${item.unitId}-${item.impactLabel}`}>
+                  {item.unitId}: {item.impactLabel}, delta {item.improvementDelta.toFixed(2)}, effectiveness {item.effectivenessScore.toFixed(2)}
+                </Text>
+              ))}
+            </Stack>
+          </Card>
+        ) : null}
 
-        <Section>
-          <Text variant="title">Contract Diagnostics</Text>
-          {contractViolations.length ? (
-            contractViolations.map((item) => <Text key={item}>{item}</Text>)
-          ) : (
-            <Text tone="secondary">No contract violations detected.</Text>
-          )}
-        </Section>
-      </Box>
-    </Screen>
+        {ykiInfluenceLogs.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">YKI Influence Logs</Text>
+              <TextList items={ykiInfluenceLogs} />
+            </Stack>
+          </Card>
+        ) : null}
+
+        {contractViolations.length ? (
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Contract Diagnostics</Text>
+              <TextList items={contractViolations} tone="muted" />
+            </Stack>
+          </Card>
+        ) : null}
+      </Stack>
+    </ScreenContainer>
   );
 }
