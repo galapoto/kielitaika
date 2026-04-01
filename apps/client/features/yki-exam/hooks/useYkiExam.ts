@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 
+import { audioManager } from "@core/audio/audioManager";
 import {
   advanceExamSession,
   clearExamSession,
+  getListeningPromptAudio,
   playExamPrompt,
+  resolveExamMediaUrl,
   resumeExamSession,
   startExamSession,
   submitExamAnswer,
@@ -117,6 +120,7 @@ export default function useYkiExam() {
 
     const response = await action();
     applyResponse(response, transportNotice);
+    return response;
   }
 
   useEffect(() => {
@@ -152,11 +156,43 @@ export default function useYkiExam() {
         "Advancing the exam failed because backend state could not be confirmed.",
       ),
     clearSession: clearExamSession,
-    playPrompt: () =>
-      runAction(
+    playPrompt: async () => {
+      const response = await runAction(
         playExamPrompt,
         "Prompt playback could not be confirmed by the engine.",
-      ),
+      );
+
+      if (!response.ok || !response.data) {
+        return response;
+      }
+
+      const promptAudio = getListeningPromptAudio(response.data);
+      if (!promptAudio?.ready || !promptAudio.url) {
+        setState((current) => ({
+          ...current,
+          notice: "Pre-rendered listening audio is unavailable.",
+        }));
+        return response;
+      }
+
+      try {
+        await audioManager.play(resolveExamMediaUrl(promptAudio.url));
+        setState((current) => ({
+          ...current,
+          notice: "Playing cached listening prompt.",
+        }));
+      } catch (error) {
+        setState((current) => ({
+          ...current,
+          notice:
+            error instanceof Error
+              ? error.message
+              : "Pre-rendered listening audio failed to play.",
+        }));
+      }
+
+      return response;
+    },
     refresh: hydrate,
     submitAnswer: (answer: string) =>
       runAction(

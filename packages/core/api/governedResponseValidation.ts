@@ -1029,6 +1029,16 @@ const ykiExamCurrentViewSchema = objectSchema(
         count: numberSchema,
         limit: numberSchema,
         remaining: numberSchema,
+        ready: booleanSchema,
+        audio: nullableSchema(
+          objectSchema({
+            id: stringSchema,
+            url: stringSchema,
+            content_type: stringSchema,
+            duration_ms: numberSchema,
+            ready: booleanSchema,
+          }),
+        ),
       }),
     ),
     question: nullableSchema(stringSchema),

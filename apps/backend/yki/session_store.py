@@ -2,6 +2,12 @@ import re
 import uuid
 from datetime import datetime, timedelta
 
+from tts.audio_registry import (
+    DEFAULT_YKI_LISTENING_SETTINGS,
+    DEFAULT_YKI_LISTENING_VOICE_ID,
+    get_audio_asset,
+    pre_render_listening_asset,
+)
 from yki.ai_evaluation import TEXT_CRITERIA, fetch_ai_text_evaluation
 from yki.storage import InMemorySessionStorage, RedisSessionStorage
 
@@ -118,6 +124,7 @@ def create_session():
         },
     }
 
+    pre_render_session_listening_audio(session)
     initialize_section_runtime(session, SECTION_ORDER[0], now=now)
     storage.create(session)
     return session
@@ -359,6 +366,64 @@ def initialize_section_runtime(session, section_name: str, now=None):
     section["expiresAt"] = (
         current_time + timedelta(minutes=SECTION_TIME_LIMITS[section_name])
     ).isoformat()
+
+
+def attach_listening_audio_asset(task):
+    source_text = task.get("audioPrompt")
+    if not source_text:
+        return task
+
+    asset = pre_render_listening_asset(
+        text=source_text,
+        voice_id=task.get("voiceId", DEFAULT_YKI_LISTENING_VOICE_ID),
+        settings=task.get("voiceSettings", DEFAULT_YKI_LISTENING_SETTINGS),
+    )
+    task["audioAssetId"] = asset["id"]
+    task["audioAssetUrl"] = asset["url"]
+    task["audioContentType"] = asset["content_type"]
+    task["audioDurationMs"] = asset["duration_ms"]
+    return task
+
+
+def pre_render_session_listening_audio(session):
+    listening_section = session["sections"]["listening"]
+
+    if not listening_section["tasks"]:
+        listening_section["tasks"] = generate_mock_tasks("listening")
+
+    for task in listening_section["tasks"]:
+        if task.get("kind") == "listening_prompt":
+            attach_listening_audio_asset(task)
+
+
+def build_playback_payload(task):
+    if task.get("kind") != "listening_prompt":
+        return None
+
+    asset_id = task.get("audioAssetId")
+    asset = get_audio_asset(asset_id) if isinstance(asset_id, str) else None
+
+    return {
+        "count": task.get("playbackCount", 0),
+        "limit": task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT),
+        "remaining": max(
+            0,
+            task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT)
+            - task.get("playbackCount", 0),
+        ),
+        "audio": (
+            {
+                "content_type": asset["content_type"],
+                "duration_ms": asset["duration_ms"],
+                "id": asset["id"],
+                "ready": True,
+                "url": asset["url"],
+            }
+            if asset
+            else None
+        ),
+        "ready": bool(asset),
+    }
 
 
 def is_answerable_task(task):
@@ -1108,8 +1173,9 @@ def build_current_view(session):
     if task.get("kind") == "listening_prompt":
         playback_limit = task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT)
         playback_count = task.get("playbackCount", 0)
+        playback = build_playback_payload(task)
         actions["play_prompt"] = {
-            "enabled": playback_count < playback_limit,
+            "enabled": playback_count < playback_limit and bool(playback and playback["ready"]),
             "kind": "play_prompt",
             "label": "Play Prompt",
         }
@@ -1140,19 +1206,7 @@ def build_current_view(session):
         "kind": kind_map[task["kind"]],
         "options": task.get("options", []),
         "passage": task.get("passage"),
-        "playback": (
-            {
-                "count": task.get("playbackCount", 0),
-                "limit": task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT),
-                "remaining": max(
-                    0,
-                    task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT)
-                    - task.get("playbackCount", 0),
-                ),
-            }
-            if task.get("kind") == "listening_prompt"
-            else None
-        ),
+        "playback": build_playback_payload(task),
         "prompt": task.get("prompt"),
         "question": task.get("question"),
         "recording": (
@@ -1361,6 +1415,10 @@ def play_listening_prompt(session_id: str):
     task = section_data["tasks"][idx]
     if task.get("kind") != "listening_prompt":
         return {"error": "NOT_LISTENING_SECTION"}
+
+    asset_id = task.get("audioAssetId")
+    if not isinstance(asset_id, str) or not get_audio_asset(asset_id):
+        return {"error": "AUDIO_ASSET_MISSING"}
 
     playback_limit = task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT)
     playback_count = task.get("playbackCount", 0)

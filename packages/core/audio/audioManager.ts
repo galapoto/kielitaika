@@ -49,10 +49,16 @@ export const audioManager = {
   },
 
   async play(uri: string) {
+    if (currentSound) {
+      await currentSound.unloadAsync();
+      currentSound = null;
+    }
+
     try {
-      if (currentSound) {
-        await currentSound.unloadAsync();
-      }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
 
       const { sound } = await Audio.Sound.createAsync({ uri });
 
@@ -60,7 +66,14 @@ export const audioManager = {
 
       await sound.playAsync();
     } catch (error) {
-      console.error("Audio play error", error);
+      if (currentSound) {
+        await currentSound.unloadAsync();
+        currentSound = null;
+      }
+
+      throw error instanceof Error
+        ? error
+        : new Error("Pre-rendered listening audio failed to play.");
     }
   },
 

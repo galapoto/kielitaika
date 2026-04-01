@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from api_contract import failure, record_contract_action, resolve_trace_id, success
 from audit.audit_logger import next_event_id
@@ -15,6 +16,7 @@ from learning.adapter import (
     get_related_learning_units,
     submit_learning_progress,
 )
+from tts.audio_registry import get_audio_asset
 from yki.adapter import (
     advance_governed_exam,
     advance_task,
@@ -52,6 +54,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/api/audio/{audio_id}")
+def audio_asset(audio_id: str):
+    asset = get_audio_asset(audio_id)
+
+    if asset is None:
+        raise HTTPException(status_code=404, detail="AUDIO_ASSET_MISSING")
+
+    return FileResponse(
+        asset["file_path"],
+        filename=asset["id"],
+        media_type=asset["content_type"],
+    )
 
 
 def _trace_id(request: Request):

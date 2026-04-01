@@ -1,4 +1,5 @@
 import { apiClient, ContractViolationError } from "@core/api/apiClient";
+import { getApiBaseUrl } from "@core/api/apiConfig";
 import { validateYkiExamSessionPayload } from "@core/api/governedResponseValidation";
 import {
   clearPersistedYkiExamSession,
@@ -57,6 +58,14 @@ export type YkiExamSession = {
       count: number;
       limit: number;
       remaining: number;
+      ready: boolean;
+      audio: {
+        id: string;
+        url: string;
+        content_type: string;
+        duration_ms: number;
+        ready: boolean;
+      } | null;
     } | null;
     question?: string | null;
     recording?: {
@@ -148,6 +157,18 @@ type PersistedExamSuccess = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export function resolveExamMediaUrl(path: string) {
+  if (/^https?:\/\//.test(path)) {
+    return path;
+  }
+
+  return `${getApiBaseUrl()}${path}`;
+}
+
+export function getListeningPromptAudio(session: YkiExamSession) {
+  return session.current_view.playback?.audio ?? null;
 }
 
 function normalizeError(error: ApiError | null): ApiError {

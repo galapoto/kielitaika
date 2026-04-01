@@ -38,6 +38,14 @@ type SessionView = {
     count: number;
     limit: number;
     remaining: number;
+    ready: boolean;
+    audio: {
+      id: string;
+      url: string;
+      content_type: string;
+      duration_ms: number;
+      ready: boolean;
+    } | null;
   } | null;
   question?: string | null;
   recording?: {
@@ -232,6 +240,7 @@ export default function YkiExamScreen({
   const transitionCopy =
     transitionLabel ?? buildStageReadyCopy(currentView, isReadOnly, playbackStateLabel);
   const listeningRemaining = currentView.playback?.remaining ?? 0;
+  const listeningAudio = currentView.playback?.audio ?? null;
 
   return (
     <ScreenContainer
@@ -399,7 +408,7 @@ export default function YkiExamScreen({
                 ) : null}
 
                 {currentView.playback ? (
-                  <Card tone="surfaceRaised">
+                  <Card tone={currentView.playback.ready ? "surfaceRaised" : "warning"}>
                     <View style={styles.heroPanel}>
                       <Stack gap="sm">
                         <Text variant="title">Listening prompt</Text>
@@ -425,6 +434,20 @@ export default function YkiExamScreen({
                           }
                           valueTone={listeningRemaining > 0 ? "primary" : "muted"}
                         />
+                        <MetadataRow
+                          label="Audio state"
+                          value={currentView.playback.ready ? "Pre-rendered and ready" : "Missing"}
+                          valueTone={currentView.playback.ready ? "success" : "muted"}
+                        />
+                        {listeningAudio ? (
+                          <>
+                            <MetadataRow label="Audio asset" value={listeningAudio.id} />
+                            <MetadataRow
+                              label="Duration"
+                              value={`${Math.round(listeningAudio.duration_ms / 1000)} sec`}
+                            />
+                          </>
+                        ) : null}
                         <Text tone="muted">
                           Questions stay hidden until you continue from this prompt screen.
                         </Text>

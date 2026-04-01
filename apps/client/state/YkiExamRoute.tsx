@@ -234,7 +234,7 @@ export default function YkiExamRoute({ onExit }: Props) {
     [],
   );
 
-  async function runExamAction(kind: PendingAction, action: () => Promise<void>) {
+  async function runExamAction(kind: PendingAction, action: () => Promise<unknown>) {
     setRuntimeMessage(null);
     setActiveRequest(kind);
 
