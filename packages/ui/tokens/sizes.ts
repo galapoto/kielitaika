@@ -47,4 +47,10 @@ export const componentSizes = {
     actionGap: 8,
     screenPadding: 16,
   },
+  exam: {
+    stageMinHeight: 320,
+    heroMinHeight: 176,
+    statusPanelMinHeight: 88,
+    transitionPanelMinHeight: 64,
+  },
 } as const;

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Text as RNText } from "react-native";
+import { StyleSheet, Text as RNText } from "react-native";
 
 import { colors, typography } from "../tokens";
 
@@ -13,23 +13,6 @@ type Props = {
   variant?: Variant;
 };
 
-const variantStyles = {
-  body: typography.roles.body,
-  bodyStrong: typography.roles.bodyStrong,
-  button: typography.roles.button,
-  caption: typography.roles.label,
-  title: typography.roles.title,
-} as const;
-
-const toneStyles = {
-  default: colors.textPrimary,
-  muted: colors.textSecondary,
-  primary: colors.neutral,
-  inverse: colors.onNeutral,
-  error: colors.wrong,
-  success: colors.correct,
-} as const;
-
 export default function Text({
   align = "left",
   children,
@@ -38,14 +21,59 @@ export default function Text({
 }: Props) {
   return (
     <RNText
-      style={{
-        color: toneStyles[tone],
-        fontFamily: typography.family.sans,
-        textAlign: align,
-        ...variantStyles[variant],
-      }}
+      style={[styles.base, variantStyles[variant], toneStyles[tone], alignStyles[align]]}
     >
       {children}
     </RNText>
   );
 }
+
+const styles = StyleSheet.create({
+  base: {
+    fontFamily: typography.family.sans,
+  },
+});
+
+const variantStyles = StyleSheet.create({
+  body: typography.roles.body,
+  bodyStrong: typography.roles.bodyStrong,
+  button: typography.roles.button,
+  caption: typography.roles.label,
+  title: typography.roles.title,
+});
+
+const toneStyles = StyleSheet.create({
+  default: {
+    color: colors.textPrimary,
+  },
+  error: {
+    color: colors.wrong,
+  },
+  inverse: {
+    color: colors.onNeutral,
+  },
+  muted: {
+    color: colors.textSecondary,
+  },
+  primary: {
+    color: colors.neutral,
+  },
+  success: {
+    color: colors.correct,
+  },
+});
+
+const alignStyles = StyleSheet.create({
+  auto: {
+    textAlign: "auto",
+  },
+  center: {
+    textAlign: "center",
+  },
+  left: {
+    textAlign: "left",
+  },
+  right: {
+    textAlign: "right",
+  },
+});

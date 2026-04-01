@@ -6,7 +6,8 @@ import { colors, componentSizes, radius, typography } from "../tokens";
 type Props = Omit<ComponentProps<typeof TextInput>, "placeholderTextColor" | "style">;
 
 export default function Input(props: Props) {
-  const size = props.multiline ? componentSizes.input.multiline : componentSizes.input.singleLine;
+  const editableState = props.editable === false ? "readOnly" : "editable";
+  const size = props.multiline ? "multiline" : "singleLine";
 
   return (
     <TextInput
@@ -14,14 +15,9 @@ export default function Input(props: Props) {
       placeholderTextColor={colors.placeholder}
       style={[
         styles.base,
-        {
-          color: props.editable === false ? colors.textSecondary : colors.textPrimary,
-          height: size.height,
-          paddingHorizontal: size.paddingHorizontal,
-          paddingVertical: size.paddingVertical,
-          textAlignVertical: props.multiline ? "top" : "center",
-          width: size.width,
-        },
+        stateStyles[editableState],
+        sizeStyles[size],
+        props.multiline ? styles.multiline : styles.singleLine,
       ]}
     />
   );
@@ -30,11 +26,42 @@ export default function Input(props: Props) {
 const styles = StyleSheet.create({
   base: {
     alignSelf: "stretch",
-    backgroundColor: colors.inputBackground,
     borderColor: colors.border,
     borderRadius: radius.medium,
     borderWidth: 1,
     fontFamily: typography.family.sans,
     ...typography.roles.body,
+  },
+  multiline: {
+    textAlignVertical: "top",
+  },
+  singleLine: {
+    textAlignVertical: "center",
+  },
+});
+
+const stateStyles = StyleSheet.create({
+  editable: {
+    backgroundColor: colors.inputBackground,
+    color: colors.textPrimary,
+  },
+  readOnly: {
+    backgroundColor: colors.surfaceMuted,
+    color: colors.textSecondary,
+  },
+});
+
+const sizeStyles = StyleSheet.create({
+  multiline: {
+    height: componentSizes.input.multiline.height,
+    paddingHorizontal: componentSizes.input.multiline.paddingHorizontal,
+    paddingVertical: componentSizes.input.multiline.paddingVertical,
+    width: componentSizes.input.multiline.width,
+  },
+  singleLine: {
+    height: componentSizes.input.singleLine.height,
+    paddingHorizontal: componentSizes.input.singleLine.paddingHorizontal,
+    paddingVertical: componentSizes.input.singleLine.paddingVertical,
+    width: componentSizes.input.singleLine.width,
   },
 });
