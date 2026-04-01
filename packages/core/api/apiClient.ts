@@ -30,6 +30,7 @@ type AuditTrailEntry = {
 
 let authToken: string | null = null;
 let expectedDecisionVersion: string | null = null;
+let expectedYkiExamSessionId: string | null = null;
 let expectedYkiPracticeSessionId: string | null = null;
 let traceCounter = 0;
 
@@ -103,6 +104,30 @@ function inferActionType(path: string, method: string) {
     return "YKI_SESSION_SUBMIT";
   }
 
+  if (path === "/api/v1/yki/sessions/start" && method === "POST") {
+    return "YKI_EXAM_SESSION_START";
+  }
+
+  if (/^\/api\/v1\/yki\/sessions\/[^/]+$/.test(path) && method === "GET") {
+    return "YKI_EXAM_SESSION_LOAD";
+  }
+
+  if (/^\/api\/v1\/yki\/sessions\/[^/]+\/next$/.test(path) && method === "POST") {
+    return "YKI_EXAM_SESSION_ADVANCE";
+  }
+
+  if (/^\/api\/v1\/yki\/sessions\/[^/]+\/answer$/.test(path) && method === "POST") {
+    return "YKI_EXAM_SESSION_ANSWER";
+  }
+
+  if (/^\/api\/v1\/yki\/sessions\/[^/]+\/audio$/.test(path) && method === "POST") {
+    return "YKI_EXAM_SESSION_AUDIO";
+  }
+
+  if (/^\/api\/v1\/yki\/sessions\/[^/]+\/play$/.test(path) && method === "POST") {
+    return "YKI_EXAM_SESSION_PLAY";
+  }
+
   return null;
 }
 
@@ -148,6 +173,7 @@ export function setAuthToken(token: string | null) {
 
 export function resetRuntimeContractState() {
   expectedDecisionVersion = null;
+  expectedYkiExamSessionId = null;
   expectedYkiPracticeSessionId = null;
 }
 
@@ -244,6 +270,17 @@ function extractYkiPracticeSessionIdFromPath(path: string) {
   return candidate;
 }
 
+function extractYkiExamSessionIdFromPath(path: string) {
+  const match = path.match(/^\/api\/v1\/yki\/sessions\/([^/]+)/);
+  const candidate = match?.[1] ?? null;
+
+  if (!candidate || candidate === "start") {
+    return null;
+  }
+
+  return candidate;
+}
+
 function validateResponseContract(path: string, data: unknown, sessionId?: string | null) {
   const responseDecisionVersion = extractDecisionVersion(data);
   if (responseDecisionVersion) {
@@ -259,6 +296,7 @@ function validateResponseContract(path: string, data: unknown, sessionId?: strin
   }
 
   const pathSessionId = extractYkiPracticeSessionIdFromPath(path);
+  const examPathSessionId = extractYkiExamSessionIdFromPath(path);
   const responseSessionId = extractSessionId(data);
   const expectedSessionId = sessionId ?? expectedYkiPracticeSessionId;
 
@@ -282,6 +320,30 @@ function validateResponseContract(path: string, data: unknown, sessionId?: strin
     }
 
     expectedYkiPracticeSessionId = responseSessionId;
+  }
+
+  const expectedExamSessionId = sessionId ?? expectedYkiExamSessionId;
+
+  if (examPathSessionId && responseSessionId && examPathSessionId !== responseSessionId) {
+    throw new ContractViolationError(
+      path,
+      "CONTRACT_VIOLATION",
+      `Exam session mismatch: path requested ${examPathSessionId}, response returned ${responseSessionId}.`,
+    );
+  }
+
+  if (path.startsWith("/api/v1/yki/sessions/start") && responseSessionId) {
+    expectedYkiExamSessionId = responseSessionId;
+  } else if (responseSessionId && path.startsWith("/api/v1/yki/sessions/")) {
+    if (expectedExamSessionId && expectedExamSessionId !== responseSessionId) {
+      throw new ContractViolationError(
+        path,
+        "CONTRACT_VIOLATION",
+        `Exam session continuity drift: expected ${expectedExamSessionId}, received ${responseSessionId}.`,
+      );
+    }
+
+    expectedYkiExamSessionId = responseSessionId;
   }
 }
 

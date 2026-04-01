@@ -16,17 +16,23 @@ from learning.adapter import (
     submit_learning_progress,
 )
 from yki.adapter import (
+    advance_governed_exam,
     advance_task,
+    answer_governed_audio,
+    answer_governed_task,
     answer_audio,
     answer_task,
     get_exam,
     get_exam_certificate,
+    get_governed_exam,
     get_task,
     get_user_progress_history,
     next_section,
+    play_governed_listening_prompt,
     play_current_listening_prompt,
     resume_exam,
     start_exam,
+    start_governed_exam,
 )
 from yki.session_store import DEFAULT_USER_ID
 from yki_practice.adapter import (
@@ -396,6 +402,134 @@ def yki_start(request: Request):
         session,
         event_type="YKI_EXAM_SESSION_STARTED",
         session_id=session.get("session_id") if isinstance(session, dict) else None,
+    )
+
+
+@app.post("/api/v1/yki/sessions/start")
+def yki_sessions_start(request: Request):
+    session = start_governed_exam()
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_EXAM_RUNTIME_STARTED",
+        session_id=session["session_id"],
+    )
+
+
+@app.get("/api/v1/yki/sessions/{session_id}")
+def yki_sessions_get(session_id: str, request: Request):
+    session = get_governed_exam(session_id)
+
+    if isinstance(session, dict) and "error" in session:
+        return _failure_response(
+            request,
+            session["error"],
+            event_type="YKI_EXAM_RUNTIME_LOADED",
+            request_payload={"session_id": session_id},
+            retryable=session["error"] == "SECTION_EXPIRED",
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        session,
+        event_type="YKI_EXAM_RUNTIME_LOADED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/yki/sessions/{session_id}/next")
+def yki_sessions_next(session_id: str, request: Request):
+    result = advance_governed_exam(session_id)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_RUNTIME_ADVANCED",
+            request_payload={"session_id": session_id},
+            retryable=result["error"] in {"SECTION_EXPIRED"},
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_RUNTIME_ADVANCED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/yki/sessions/{session_id}/answer")
+def yki_sessions_answer(session_id: str, body: dict, request: Request):
+    answer = body.get("answer")
+    result = answer_governed_task(session_id, answer)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_RUNTIME_ANSWERED",
+            request_payload={"answer": answer, "session_id": session_id},
+            retryable=False,
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_RUNTIME_ANSWERED",
+        request_payload={"answer": answer, "session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/yki/sessions/{session_id}/audio")
+def yki_sessions_audio(session_id: str, body: dict, request: Request):
+    audio_ref = body.get("audio")
+    result = answer_governed_audio(session_id, audio_ref)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_RUNTIME_AUDIO_SUBMITTED",
+            request_payload={"audio": audio_ref, "session_id": session_id},
+            retryable=False,
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_RUNTIME_AUDIO_SUBMITTED",
+        request_payload={"audio": audio_ref, "session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/yki/sessions/{session_id}/play")
+def yki_sessions_play(session_id: str, request: Request):
+    result = play_governed_listening_prompt(session_id)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_RUNTIME_PLAYED",
+            request_payload={"session_id": session_id},
+            retryable=False,
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_RUNTIME_PLAYED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
     )
 
 

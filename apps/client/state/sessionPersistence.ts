@@ -6,9 +6,10 @@ const STORAGE_FORMAT = "kielitaika.runtime.session";
 const STORAGE_VERSION = 1;
 const NAVIGATION_STATE_KEY = "runtime_navigation_state";
 const LEARNING_SESSION_KEY = "runtime_learning_session";
+const YKI_EXAM_SESSION_KEY = "yki_exam_session_id";
 const YKI_SESSION_KEY = "yki_practice_session_id";
 
-type PersistedEnvelopeKind = "learning" | "navigation" | "yki";
+type PersistedEnvelopeKind = "learning" | "navigation" | "yki" | "ykiExam";
 
 type PersistedEnvelopeBase = {
   format: typeof STORAGE_FORMAT;
@@ -44,7 +45,18 @@ type PersistedYkiSession = PersistedEnvelopeBase & {
   taskSequenceHash: string;
 };
 
-type PersistedEnvelope = PersistedLearningSession | PersistedNavigationState | PersistedYkiSession;
+type PersistedYkiExamSession = PersistedEnvelopeBase & {
+  kind: "ykiExam";
+  sessionId: string;
+  status: string;
+  viewKey: string;
+};
+
+type PersistedEnvelope =
+  | PersistedLearningSession
+  | PersistedNavigationState
+  | PersistedYkiSession
+  | PersistedYkiExamSession;
 
 type PersistedStateResult<T extends PersistedEnvelope> =
   | {
@@ -161,6 +173,20 @@ function isPersistedYkiSession(value: unknown): value is PersistedYkiSession {
     typeof record.isComplete === "boolean" &&
     typeof record.sessionHash === "string" &&
     typeof record.taskSequenceHash === "string"
+  );
+}
+
+function isPersistedYkiExamSession(value: unknown): value is PersistedYkiExamSession {
+  if (!hasVersionedEnvelope(value, "ykiExam")) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return (
+    typeof record.sessionId === "string" &&
+    typeof record.status === "string" &&
+    typeof record.viewKey === "string"
   );
 }
 
@@ -299,4 +325,27 @@ export async function loadPersistedYkiSession() {
 
 export async function clearPersistedYkiSession() {
   await storageService.remove(YKI_SESSION_KEY);
+}
+
+export async function persistYkiExamSession(value: {
+  sessionId: string;
+  status: string;
+  viewKey: string;
+}) {
+  await storageService.set(
+    YKI_EXAM_SESSION_KEY,
+    createEnvelope("ykiExam", {
+      sessionId: value.sessionId,
+      status: value.status,
+      viewKey: value.viewKey,
+    }),
+  );
+}
+
+export async function loadPersistedYkiExamSession() {
+  return loadVersionedState(YKI_EXAM_SESSION_KEY, isPersistedYkiExamSession, "ykiExam");
+}
+
+export async function clearPersistedYkiExamSession() {
+  await storageService.remove(YKI_EXAM_SESSION_KEY);
 }

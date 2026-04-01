@@ -996,6 +996,135 @@ const ykiPracticeSessionSchema = objectSchema(
   },
 );
 
+const ykiExamActionSchema = nullableSchema(
+  objectSchema({
+    enabled: booleanSchema,
+    kind: stringSchema,
+    label: stringSchema,
+  }),
+);
+
+const ykiExamCurrentViewSchema = objectSchema(
+  {
+    view_key: stringSchema,
+    kind: stringSchema,
+    title: stringSchema,
+    prompt: stringSchema,
+    input_mode: enumSchema(["none", "choice", "text", "audio"]),
+    instructions: arraySchema(stringSchema),
+    answer_status: stringSchema,
+    response_locked: booleanSchema,
+    section: nullableSchema(stringSchema),
+    options: arraySchema(stringSchema),
+    actions: objectSchema({
+      next: ykiExamActionSchema,
+      play_prompt: ykiExamActionSchema,
+      submit: ykiExamActionSchema,
+    }),
+  },
+  {
+    passage: nullableSchema(stringSchema),
+    playback: nullableSchema(
+      objectSchema({
+        count: numberSchema,
+        limit: numberSchema,
+        remaining: numberSchema,
+      }),
+    ),
+    question: nullableSchema(stringSchema),
+    recording: nullableSchema(
+      objectSchema({
+        max_duration_seconds: numberSchema,
+      }),
+    ),
+    submitted_answer: nullableSchema(stringSchema),
+    submitted_audio: nullableSchema(stringSchema),
+  },
+);
+
+const ykiExamSessionSchema = objectSchema({
+  session_id: stringSchema,
+  user_id: stringSchema,
+  status: stringSchema,
+  state_source: objectSchema({
+    mode: stringSchema,
+    path: stringSchema,
+  }),
+  section_order: arraySchema(stringSchema),
+  current_section: nullableSchema(stringSchema),
+  current_view: ykiExamCurrentViewSchema,
+  navigation: objectSchema({
+    back_allowed: booleanSchema,
+    can_next: booleanSchema,
+    forward_only: booleanSchema,
+    interaction_locked: booleanSchema,
+    next_label: nullableSchema(stringSchema),
+    read_only: booleanSchema,
+    skip_allowed: booleanSchema,
+    state_locked: booleanSchema,
+  }),
+  timing_manifest: objectSchema({
+    server_now: stringSchema,
+    exam_started_at: stringSchema,
+    exam_expires_at: stringSchema,
+    exam_remaining_seconds: numberSchema,
+    current_section_started_at: nullableSchema(stringSchema),
+    current_section_expires_at: nullableSchema(stringSchema),
+    current_section_remaining_seconds: numberSchema,
+    warning_threshold_seconds: numberSchema,
+    sections: recordSchema(
+      objectSchema({
+        duration_minutes: numberSchema,
+        expires_at: nullableSchema(stringSchema),
+        started_at: nullableSchema(stringSchema),
+        remaining_seconds: numberSchema,
+      }),
+    ),
+  }),
+  completion_state: objectSchema({
+    completed_section_count: numberSchema,
+    completed_step_count: numberSchema,
+    status: stringSchema,
+    total_section_count: numberSchema,
+    total_step_count: numberSchema,
+  }),
+  section_progress: arraySchema(
+    objectSchema({
+      section: stringSchema,
+      status: stringSchema,
+      current_step_index: numberSchema,
+      total_steps: numberSchema,
+      completed_step_count: numberSchema,
+      started_at: nullableSchema(stringSchema),
+      expires_at: nullableSchema(stringSchema),
+    }),
+  ),
+  certificate: nullableSchema(
+    objectSchema({
+      overall_score: numberSchema,
+      level: stringSchema,
+      passed: booleanSchema,
+      section_scores: recordSchema(numberSchema),
+      evaluation_mode: nullableSchema(stringSchema),
+    }),
+  ),
+  learning_feedback: nullableSchema(
+    objectSchema({
+      weak_areas: arraySchema(stringSchema),
+      suggestions: arraySchema(stringSchema),
+    }),
+  ),
+  progress_history: objectSchema({
+    sessions: arraySchema(unknownRecordSchema()),
+    progression: arraySchema(numberSchema),
+    current_level: nullableSchema(stringSchema),
+    trend: stringSchema,
+    weak_patterns: arraySchema(stringSchema),
+    strong_patterns: arraySchema(stringSchema),
+  }),
+  runtime: unknownRecordSchema(),
+});
+
 const authStatusSchema = objectSchema({
   isAuthenticated: booleanSchema,
 });
@@ -1313,4 +1442,9 @@ export function validateYkiPracticeSessionPayload<
       policy_version: traceMetadata.policyVersion,
     },
   };
+}
+
+export function validateYkiExamSessionPayload<T extends Record<string, unknown>>(payload: T) {
+  validateSchema(payload, ykiExamSessionSchema, "ykiExamSession");
+  return payload;
 }

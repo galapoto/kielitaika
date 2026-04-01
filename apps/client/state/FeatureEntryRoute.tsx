@@ -1,15 +1,11 @@
 import DailyPracticeScreen from "@ui/screens/DailyPracticeScreen";
 import ProfessionalFinnishScreen from "@ui/screens/ProfessionalFinnishScreen";
 import SpeakingPracticeScreen from "@ui/screens/SpeakingPracticeScreen";
-import YkiExamScreen from "@ui/screens/YkiExamScreen";
 
 import type { GuardedScreen } from "./navigationModel";
 
 type Props = {
-  screen: Extract<
-    GuardedScreen,
-    "daily-practice" | "professional-finnish" | "speaking-practice" | "yki-exam"
-  >;
+  screen: Extract<GuardedScreen, "daily-practice" | "professional-finnish" | "speaking-practice">;
   onBack: () => void;
   onOpenLearning: () => void;
   onOpenYkiPractice: () => void;
@@ -37,5 +33,5 @@ export default function FeatureEntryRoute({
     );
   }
 
-  return <YkiExamScreen onBack={onBack} onOpenYkiPractice={onOpenYkiPractice} />;
+  return null;
 }

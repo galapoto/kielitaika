@@ -8,6 +8,7 @@ import {
   startPracticeSession,
   type YkiPracticeSession,
 } from "../features/yki-practice/services/ykiPracticeService";
+import { clearExamSession } from "../features/yki-exam/services/ykiExamService";
 import {
   getLearningDebugState,
   getLearningModules,
@@ -40,6 +41,7 @@ import {
   persistNavigationState,
 } from "./sessionPersistence";
 import YkiPracticeRoute from "./YkiPracticeRoute";
+import YkiExamRoute from "./YkiExamRoute";
 import { useAuthStore } from "./authStore";
 
 type Props = {
@@ -80,12 +82,11 @@ function toRequestedScreen(screen: GuardedScreen | RequestedScreen): RequestedSc
 
 function isFeatureEntryScreen(
   screen: GuardedScreen | RequestedScreen,
-): screen is "daily-practice" | "professional-finnish" | "speaking-practice" | "yki-exam" {
+): screen is "daily-practice" | "professional-finnish" | "speaking-practice" {
   return (
     screen === "daily-practice" ||
     screen === "professional-finnish" ||
-    screen === "speaking-practice" ||
-    screen === "yki-exam"
+    screen === "speaking-practice"
   );
 }
 
@@ -148,6 +149,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     await Promise.all([
       clearPersistedLearningSession(),
       clearPersistedNavigationState(),
+      clearExamSession(),
       clearPracticeSession(),
     ]);
   }
@@ -443,6 +445,12 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       return;
     }
 
+    if (persistedNavigation.value.activeScreen === "yki-exam") {
+      router.replace(getPathForScreen("yki-exam"));
+      await resolveAndPersist("yki-exam", persistedNavigation.value.requestedScreen);
+      return;
+    }
+
     if (isFeatureEntryScreen(persistedNavigation.value.activeScreen)) {
       router.replace(getPathForScreen(persistedNavigation.value.activeScreen));
       await resolveAndPersist(
@@ -513,6 +521,12 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       }
 
       await resolveAndPersist("learning", target);
+      return;
+    }
+
+    if (target === "yki-exam") {
+      router.replace(getPathForScreen("yki-exam"));
+      await resolveAndPersist("yki-exam", target);
       return;
     }
 
@@ -604,6 +618,13 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
 
       router.replace(getPathForScreen("learning"));
       await resolveAndPersist("learning", screen);
+      return;
+    }
+
+    if (screen === "yki-exam") {
+      clearNavigationError();
+      router.replace(getPathForScreen("yki-exam"));
+      await resolveAndPersist("yki-exam", screen);
       return;
     }
 
@@ -743,6 +764,16 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
         }}
         onOpenYkiPractice={() => {
           void navigateTo("yki-practice");
+        }}
+      />
+    );
+  }
+
+  if (activeScreen === "yki-exam") {
+    return (
+      <YkiExamRoute
+        onExit={() => {
+          void navigateTo("home");
         }}
       />
     );

@@ -46,6 +46,7 @@ WRITING_MINIMUM_WORDS = 80
 WRITING_RECOMMENDED_MAX_WORDS = 180
 SPEAKING_MAX_RECORDING_SECONDS = 30
 DEFAULT_USER_ID = "local-user"
+ENGINE_STATE_SOURCE_PATH = "/api/v1/yki/sessions/{session_id}"
 storage = InMemorySessionStorage()
 try:
     storage = RedisSessionStorage()
@@ -70,6 +71,7 @@ def create_session():
         "certificate": None,
         "learning_feedback": None,
         "runtime": {
+            "engineDrivenUi": True,
             "navigationLocked": True,
             "sectionLocking": True,
             "warningThresholdSeconds": REALISM_WARNING_THRESHOLD_SECONDS,
@@ -85,7 +87,7 @@ def create_session():
             },
         },
         "progress": {
-            "currentSection": None,
+            "currentSection": SECTION_ORDER[0],
             "completedSections": [],
         },
         "sections": {
@@ -116,6 +118,7 @@ def create_session():
         },
     }
 
+    initialize_section_runtime(session, SECTION_ORDER[0], now=now)
     storage.create(session)
     return session
 
@@ -169,54 +172,255 @@ def resume_session(session_id: str):
 
 
 def generate_mock_tasks(section_name: str):
+    if section_name == "reading":
+        return [
+            {
+                "id": "reading-passage-1",
+                "kind": "passage",
+                "section": "reading",
+                "status": "pending",
+                "title": "Reading Passage",
+                "prompt": "Read the passage fully before the question phase begins.",
+                "instructions": [
+                    "No questions are shown during the passage phase.",
+                    "Use Next to move from the passage into the question flow.",
+                ],
+                "passage": (
+                    "Tyopaikalla suunnitellaan yhteista kielipaivaa, jossa jokainen tyontekija "
+                    "esittelee yhden tavan harjoitella suomea arjessa. Esihenkilo toivoo, etta "
+                    "paivan aikana kerataan ehdotuksia, joita voidaan kayttaa uusien "
+                    "tyontekijoiden perehdytyksessa."
+                ),
+                "timeLimitSeconds": SECTION_TIME_LIMITS["reading"] * 60,
+            },
+            {
+                "id": "reading-question-1",
+                "kind": "question",
+                "section": "reading",
+                "status": "pending",
+                "title": "Reading Question 1",
+                "prompt": "Choose the best answer based on the passage.",
+                "question": "What is the main goal of the language day?",
+                "options": [
+                    "To collect practical Finnish-learning ideas for onboarding.",
+                    "To test every employee on grammar rules.",
+                    "To replace onboarding with self-study only.",
+                ],
+                "correctAnswer": "To collect practical Finnish-learning ideas for onboarding.",
+                "timeLimitSeconds": SECTION_TIME_LIMITS["reading"] * 60,
+            },
+            {
+                "id": "reading-question-2",
+                "kind": "question",
+                "section": "reading",
+                "status": "pending",
+                "title": "Reading Question 2",
+                "prompt": "Choose the best answer based on the passage.",
+                "question": "Who wants the suggestions to be collected?",
+                "options": [
+                    "A new employee",
+                    "The supervisor",
+                    "An external examiner",
+                ],
+                "correctAnswer": "The supervisor",
+                "timeLimitSeconds": SECTION_TIME_LIMITS["reading"] * 60,
+            },
+        ]
+
     if section_name == "listening":
         return [
             {
-                "id": f"{section_name}-task-1",
-                "type": "listening",
+                "id": "listening-prompt-1",
+                "kind": "listening_prompt",
+                "section": "listening",
                 "status": "pending",
-                "evaluation": None,
+                "title": "Listening Prompt",
+                "prompt": "Listen to the prompt before the question phase begins.",
+                "instructions": [
+                    "Questions remain hidden until you move forward from this prompt screen.",
+                    "Playback is engine-limited and cannot be reset.",
+                ],
+                "audioPrompt": "A caller asks to move a meeting because the train is delayed.",
                 "playbackCount": 0,
                 "playbackLimit": LISTENING_PLAYBACK_LIMIT,
+                "timeLimitSeconds": SECTION_TIME_LIMITS["listening"] * 60,
             },
             {
-                "id": f"{section_name}-task-2",
-                "type": "listening",
+                "id": "listening-question-1",
+                "kind": "question",
+                "section": "listening",
+                "status": "pending",
+                "title": "Listening Question 1",
+                "prompt": "Choose the best answer based on the audio prompt.",
+                "question": "Why is the meeting being changed?",
+                "options": [
+                    "The speaker is sick.",
+                    "The train is delayed.",
+                    "The office is closed.",
+                ],
+                "correctAnswer": "The train is delayed.",
+                "timeLimitSeconds": SECTION_TIME_LIMITS["listening"] * 60,
+            },
+            {
+                "id": "listening-question-2",
+                "kind": "question",
+                "section": "listening",
+                "status": "pending",
+                "title": "Listening Question 2",
+                "prompt": "Choose the best answer based on the audio prompt.",
+                "question": "What does the caller want to do?",
+                "options": [
+                    "Cancel the meeting completely.",
+                    "Move the meeting to a later time.",
+                    "Invite more people to the meeting.",
+                ],
+                "correctAnswer": "Move the meeting to a later time.",
+                "timeLimitSeconds": SECTION_TIME_LIMITS["listening"] * 60,
+            },
+        ]
+
+    if section_name == "writing":
+        return [
+            {
+                "id": "writing-prompt-1",
+                "kind": "writing_prompt",
+                "section": "writing",
+                "status": "pending",
+                "title": "Writing Instructions",
+                "prompt": "Read the task instructions before opening the writing response screen.",
+                "instructions": [
+                    f"Write at least {WRITING_MINIMUM_WORDS} words.",
+                    f"Aim to stay within {WRITING_RECOMMENDED_MAX_WORDS} words.",
+                ],
+                "question": "Write an email to your teacher explaining why you need to move a lesson.",
+                "timeLimitSeconds": SECTION_TIME_LIMITS["writing"] * 60,
+            },
+            {
+                "id": "writing-response-1",
+                "kind": "writing_response",
+                "section": "writing",
+                "type": "writing",
+                "answer": None,
                 "status": "pending",
                 "evaluation": None,
-                "playbackCount": 0,
-                "playbackLimit": LISTENING_PLAYBACK_LIMIT,
+                "title": "Writing Response",
+                "prompt": "Write your response for the task below.",
+                "question": "Write an email to your teacher explaining why you need to move a lesson.",
+                "minimumWords": WRITING_MINIMUM_WORDS,
+                "recommendedMaxWords": WRITING_RECOMMENDED_MAX_WORDS,
+                "timeLimitSeconds": SECTION_TIME_LIMITS["writing"] * 60,
             },
         ]
 
     if section_name == "speaking":
         return [
             {
-                "id": f"{section_name}-task-1",
+                "id": "speaking-prompt-1",
+                "kind": "speaking_prompt",
+                "section": "speaking",
+                "status": "pending",
+                "title": "Speaking Instructions",
+                "prompt": "Read the speaking task before opening the response screen.",
+                "instructions": [
+                    "Plan the response briefly, then record once you are ready.",
+                    "When you stop recording, the response is submitted immediately.",
+                ],
+                "question": "Describe a work situation where clear communication prevented a problem.",
+                "timeLimitSeconds": SECTION_TIME_LIMITS["speaking"] * 60,
+            },
+            {
+                "id": "speaking-response-1",
+                "kind": "speaking_response",
+                "section": "speaking",
                 "type": "speaking",
                 "audio": None,
                 "status": "pending",
                 "evaluation": None,
+                "title": "Speaking Response",
+                "prompt": "Record your spoken response for the task below.",
+                "question": "Describe a work situation where clear communication prevented a problem.",
                 "maxDurationSeconds": SPEAKING_MAX_RECORDING_SECONDS,
+                "timeLimitSeconds": SECTION_TIME_LIMITS["speaking"] * 60,
             }
         ]
 
-    return [
-        {
-            "id": f"{section_name}-task-1",
-            "type": "mock",
-            "answer": None,
-            "status": "pending",
-            "evaluation": None,
-        },
-        {
-            "id": f"{section_name}-task-2",
-            "type": "mock",
-            "answer": None,
-            "status": "pending",
-            "evaluation": None,
-        },
-    ]
+    return []
+
+
+def initialize_section_runtime(session, section_name: str, now=None):
+    current_time = now or datetime.utcnow()
+    section = session["sections"][section_name]
+
+    if not section["tasks"]:
+        section["tasks"] = generate_mock_tasks(section_name)
+
+    section["currentTaskIndex"] = 0
+    section["startedAt"] = current_time.isoformat()
+    section["expiresAt"] = (
+        current_time + timedelta(minutes=SECTION_TIME_LIMITS[section_name])
+    ).isoformat()
+
+
+def is_answerable_task(task):
+    return task.get("kind") in {"question", "writing_response", "speaking_response"}
+
+
+def is_display_only_task(task):
+    return task.get("kind") in {
+        "passage",
+        "listening_prompt",
+        "writing_prompt",
+        "speaking_prompt",
+    }
+
+
+def build_empty_answer_evaluation(task):
+    if task.get("kind") == "speaking_response":
+        return {
+            "score": 0,
+            "maxScore": 5,
+            "criteria": criteria_scores_to_list(
+                {
+                    "content": 0,
+                    "clarity": 0,
+                    "fluency": 0,
+                    "pronunciation": 0,
+                    "relevance": 0,
+                }
+            ),
+            "feedback": "No audio response was submitted before the step was skipped.",
+            "evaluation_mode": "structural_audio",
+        }
+
+    return {
+        "score": 0,
+        "maxScore": 5,
+        "criteria": criteria_scores_to_list(
+            {
+                "content": 0,
+                "clarity": 0,
+                "relevance": 0,
+                "language_accuracy": 0,
+            }
+        ),
+        "feedback": "No written response was submitted before the step was skipped.",
+        "evaluation_mode": "rule_based_text_v1",
+    }
+
+
+def mark_task_skipped(task):
+    task["status"] = "answered"
+    task["skipped"] = True
+    if task.get("kind") == "speaking_response":
+        task["audio"] = None
+    else:
+        task["answer"] = ""
+    task["evaluation"] = build_empty_answer_evaluation(task)
+
+
+def is_section_complete(session, section_name: str):
+    tasks = session["sections"][section_name]["tasks"]
+    return all(task.get("status") in {"answered", "completed"} for task in tasks)
 
 
 def create_evaluation():
@@ -535,10 +739,15 @@ def get_section_score(session, section_name: str):
 
     scores = []
     for task in tasks:
+        if not is_answerable_task(task):
+            continue
         evaluation = task.get("evaluation")
         if not evaluation or evaluation.get("score") is None:
             return None
         scores.append(clamp_score(evaluation["score"]))
+
+    if not scores:
+        return None
 
     return round(sum(scores) / len(scores))
 
@@ -678,6 +887,331 @@ def ensure_completion_artifacts(session_id: str, session):
     return session
 
 
+def get_section_status(session, section_name: str):
+    if session.get("status") == "completed" and section_name in session["progress"]["completedSections"]:
+        return "completed"
+
+    if session["progress"]["currentSection"] == section_name:
+        section = session["sections"][section_name]
+        if section["currentTaskIndex"] >= len(section["tasks"]):
+            return "awaiting_next"
+        return "active"
+
+    if section_name in session["progress"]["completedSections"]:
+        return "completed"
+
+    return "locked"
+
+
+def get_current_runtime_task(session):
+    section_name = session["progress"]["currentSection"]
+    if not section_name:
+        return None
+
+    section = session["sections"][section_name]
+    index = section["currentTaskIndex"]
+    tasks = section["tasks"]
+
+    if index >= len(tasks):
+        return None
+
+    return tasks[index]
+
+
+def build_timing_manifest(session):
+    now = datetime.utcnow()
+    current_section = session["progress"]["currentSection"]
+    current_section_data = (
+        session["sections"][current_section] if current_section else None
+    )
+
+    def remaining_seconds(expires_at):
+        if not expires_at:
+            return 0
+        return max(0, int((datetime.fromisoformat(expires_at) - now).total_seconds()))
+
+    section_windows = {}
+    for section_name in SECTION_ORDER:
+        section_data = session["sections"][section_name]
+        section_windows[section_name] = {
+            "duration_minutes": SECTION_TIME_LIMITS[section_name],
+            "expires_at": section_data["expiresAt"],
+            "started_at": section_data["startedAt"],
+            "remaining_seconds": remaining_seconds(section_data["expiresAt"]),
+        }
+
+    return {
+        "server_now": now.isoformat(),
+        "exam_started_at": session["timing"]["startedAt"],
+        "exam_expires_at": session["timing"]["expiresAt"],
+        "exam_remaining_seconds": remaining_seconds(session["timing"]["expiresAt"]),
+        "current_section_started_at": current_section_data["startedAt"] if current_section_data else None,
+        "current_section_expires_at": current_section_data["expiresAt"] if current_section_data else None,
+        "current_section_remaining_seconds": remaining_seconds(
+            current_section_data["expiresAt"] if current_section_data else None
+        ),
+        "warning_threshold_seconds": session["runtime"]["warningThresholdSeconds"],
+        "sections": section_windows,
+    }
+
+
+def build_section_progress(session):
+    progress_rows = []
+
+    for section_name in SECTION_ORDER:
+        section = session["sections"][section_name]
+        completed_step_count = len(
+            [task for task in section["tasks"] if task.get("status") in {"answered", "completed"}]
+        )
+        progress_rows.append(
+            {
+                "section": section_name,
+                "status": get_section_status(session, section_name),
+                "current_step_index": section["currentTaskIndex"],
+                "total_steps": len(section["tasks"]),
+                "completed_step_count": completed_step_count,
+                "started_at": section["startedAt"],
+                "expires_at": section["expiresAt"],
+            }
+        )
+
+    return progress_rows
+
+
+def build_completion_state(session):
+    total_steps = sum(len(session["sections"][section]["tasks"]) for section in SECTION_ORDER)
+    completed_steps = sum(
+        len(
+            [
+                task
+                for task in session["sections"][section]["tasks"]
+                if task.get("status") in {"answered", "completed"}
+            ]
+        )
+        for section in SECTION_ORDER
+    )
+
+    return {
+        "completed_section_count": len(session["progress"]["completedSections"]),
+        "completed_step_count": completed_steps,
+        "status": "completed" if session.get("status") == "completed" else "active",
+        "total_section_count": len(SECTION_ORDER),
+        "total_step_count": total_steps,
+    }
+
+
+def build_current_view(session):
+    if session.get("status") == "completed":
+        return {
+            "actions": {
+                "next": None,
+                "play_prompt": None,
+                "submit": None,
+            },
+            "answer_status": "locked",
+            "input_mode": "none",
+            "instructions": [
+                "Certification has been generated.",
+                "This runtime is now read-only.",
+            ],
+            "kind": "exam_complete",
+            "prompt": "The YKI exam flow is complete.",
+            "question": None,
+            "options": [],
+            "playback": None,
+            "recording": None,
+            "response_locked": True,
+            "section": None,
+            "title": "Exam Complete",
+            "view_key": "exam-complete",
+        }
+
+    current_section = session["progress"]["currentSection"]
+    section = session["sections"][current_section]
+    index = section["currentTaskIndex"]
+
+    if index >= len(section["tasks"]):
+        next_label = (
+            "Complete Exam"
+            if SECTION_ORDER.index(current_section) == len(SECTION_ORDER) - 1
+            else f"Continue to {SECTION_ORDER[SECTION_ORDER.index(current_section) + 1].title()}"
+        )
+        return {
+            "actions": {
+                "next": {
+                    "enabled": True,
+                    "kind": "next",
+                    "label": next_label,
+                },
+                "play_prompt": None,
+                "submit": None,
+            },
+            "answer_status": "none",
+            "input_mode": "none",
+            "instructions": [
+                f"{current_section.title()} is sealed.",
+                "Advance forward to continue the engine-controlled exam flow.",
+            ],
+            "kind": "section_complete",
+            "prompt": "All required steps in this section are locked.",
+            "question": None,
+            "options": [],
+            "playback": None,
+            "recording": None,
+            "response_locked": True,
+            "section": current_section,
+            "title": f"{current_section.title()} Complete",
+            "view_key": f"{current_section}-complete",
+        }
+
+    task = section["tasks"][index]
+    skipped = bool(task.get("skipped"))
+    answer_status = (
+        "submitted"
+        if task["status"] == "answered" and not skipped
+        else "skipped"
+        if skipped
+        else "pending"
+    )
+
+    instructions = list(task.get("instructions", []))
+    if not instructions:
+        instructions = [
+            "This view is engine-controlled.",
+            "Only the available forward action can change exam state.",
+        ]
+
+    actions = {
+        "next": None,
+        "play_prompt": None,
+        "submit": None,
+    }
+
+    if is_display_only_task(task):
+        actions["next"] = {
+            "enabled": True,
+            "kind": "next",
+            "label": "Next",
+        }
+    elif is_answerable_task(task):
+        actions["submit"] = {
+            "enabled": task["status"] == "pending",
+            "kind": "submit",
+            "label": "Submit Response",
+        }
+        actions["next"] = {
+            "enabled": True,
+            "kind": "next",
+            "label": "Next",
+        }
+
+    if task.get("kind") == "listening_prompt":
+        playback_limit = task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT)
+        playback_count = task.get("playbackCount", 0)
+        actions["play_prompt"] = {
+            "enabled": playback_count < playback_limit,
+            "kind": "play_prompt",
+            "label": "Play Prompt",
+        }
+
+    kind_map = {
+        "passage": "reading_passage",
+        "listening_prompt": "listening_prompt",
+        "question": f"{task['section']}_question",
+        "writing_prompt": "writing_prompt",
+        "writing_response": "writing_response",
+        "speaking_prompt": "speaking_prompt",
+        "speaking_response": "speaking_response",
+    }
+
+    input_mode = "none"
+    if task.get("kind") == "question":
+        input_mode = "choice" if task.get("options") else "text"
+    elif task.get("kind") == "writing_response":
+        input_mode = "text"
+    elif task.get("kind") == "speaking_response":
+        input_mode = "audio"
+
+    return {
+        "actions": actions,
+        "answer_status": answer_status,
+        "input_mode": input_mode,
+        "instructions": instructions,
+        "kind": kind_map[task["kind"]],
+        "options": task.get("options", []),
+        "passage": task.get("passage"),
+        "playback": (
+            {
+                "count": task.get("playbackCount", 0),
+                "limit": task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT),
+                "remaining": max(
+                    0,
+                    task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT)
+                    - task.get("playbackCount", 0),
+                ),
+            }
+            if task.get("kind") == "listening_prompt"
+            else None
+        ),
+        "prompt": task.get("prompt"),
+        "question": task.get("question"),
+        "recording": (
+            {
+                "max_duration_seconds": task.get("maxDurationSeconds", SPEAKING_MAX_RECORDING_SECONDS)
+            }
+            if task.get("kind") == "speaking_response"
+            else None
+        ),
+        "response_locked": task["status"] != "pending",
+        "section": current_section,
+        "submitted_answer": task.get("answer"),
+        "submitted_audio": task.get("audio"),
+        "title": task.get("title"),
+        "view_key": f"{current_section}:{task['id']}",
+    }
+
+
+def build_navigation_state(session):
+    current_view = build_current_view(session)
+    next_action = current_view["actions"]["next"]
+    return {
+        "back_allowed": False,
+        "can_next": bool(next_action and next_action["enabled"]),
+        "forward_only": True,
+        "interaction_locked": current_view["response_locked"] and not next_action,
+        "next_label": next_action["label"] if next_action else None,
+        "read_only": session.get("status") == "completed",
+        "skip_allowed": current_view["input_mode"] in {"choice", "text", "audio"},
+        "state_locked": True,
+    }
+
+
+def build_governed_session(session_id: str, session):
+    current_section = session["progress"]["currentSection"]
+    current_view = build_current_view(session)
+
+    return {
+        "session_id": session["sessionId"],
+        "user_id": session["userId"],
+        "status": "read_only" if session.get("status") == "completed" else session.get("status", "active"),
+        "state_source": {
+            "mode": "engine_controlled",
+            "path": ENGINE_STATE_SOURCE_PATH.format(session_id=session_id),
+        },
+        "section_order": SECTION_ORDER,
+        "current_section": current_section,
+        "current_view": current_view,
+        "navigation": build_navigation_state(session),
+        "timing_manifest": build_timing_manifest(session),
+        "completion_state": build_completion_state(session),
+        "section_progress": build_section_progress(session),
+        "certificate": session.get("certificate"),
+        "learning_feedback": session.get("learning_feedback"),
+        "progress_history": get_history_overview(session["userId"]),
+        "runtime": session.get("runtime"),
+    }
+
+
 def build_session_summary(session):
     certificate = session.get("certificate")
     learning_feedback = session.get("learning_feedback")
@@ -806,6 +1340,9 @@ def play_listening_prompt(session_id: str):
     if isinstance(session, dict) and "error" in session:
         return session
 
+    if session.get("status") == "completed":
+        return {"error": "SESSION_READ_ONLY"}
+
     if is_session_expired(session):
         return {"error": "SESSION_EXPIRED"}
 
@@ -822,8 +1359,8 @@ def play_listening_prompt(session_id: str):
         return {"error": "NO_TASK_AVAILABLE"}
 
     task = section_data["tasks"][idx]
-    if task["status"] == "answered":
-        return {"error": "TASK_ALREADY_ANSWERED"}
+    if task.get("kind") != "listening_prompt":
+        return {"error": "NOT_LISTENING_SECTION"}
 
     playback_limit = task.get("playbackLimit", LISTENING_PLAYBACK_LIMIT)
     playback_count = task.get("playbackCount", 0)
@@ -856,6 +1393,9 @@ def advance_section(session_id: str):
     if isinstance(session, dict) and "error" in session:
         return session
 
+    if session.get("status") == "completed":
+        return {"error": "SESSION_READ_ONLY"}
+
     if is_session_expired(session):
         return {"error": "SESSION_EXPIRED"}
 
@@ -864,36 +1404,25 @@ def advance_section(session_id: str):
 
     current = session["progress"]["currentSection"]
 
-    if current:
-        tasks = session["sections"][current]["tasks"]
-        for task in tasks:
-            if task["status"] != "answered":
-                return {"error": "SECTION_NOT_COMPLETE"}
+    if current and not is_section_complete(session, current):
+        return {"error": "SECTION_NOT_COMPLETE"}
 
     if current is None:
         next_section = SECTION_ORDER[0]
     else:
-        idx = SECTION_ORDER.index(current)
-        if idx + 1 >= len(SECTION_ORDER):
+        current_index = SECTION_ORDER.index(current)
+        if current not in session["progress"]["completedSections"]:
+            session["progress"]["completedSections"].append(current)
+
+        if current_index + 1 >= len(SECTION_ORDER):
             session["status"] = "completed"
             session = ensure_completion_artifacts(session_id, session)
             return session
-        next_section = SECTION_ORDER[idx + 1]
+
+        next_section = SECTION_ORDER[current_index + 1]
 
     session["progress"]["currentSection"] = next_section
-    now = datetime.utcnow()
-    duration = SECTION_TIME_LIMITS[next_section]
-
-    if not session["sections"][next_section]["tasks"]:
-        session["sections"][next_section]["tasks"] = generate_mock_tasks(next_section)
-    session["sections"][next_section]["startedAt"] = now.isoformat()
-    session["sections"][next_section]["expiresAt"] = (
-        now + timedelta(minutes=duration)
-    ).isoformat()
-
-    if next_section not in session["progress"]["completedSections"]:
-        session["progress"]["completedSections"].append(next_section)
-
+    initialize_section_runtime(session, next_section)
     storage.update(session_id, session)
     return session
 
@@ -909,23 +1438,16 @@ def get_current_task(session_id: str):
     if is_section_expired(session):
         return {"error": "SECTION_EXPIRED"}
 
-    section = session["progress"]["currentSection"]
-    if not section:
-        return None
-
-    section_data = session["sections"][section]
-    idx = section_data["currentTaskIndex"]
-
-    if idx >= len(section_data["tasks"]):
-        return None
-
-    return section_data["tasks"][idx]
+    return get_current_runtime_task(session)
 
 
 def next_task(session_id: str):
     session = get_session(session_id)
     if isinstance(session, dict) and "error" in session:
         return session
+
+    if session.get("status") == "completed":
+        return {"error": "SESSION_READ_ONLY"}
 
     if is_session_expired(session):
         return {"error": "SESSION_EXPIRED"}
@@ -938,15 +1460,27 @@ def next_task(session_id: str):
         return None
 
     section_data = session["sections"][section]
+
     if section_data["currentTaskIndex"] >= len(section_data["tasks"]):
-        return {"error": "NO_TASK_AVAILABLE"}
+        advanced = advance_section(session_id)
+        if isinstance(advanced, dict) and "error" in advanced:
+            return advanced
+        return advanced
 
     current_task = section_data["tasks"][section_data["currentTaskIndex"]]
 
-    if current_task["status"] != "answered":
+    if is_display_only_task(current_task):
+        current_task["status"] = "completed"
+    elif is_answerable_task(current_task) and current_task["status"] == "pending":
+        mark_task_skipped(current_task)
+    elif current_task["status"] != "answered":
         return {"error": "TASK_NOT_ANSWERED"}
 
     section_data["currentTaskIndex"] += 1
+
+    if section_data["currentTaskIndex"] > len(section_data["tasks"]):
+        return {"error": "NO_TASK_AVAILABLE"}
+
     storage.update(session_id, session)
     return session
 
@@ -955,6 +1489,9 @@ def submit_answer(session_id: str, answer):
     session = get_session(session_id)
     if isinstance(session, dict) and "error" in session:
         return session
+
+    if session.get("status") == "completed":
+        return {"error": "SESSION_READ_ONLY"}
 
     if is_session_expired(session):
         return {"error": "SESSION_EXPIRED"}
@@ -974,13 +1511,20 @@ def submit_answer(session_id: str, answer):
 
     task = section_data["tasks"][idx]
 
+    if not is_answerable_task(task) or task.get("kind") == "speaking_response":
+        return {"error": "ANSWER_SUBMISSION_FAILED"}
+
     if task["status"] == "answered":
         return {"error": "TASK_ALREADY_ANSWERED"}
 
     normalized_answer = answer.strip() if isinstance(answer, str) else ""
 
-    task["answer"] = answer
+    if task.get("options") and normalized_answer and normalized_answer not in task["options"]:
+        return {"error": "INVALID_OPTION"}
+
+    task["answer"] = normalized_answer
     task["status"] = "answered"
+    task["skipped"] = normalized_answer == ""
     task["evaluation"] = evaluate_text_answer(normalized_answer)
 
     storage.update(session_id, session)
@@ -991,6 +1535,9 @@ def submit_audio(session_id: str, audio_ref: str):
     session = get_session(session_id)
     if isinstance(session, dict) and "error" in session:
         return session
+
+    if session.get("status") == "completed":
+        return {"error": "SESSION_READ_ONLY"}
 
     if is_session_expired(session):
         return {"error": "SESSION_EXPIRED"}
@@ -1010,12 +1557,37 @@ def submit_audio(session_id: str, audio_ref: str):
 
     task = section_data["tasks"][idx]
 
+    if task.get("kind") != "speaking_response":
+        return {"error": "NOT_SPEAKING_SECTION"}
+
     if task["status"] == "answered":
         return {"error": "TASK_ALREADY_ANSWERED"}
 
+    if audio_ref and extract_audio_duration_seconds(audio_ref) > SPEAKING_MAX_RECORDING_SECONDS:
+        return {"error": "AUDIO_TOO_LONG"}
+
     task["audio"] = audio_ref
     task["status"] = "answered"
+    task["skipped"] = not bool(audio_ref)
     task["evaluation"] = evaluate_speaking_audio(audio_ref)
 
     storage.update(session_id, session)
     return task
+
+
+def get_governed_exam_session(session_id: str):
+    session = get_session(session_id)
+    if isinstance(session, dict) and "error" in session:
+        return session
+
+    if is_session_expired(session):
+        return {"error": "SESSION_EXPIRED"}
+
+    if is_section_expired(session):
+        return {"error": "SECTION_EXPIRED"}
+
+    session = ensure_completion_artifacts(session_id, session)
+    if isinstance(session, dict) and "error" in session:
+        return session
+
+    return build_governed_session(session_id, session)
