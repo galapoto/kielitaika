@@ -1,5 +1,1 @@
-import { tokens } from "./tokens";
-
-export const spacing = {
-  ...tokens.spacing,
-} as const;
+export { spacing } from "../tokens/spacing";

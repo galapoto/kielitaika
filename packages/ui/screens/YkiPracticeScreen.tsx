@@ -109,38 +109,57 @@ export default function YkiPracticeScreen({
 }: Props) {
   if (loading) {
     return (
-      <ScreenContainer center>
-        <Card>
-          <Stack gap="xs">
-            <Text variant="title">YKI Practice</Text>
-            <Text tone="muted">Loading governed session...</Text>
-          </Stack>
-        </Card>
-      </ScreenContainer>
+      <ScreenContainer
+        actions={null}
+        center
+        content={null}
+        header={
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">YKI Practice</Text>
+              <Text tone="muted">Loading governed session...</Text>
+            </Stack>
+          </Card>
+        }
+      />
     );
   }
 
   if (errorMessage) {
     return (
-      <ScreenContainer center>
-        <Stack gap="sm">
+      <ScreenContainer
+        actions={
+          <Stack gap="xs">
+            <Button label="Retry" onPress={onRefresh} />
+            <Button label="Back" onPress={onBack} tone="surface" />
+          </Stack>
+        }
+        center
+        content={null}
+        header={
           <Card>
             <Stack gap="xs">
               <Text variant="title">YKI Practice</Text>
               <Text tone="error">{errorMessage}</Text>
             </Stack>
           </Card>
-          <Button label="Retry" onPress={onRefresh} />
-          <Button label="Back" onPress={onBack} tone="surface" />
-        </Stack>
-      </ScreenContainer>
+        }
+      />
     );
   }
 
   if (!sessionId || !trace || !policyVersion) {
     return (
-      <ScreenContainer center>
-        <Stack gap="sm">
+      <ScreenContainer
+        actions={
+          <Stack gap="xs">
+            {!offlineMessage ? <Button label="Refresh Session" onPress={onRefresh} /> : null}
+            <Button label="Back Home" onPress={onBack} tone="surface" />
+          </Stack>
+        }
+        center
+        content={null}
+        header={
           <Card>
             <Stack gap="xs">
               <Text variant="title">YKI Practice</Text>
@@ -148,16 +167,131 @@ export default function YkiPracticeScreen({
               {offlineMessage ? <Text tone="muted">{offlineMessage}</Text> : null}
             </Stack>
           </Card>
-          {!offlineMessage ? <Button label="Refresh Session" onPress={onRefresh} /> : null}
-          <Button label="Back Home" onPress={onBack} tone="surface" />
-        </Stack>
-      </ScreenContainer>
+        }
+      />
     );
   }
 
   return (
-    <ScreenContainer>
-      <Stack gap="sm">
+    <ScreenContainer
+      actions={
+        <Stack gap="xs">
+          {!offlineMessage ? <Button label="Refresh Session" onPress={onRefresh} /> : null}
+          {completionState?.status === "completed" ? (
+            <Button label="Download Result" onPress={onDownloadResult} />
+          ) : null}
+          <Button label="Back Home" onPress={onBack} tone="surface" />
+        </Stack>
+      }
+      content={
+        <Stack gap="sm">
+          {completionState?.status !== "completed" && task ? (
+            <Card>
+              <Stack gap="xs">
+                <Text variant="title">{task.title}</Text>
+                <MetadataRow label="Section" value={task.section} />
+                <Text>{task.prompt}</Text>
+                {task.question ? <Text>{task.question}</Text> : null}
+                {task.guidance ? <Text tone="muted">{task.guidance}</Text> : null}
+                {task.options?.length && !offlineMessage ? (
+                  <Stack gap="xs">
+                    {task.options.map((option) => (
+                      <Button
+                        key={option}
+                        label={option}
+                        onPress={() => onAnswerChange(option)}
+                        tone="surface"
+                      />
+                    ))}
+                  </Stack>
+                ) : null}
+                {offlineMessage ? (
+                  <Stack gap="xxs">
+                    <Text tone="muted">Playback is locked until connection resumes.</Text>
+                    <Text tone="muted">
+                      Current answer: {answer || "No submitted answer captured for this task."}
+                    </Text>
+                  </Stack>
+                ) : (
+                  <Input
+                    multiline
+                    onChangeText={onAnswerChange}
+                    placeholder="Write your answer"
+                    value={answer}
+                  />
+                )}
+                {!canAdvance && !offlineMessage ? (
+                  <Button label="Submit Answer" onPress={onSubmit} />
+                ) : null}
+                {canAdvance && !offlineMessage ? (
+                  <Button label="Continue Playback" onPress={onAdvance} />
+                ) : null}
+              </Stack>
+            </Card>
+          ) : (
+            <Card>
+              <Stack gap="xs">
+                <Text variant="title">Session Complete</Text>
+                <Text tone="muted">The governed playback plan has been completed and sealed.</Text>
+                {certificationTraceReference ? (
+                  <Text tone="muted">Trace reference: {certificationTraceReference}</Text>
+                ) : null}
+                {certificationSummary.map((item) => (
+                  <Text key={item}>{item}</Text>
+                ))}
+              </Stack>
+            </Card>
+          )}
+
+          {latestResult ? (
+            <Card>
+              <Stack gap="xs">
+                <Text variant="title">Latest Result</Text>
+                <MetadataRow label="Score" value={`${latestResult.score}`} />
+                <Text>{latestResult.explanation}</Text>
+                <Text tone="muted">{latestResult.whyWrong}</Text>
+              </Stack>
+            </Card>
+          ) : null}
+
+          <Card>
+            <Stack gap="xs">
+              <Text variant="title">Session Trace</Text>
+              <MetadataRow label="Decision version" value={trace.decisionVersion} />
+              <MetadataRow label="Policy version" value={trace.policyVersion} />
+              <MetadataRow label="Governance version" value={trace.governanceVersion} />
+              <MetadataRow label="Exam mode" value={trace.examMode ? "locked" : "adaptive"} />
+              {trace.changeReference ? (
+                <MetadataRow label="Change reference" value={trace.changeReference} />
+              ) : null}
+              <Text tone="muted">Precomputed plan: {trace.precomputedPlanSummary}</Text>
+              {trace.tasks.map((item) => (
+                <Text key={item.taskId}>
+                  {item.taskId}: {item.reason} ({item.difficultyLevel}) unit{" "}
+                  {item.relatedLearningUnitId}
+                </Text>
+              ))}
+            </Stack>
+          </Card>
+
+          {auditReplaySummary.length || auditTimeline.length ? (
+            <Card>
+              <Stack gap="xs">
+                <Text variant="title">Audit Timeline</Text>
+                {auditReplaySummary.map((item) => (
+                  <Text key={item}>{item}</Text>
+                ))}
+                {auditTimeline.map((item) => (
+                  <Text key={item} tone="muted">
+                    {item}
+                  </Text>
+                ))}
+              </Stack>
+            </Card>
+          ) : null}
+        </Stack>
+      }
+      header={
         <Card>
           <Stack gap="xs">
             <Text variant="title">YKI Practice</Text>
@@ -176,106 +310,7 @@ export default function YkiPracticeScreen({
             {notice ? <Text tone="muted">{notice}</Text> : null}
           </Stack>
         </Card>
-
-        <Card>
-          <Stack gap="xs">
-            {!offlineMessage ? <Button label="Refresh Session" onPress={onRefresh} /> : null}
-            <Button label="Back Home" onPress={onBack} tone="surface" />
-          </Stack>
-        </Card>
-
-        {completionState?.status !== "completed" && task ? (
-          <Card>
-            <Stack gap="xs">
-              <Text variant="title">{task.title}</Text>
-              <MetadataRow label="Section" value={task.section} />
-              <Text>{task.prompt}</Text>
-              {task.question ? <Text>{task.question}</Text> : null}
-              {task.guidance ? <Text tone="muted">{task.guidance}</Text> : null}
-              {task.options?.length && !offlineMessage ? (
-                <Stack gap="xs">
-                  {task.options.map((option) => (
-                    <Button key={option} label={option} onPress={() => onAnswerChange(option)} tone="surface" />
-                  ))}
-                </Stack>
-              ) : null}
-              {offlineMessage ? (
-                <Stack gap="xxs">
-                  <Text tone="muted">Playback is locked until connection resumes.</Text>
-                  <Text tone="muted">
-                    Current answer: {answer || "No submitted answer captured for this task."}
-                  </Text>
-                </Stack>
-              ) : (
-                <Input multiline onChangeText={onAnswerChange} placeholder="Write your answer" value={answer} />
-              )}
-              {!canAdvance && !offlineMessage ? <Button label="Submit Answer" onPress={onSubmit} /> : null}
-              {canAdvance && !offlineMessage ? <Button label="Continue Playback" onPress={onAdvance} /> : null}
-            </Stack>
-          </Card>
-        ) : (
-          <Card>
-            <Stack gap="xs">
-              <Text variant="title">Session Complete</Text>
-              <Text tone="muted">The governed playback plan has been completed and sealed.</Text>
-              {certificationTraceReference ? (
-                <Text tone="muted">Trace reference: {certificationTraceReference}</Text>
-              ) : null}
-              {certificationSummary.map((item) => (
-                <Text key={item}>{item}</Text>
-              ))}
-              <Button label="Download Result" onPress={onDownloadResult} />
-              <Button label="Back Home" onPress={onBack} />
-            </Stack>
-          </Card>
-        )}
-
-        {latestResult ? (
-          <Card>
-            <Stack gap="xs">
-              <Text variant="title">Latest Result</Text>
-              <MetadataRow label="Score" value={`${latestResult.score}`} />
-              <Text>{latestResult.explanation}</Text>
-              <Text tone="muted">{latestResult.whyWrong}</Text>
-            </Stack>
-          </Card>
-        ) : null}
-
-        <Card>
-          <Stack gap="xs">
-            <Text variant="title">Session Trace</Text>
-            <MetadataRow label="Decision version" value={trace.decisionVersion} />
-            <MetadataRow label="Policy version" value={trace.policyVersion} />
-            <MetadataRow label="Governance version" value={trace.governanceVersion} />
-            <MetadataRow label="Exam mode" value={trace.examMode ? "locked" : "adaptive"} />
-            {trace.changeReference ? (
-              <MetadataRow label="Change reference" value={trace.changeReference} />
-            ) : null}
-            <Text tone="muted">Precomputed plan: {trace.precomputedPlanSummary}</Text>
-            {trace.tasks.map((item) => (
-              <Text key={item.taskId}>
-                {item.taskId}: {item.reason} ({item.difficultyLevel}) unit {item.relatedLearningUnitId}
-              </Text>
-            ))}
-          </Stack>
-        </Card>
-
-        {auditReplaySummary.length || auditTimeline.length ? (
-          <Card>
-            <Stack gap="xs">
-              <Text variant="title">Audit Timeline</Text>
-              {auditReplaySummary.map((item) => (
-                <Text key={item}>{item}</Text>
-              ))}
-              {auditTimeline.map((item) => (
-                <Text key={item} tone="muted">
-                  {item}
-                </Text>
-              ))}
-            </Stack>
-          </Card>
-        ) : null}
-      </Stack>
-    </ScreenContainer>
+      }
+    />
   );
 }

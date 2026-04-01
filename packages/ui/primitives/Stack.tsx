@@ -2,7 +2,7 @@ import type { PropsWithChildren } from "react";
 import type { FlexAlignType, ViewStyle } from "react-native";
 import { View } from "react-native";
 
-import { colors, spacing } from "../theme/tokens";
+import { colors, spacing } from "../tokens";
 
 type SpaceKey = keyof typeof spacing;
 

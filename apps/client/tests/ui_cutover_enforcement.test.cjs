@@ -43,6 +43,7 @@ const sourceFiles = [
   ...walk(path.join(clientRoot, "features")),
   ...walk(path.join(uiRoot, "screens")),
   ...walk(path.join(uiRoot, "primitives")),
+  ...walk(path.join(uiRoot, "tokens")),
   ...walk(path.join(uiRoot, "theme")),
   path.join(uiRoot, "index.ts"),
 ];
@@ -98,6 +99,19 @@ const requiredScreens = [
 
 for (const screenFile of requiredScreens) {
   assert(fs.existsSync(path.join(uiRoot, "screens", screenFile)), `Missing governed UI screen ${screenFile}`);
+}
+
+const requiredTokens = [
+  "animation.ts",
+  "colors.ts",
+  "index.ts",
+  "sizes.ts",
+  "spacing.ts",
+  "typography.ts",
+];
+
+for (const tokenFile of requiredTokens) {
+  assert(fs.existsSync(path.join(uiRoot, "tokens", tokenFile)), `Missing governed UI token file ${tokenFile}`);
 }
 
 console.log("ui_cutover_enforcement: ok");

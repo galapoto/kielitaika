@@ -1,5 +1,1 @@
-import { tokens } from "./tokens";
-
-export const typography = {
-  ...tokens.typography,
-} as const;
+export { typography } from "../tokens/typography";

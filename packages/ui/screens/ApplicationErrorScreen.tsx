@@ -24,21 +24,32 @@ export default function ApplicationErrorScreen({
   traceReference,
 }: Props) {
   return (
-    <ScreenContainer center>
-      <Stack gap="sm">
+    <ScreenContainer
+      actions={
+        <Stack gap="xs">
+          <Button label={primaryLabel} onPress={onPrimaryAction} />
+          {onSecondaryAction && secondaryLabel ? (
+            <Button label={secondaryLabel} onPress={onSecondaryAction} tone="surface" />
+          ) : null}
+        </Stack>
+      }
+      center
+      content={
+        traceReference ? (
+          <Card tone="surfaceMuted">
+            <Text tone="muted">{traceReference}</Text>
+          </Card>
+        ) : null
+      }
+      header={
         <Card>
           <Stack gap="xs">
             <Text variant="title">Runtime Blocked</Text>
             <Text tone="error">{code}</Text>
             <Text>{message}</Text>
-            {traceReference ? <Text tone="muted">{traceReference}</Text> : null}
           </Stack>
         </Card>
-        <Button label={primaryLabel} onPress={onPrimaryAction} />
-        {onSecondaryAction && secondaryLabel ? (
-          <Button label={secondaryLabel} onPress={onSecondaryAction} tone="surface" />
-        ) : null}
-      </Stack>
-    </ScreenContainer>
+      }
+    />
   );
 }

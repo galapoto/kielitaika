@@ -28,42 +28,43 @@ export default function FeatureEntryScreen({
   secondaryAction,
 }: Props) {
   return (
-    <ScreenContainer center>
-      <Stack gap="sm">
-        <Card>
-          <Stack gap="xs">
-            <Text variant="title">{title}</Text>
-            <Text tone="muted">{subtitle}</Text>
-            <Text>{summary}</Text>
-          </Stack>
-        </Card>
-
+    <ScreenContainer
+      actions={
+        <Stack gap="xs">
+          {primaryAction ? (
+            <Button
+              label={primaryAction.label}
+              onPress={primaryAction.onPress}
+              tone={primaryAction.tone}
+            />
+          ) : null}
+          <Button
+            label={secondaryAction.label}
+            onPress={secondaryAction.onPress}
+            tone={secondaryAction.tone}
+          />
+        </Stack>
+      }
+      center
+      content={
         <Card>
           <Stack gap="xs">
             <Text variant="title">Governed Scope</Text>
+            <Text>{summary}</Text>
             {details.map((detail) => (
               <Text key={detail}>{detail}</Text>
             ))}
           </Stack>
         </Card>
-
+      }
+      header={
         <Card>
           <Stack gap="xs">
-            {primaryAction ? (
-              <Button
-                label={primaryAction.label}
-                onPress={primaryAction.onPress}
-                tone={primaryAction.tone}
-              />
-            ) : null}
-            <Button
-              label={secondaryAction.label}
-              onPress={secondaryAction.onPress}
-              tone={secondaryAction.tone}
-            />
+            <Text variant="title">{title}</Text>
+            <Text tone="muted">{subtitle}</Text>
           </Stack>
         </Card>
-      </Stack>
-    </ScreenContainer>
+      }
+    />
   );
 }

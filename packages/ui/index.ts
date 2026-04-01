@@ -14,4 +14,12 @@ export { default as ProfessionalFinnishScreen } from "./screens/ProfessionalFinn
 export { default as SpeakingPracticeScreen } from "./screens/SpeakingPracticeScreen";
 export { default as YkiExamScreen } from "./screens/YkiExamScreen";
 export { default as YkiPracticeScreen } from "./screens/YkiPracticeScreen";
-export { colors, radius, spacing, tokens, typography } from "./theme/tokens";
+export {
+  animation,
+  colors,
+  componentSizes,
+  radius,
+  spacing,
+  tokens,
+  typography,
+} from "./tokens";

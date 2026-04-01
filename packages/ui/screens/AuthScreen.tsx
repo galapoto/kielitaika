@@ -27,19 +27,18 @@ export default function AuthScreen({
   onSubmit,
 }: Props) {
   return (
-    <ScreenContainer center>
-      <Stack align="center" gap="sm">
+    <ScreenContainer
+      actions={
+        <Button
+          disabled={submitting || !email.trim() || !password}
+          label={submitting ? "Signing In..." : "Sign In"}
+          onPress={onSubmit}
+        />
+      }
+      center
+      content={
         <Card>
           <Stack gap="xs">
-            <Text variant="title">Auth</Text>
-            <Text tone="muted">
-              Sign in to switch the app shell into the authenticated home state.
-            </Text>
-            {fallbackEnabled ? (
-              <Text tone="muted">
-                Mock auth fallback is active until the backend login endpoint is available.
-              </Text>
-            ) : null}
             <Input
               autoCapitalize="none"
               autoCorrect={false}
@@ -56,14 +55,24 @@ export default function AuthScreen({
               value={password}
             />
             {errorMessage ? <Text tone="error">{errorMessage}</Text> : null}
-            <Button
-              disabled={submitting || !email.trim() || !password}
-              label={submitting ? "Signing In..." : "Sign In"}
-              onPress={onSubmit}
-            />
           </Stack>
         </Card>
-      </Stack>
-    </ScreenContainer>
+      }
+      header={
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">Auth</Text>
+            <Text tone="muted">
+              Sign in to switch the app shell into the authenticated home state.
+            </Text>
+            {fallbackEnabled ? (
+              <Text tone="muted">
+                Mock auth fallback is active until the backend login endpoint is available.
+              </Text>
+            ) : null}
+          </Stack>
+        </Card>
+      }
+    />
   );
 }

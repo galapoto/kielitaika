@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Text as RNText } from "react-native";
 
-import { colors, typography } from "../theme/tokens";
+import { colors, typography } from "../tokens";
 
 type Variant = "body" | "bodyStrong" | "button" | "caption" | "title";
 type Tone = "default" | "error" | "inverse" | "muted" | "primary" | "success";
@@ -14,40 +14,20 @@ type Props = {
 };
 
 const variantStyles = {
-  body: {
-    fontSize: typography.size.body,
-    fontWeight: typography.weight.regular,
-    lineHeight: typography.lineHeight.body,
-  },
-  bodyStrong: {
-    fontSize: typography.size.body,
-    fontWeight: typography.weight.semibold,
-    lineHeight: typography.lineHeight.body,
-  },
-  button: {
-    fontSize: typography.size.button,
-    fontWeight: typography.weight.semibold,
-    lineHeight: typography.lineHeight.button,
-  },
-  caption: {
-    fontSize: typography.size.label,
-    fontWeight: typography.weight.medium,
-    lineHeight: typography.lineHeight.label,
-  },
-  title: {
-    fontSize: typography.size.title,
-    fontWeight: typography.weight.bold,
-    lineHeight: typography.lineHeight.title,
-  },
+  body: typography.roles.body,
+  bodyStrong: typography.roles.bodyStrong,
+  button: typography.roles.button,
+  caption: typography.roles.label,
+  title: typography.roles.title,
 } as const;
 
 const toneStyles = {
   default: colors.textPrimary,
   muted: colors.textSecondary,
-  primary: colors.primary,
-  inverse: colors.onPrimary,
-  error: colors.error,
-  success: colors.success,
+  primary: colors.neutral,
+  inverse: colors.onNeutral,
+  error: colors.wrong,
+  success: colors.correct,
 } as const;
 
 export default function Text({
@@ -60,7 +40,7 @@ export default function Text({
     <RNText
       style={{
         color: toneStyles[tone],
-        fontFamily: typography.family.body,
+        fontFamily: typography.family.sans,
         textAlign: align,
         ...variantStyles[variant],
       }}

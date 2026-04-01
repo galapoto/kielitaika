@@ -34,8 +34,34 @@ export default function HomeScreen({
   onOpenYkiPractice,
 }: Props) {
   return (
-    <ScreenContainer center>
-      <Stack gap="sm">
+    <ScreenContainer
+      actions={
+        <Stack gap="xs">
+          <Button label="Open Learning" onPress={onOpenLearning} />
+          <Button label="Open YKI Practice" onPress={onOpenYkiPractice} />
+          <Button label="Daily Practice" onPress={onOpenDailyPractice} tone="surface" />
+          <Button label="Professional Finnish" onPress={onOpenProfessionalFinnish} tone="surface" />
+          <Button label="Speaking Practice" onPress={onOpenSpeakingPractice} tone="surface" />
+          <Button label="YKI Exam" onPress={onOpenYkiExam} tone="surface" />
+          <Button label="Log Out" onPress={onLogout} tone="surface" />
+        </Stack>
+      }
+      center
+      content={
+        <Card>
+          <Stack gap="xs">
+            <Text variant="title">Runtime Flows</Text>
+            <Text>
+              Daily practice, professional Finnish, speaking, and YKI exam all resolve through
+              the same governed RN UI system.
+            </Text>
+            {debugAvailable ? (
+              <Text tone="muted">Learning debug visibility is available.</Text>
+            ) : null}
+          </Stack>
+        </Card>
+      }
+      header={
         <Card>
           <Stack gap="xs">
             <Text variant="title">Home</Text>
@@ -45,23 +71,7 @@ export default function HomeScreen({
             <Text>User ID: {user.id}</Text>
           </Stack>
         </Card>
-
-        <Card>
-          <Stack gap="xs">
-            <Text variant="title">Runtime Flows</Text>
-            <Button label="Open Learning" onPress={onOpenLearning} />
-            <Button label="Daily Practice" onPress={onOpenDailyPractice} tone="surface" />
-            <Button label="Professional Finnish" onPress={onOpenProfessionalFinnish} tone="surface" />
-            <Button label="Speaking Practice" onPress={onOpenSpeakingPractice} tone="surface" />
-            <Button label="YKI Exam" onPress={onOpenYkiExam} tone="surface" />
-            <Button label="Open YKI Practice" onPress={onOpenYkiPractice} />
-            {debugAvailable ? (
-              <Text tone="muted">Learning debug visibility is available.</Text>
-            ) : null}
-            <Button label="Log Out" onPress={onLogout} tone="surface" />
-          </Stack>
-        </Card>
-      </Stack>
-    </ScreenContainer>
+      }
+    />
   );
 }
