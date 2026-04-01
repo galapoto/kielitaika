@@ -1,0 +1,864 @@
+{
+  "session_id": "c8a53740-11e1-49ef-9d8f-de731aaec980",
+  "level_band": "B1_B2",
+  "exam": {
+    "level_band": "B1_B2",
+    "reading": [
+      {
+        "id": "004b304f-5cb4-542a-bd4f-5fbac8798b8d",
+        "version": "3.2.0",
+        "task_type": "reading_mcq_set",
+        "level_band": "B1_B2",
+        "skill": "reading",
+        "difficulty": 0.59,
+        "language": "fi",
+        "source": {
+          "origin": "recovered",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Lue teksti huolellisesti. Valitse jokaiseen kysymykseen yksi vaihtoehto.",
+          "materials": {
+            "text": "Luottamus instituutioihin ei romahda yhdessä yössä, mutta se voi kulua hiljalleen. Siksi myös Oulussassä valmisteltu uusi palvelumalli on herättänyt sekä toiveita että epäluuloa. Mallin idea on yksinkertainen: samaan asiointiin liitetään useampi palvelu, jotta asiakkaan ei tarvitse kertoa tilannettaan alusta jokaisessa toimipisteessä. Käytännössä muutos osuu kuitenkin eri tavoin eri ryhmiin.\n\nKannattajien mukaan palveluketju nopeutuu. Kun taustatiedot ovat valmiina, ammattilainen voi keskittyä olennaiseen, ja turhat käynnit vähenevät. Lisäksi yhteinen kokonaiskuva auttaa tunnistamaan tilanteita, joissa ongelma ei ole vain yksi yksittäinen asia. Tässä mielessä muutos näyttää inhimilliseltä, vaikka se kuulostaa hallinnolliselta.\n\nKriitikot nostavat esiin kaksi huolta. Ensimmäinen koskee valtaa: jos sama järjestelmä kokoaa paljon tietoa, kuka päättää, mitä sillä tehdään ja kuka näkee sen? Toinen liittyy arviointiin. Uudistusta perustellaan usein tehokkuudella, mutta tehokkuus ei aina tarkoita parempaa palvelua. Jos aikaa säästyy, mutta ihminen kokee tulleensa ohitetuksi, kokemus jää silti huonoksi.\n\nMielenkiintoista on, että keskustelussa puhutaan harvoin koulutuksesta. Uuden mallin onnistuminen riippuu siitä, osaavatko työntekijät tulkita tietoa, käyttää yhteisiä käytäntöjä ja myös selittää ne asiakkaalle ymmärrettävästi. Ilman tätä syntyy helposti vaikutelma, että järjestelmä hallitsee ihmistä, eikä toisin päin. Tällöin muutos saa symbolisen merkityksen: se ei ole vain tapa tehdä työtä, vaan myös viesti siitä, mitä pidetään tärkeänä.\n\nKun muutosta arvioidaan, pelkkä yksi mittari ei riitä. Tarvitaan sekä numeroita että kertomuksia. Numerot näyttävät suunnan, mutta kertomukset paljastavat, miksi suunta tuntuu oikealta tai väärältä. Jos nämä kaksi jätetään erilleen, keskustelu jakautuu niihin, jotka vaativat “todisteita”, ja niihin, jotka vaativat “kokemusten kunnioittamista”. Todellisessa päätöksenteossa molemmat ovat välttämättömiä.  Tarkemman analyysin kannalta on syytä huomioida konteksti ja mahdolliset rajoitteet. Asiasta voi olla useita tulkintoja, ja lähteiden luotettavuus on tärkeä. Lyhyesti ottaen tämä näkökulma täydentää aiempaa kuvailua. Lisälukemista varten aiheeseen liittyy runsaasti kirjallisuutta.",
+            "word_count": 273
+          },
+          "questions": [
+            {
+              "id": "q1",
+              "prompt": "Mikä on uuden palvelumallin perusidea?",
+              "options": [
+                "Asiakas valitsee aina uuden työntekijän",
+                "Useampi palvelu yhdistetään samaan asiointiin",
+                "Palvelut lopetetaan kokonaan",
+                "Kaikki siirretään vain paperille"
+              ],
+              "correct_index": 0
+            },
+            {
+              "id": "q2",
+              "prompt": "Mitä kannattajat painottavat?",
+              "options": [
+                "Palveluketju nopeutuu ja turhat käynnit vähenevät",
+                "Kustannukset nousevat väistämättä",
+                "Asiakkaat eivät huomaa muutosta",
+                "Tietoa ei tarvita"
+              ],
+              "correct_index": 0
+            },
+            {
+              "id": "q3",
+              "prompt": "Mikä on kriitikoiden ensimmäinen huoli?",
+              "options": [
+                "Sää muuttuu",
+                "Valta ja se, kuka näkee ja käyttää tietoa",
+                "Mainonta lisääntyy",
+                "Rakennukset ovat vanhoja"
+              ],
+              "correct_index": 0
+            },
+            {
+              "id": "q4",
+              "prompt": "Miksi koulutus on tekstin mukaan tärkeää?",
+              "options": [
+                "Koska se tekee keskustelusta helpompaa",
+                "Koska se lyhentää lomia",
+                "Koska se poistaa kaikki mittarit",
+                "Ilman sitä syntyy vaikutelma, että järjestelmä hallitsee ihmistä"
+              ],
+              "correct_index": 0
+            },
+            {
+              "id": "q5",
+              "prompt": "Mitä tekstissä ehdotetaan arviointiin?",
+              "options": [
+                "Vain yksi mittari",
+                "Sekä numeroita että kertomuksia",
+                "Vain data ilman kokemuksia",
+                "Vain kokemukset ilman dataa"
+              ],
+              "correct_index": 0
+            }
+          ],
+          "timing": {
+            "recommended_minutes": 15
+          }
+        }
+      },
+      {
+        "id": "004ea3d9-bf04-57a9-ab04-14c4357efcb0",
+        "version": "3.2.0",
+        "task_type": "reading_mcq_set",
+        "level_band": "B1_B2",
+        "skill": "reading",
+        "difficulty": 0.524,
+        "language": "fi",
+        "source": {
+          "origin": "recovered",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Lue uimahallin hinnasto ja valitse oikea vaihtoehto.",
+          "materials": {
+            "text": "UIMAHALLI AALTO – HINNASTO 2025\n\nLiput:\nAikuiset (yli 18 v.): 11 €\nLapset (4–17 v.): 6 €\nAlle 4-vuotiaat: ilmaiseksi\nPerhelippu (2 aikuista + 2 lasta): 26 €\n\nKausikortit:\n10 kerran kortti aikuiset: 90 €\n10 kerran kortti lapset: 50 €\nKuukausikortti aikuiset: 55 €\n\nVuorot:\nAikuisten uintivuoro ma–pe klo 20–22: 13 €\nVauvauinti ti ja to klo 9–10: 8 €\n\nOhjattu vesijumppa ma, ke, pe klo 18–19: 14 €\n\nPukukaapit: 0,50 € (palautetaan)",
+            "word_count": 74
+          },
+          "questions": [
+            {
+              "id": "item_001",
+              "prompt": "Paljonko aikuisten lippu maksaa?",
+              "options": [
+                "10 €",
+                "11 €",
+                "12 €"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "item_002",
+              "prompt": "Paljonko perhelippu maksaa?",
+              "options": [
+                "24 €",
+                "26 €",
+                "28 €"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "item_003",
+              "prompt": "Milloin on vauvauinti?",
+              "options": [
+                "maanantaisin ja keskiviikkoisin",
+                "tiistaisin ja torstaisin",
+                "keskiviikkoisin ja perjantaisin"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "item_004",
+              "prompt": "Paljonko pukukaapit maksavat?",
+              "options": [
+                "ilmaiseksi",
+                "0,50 €",
+                "1 €"
+              ],
+              "correct_index": 1
+            }
+          ],
+          "timing": {
+            "recommended_minutes": 15
+          }
+        }
+      },
+      {
+        "id": "00e597aa-d494-5acb-8836-148c84a14d26",
+        "version": "3.2.0",
+        "task_type": "reading_mcq_set",
+        "level_band": "B1_B2",
+        "skill": "reading",
+        "difficulty": 0.544,
+        "language": "fi",
+        "source": {
+          "origin": "recovered",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Mitä tekstissä kerrotaan?",
+          "materials": {
+            "text": "Suomessa asutaan monenlaisissa asunnoissa. Kaupungeissa yleisiä ovat kerrostalot, kun taas taajamissa ja maaseudulla omakotitalot ja rivitalot ovat tavallisia. Noin kolmannes suomalaisista asuu vuokralla, ja loput omistavat asuntonsa. Asumisen kustannukset vaihtelevat paljon asuinpaikan mukaan; pääkaupunkiseudulla hinnat ovat korkeimmat. Monet asuvat yksin, mutta erityisesti lapsiperheissä asutaan useamman hengen talouksissa. Asuntojen varustelutaso on yleensä hyvä: lähes kaikissa on sähkö, juokseva vesi, viemäröinti ja keskuslämmitys. Uusissa rakennuksissa panostetaan energiatehokkuuteen ja esteettömyyteen. Asumiseen voi saada tukea, kuten asumistukea, jos tulot ovat pienet.",
+            "word_count": 77
+          },
+          "questions": [
+            {
+              "id": "q1_reading_b1_013",
+              "prompt": "Millaisia asumismuotoja Suomessa on?",
+              "options": [
+                "Vain kerrostaloja",
+                "Kerrostaloja, omakotitaloja ja rivitaloja",
+                "Vain omakotitaloja",
+                "Vain vuokra-asuntoja"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "q2_reading_b1_013",
+              "prompt": "Kuinka moni suomalainen asuu vuokralla?",
+              "options": [
+                "Noin puolet",
+                "Noin kolmannes",
+                "Noin neljännes",
+                "Noin kaksi kolmannesta"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "q3_reading_b1_013",
+              "prompt": "Missä asumisen kustannukset ovat korkeimmat?",
+              "options": [
+                "Maaseudulla",
+                "Pohjois-Suomessa",
+                "Pääkaupunkiseudulla",
+                "Pienissä kaupungeissa"
+              ],
+              "correct_index": 2
+            },
+            {
+              "id": "q4_reading_b1_013",
+              "prompt": "Mitä asumisen tukea voi saada?",
+              "options": [
+                "Lapsilisää",
+                "Asumistukea",
+                "Opintotukea",
+                "Työttömyyskorvausta"
+              ],
+              "correct_index": 1
+            }
+          ],
+          "timing": {
+            "recommended_minutes": 15
+          }
+        }
+      },
+      {
+        "id": "0176c657-ab5c-5668-82af-b2a07fcf283a",
+        "version": "3.2.0",
+        "task_type": "reading_mcq_set",
+        "level_band": "B1_B2",
+        "skill": "reading",
+        "difficulty": 0.567,
+        "language": "fi",
+        "source": {
+          "origin": "recovered",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Lue juttu ja valitse oikeat vastaukset.",
+          "materials": {
+            "text": "Kaupunki käynnisti viherkattohankkeen kolmessa julkisessa rakennuksessa vähentääkseen rankkasateiden aiheuttamaa hulevesikuormitusta. Hankkeen suunnittelussa painotettiin kahta tavoitetta: sadeveden pidätystä ja rakennusten kesäaikaisen lämpökuorman pienentämistä. Ensimmäisen vuoden mittauksissa havaittiin, että viherkatot tasoittivat veden virtaamaa rankkasateiden jälkeen. Energiansäästössä tulokset vaihtelivat rakennuksen käyttöprofiilin mukaan. Kritiikki kohdistui ylläpitokustannuksiin ja siihen, että osa huoltotoimista vaati erityisosaamista, jota ei ollut kaikilla kiinteistönhoitajilla. Kaupunki vastasi kritiikkiin laatimalla koulutusohjelman huoltoyhtiöille sekä vertailemalla pitkän aikavälin kustannuksia tulvariskien ja jäähdytyksen kuluihin. Päätös laajennuksesta tehdään vasta, kun kolmen vuoden seurantadata on valmis.  Yhteenvetona voidaan sanoa, että asiayhteys ja paikalliset käytännöt voivat vaikuttaa toimenpiteisiin. Lisätietoja on usein mahdollista hakea virallisista lähteistä tai asiantuntijalta. Tämä teksti on laadittu luetun ymmärtämisen harjoitustehtävää varten.",
+            "word_count": 107
+          },
+          "questions": [
+            {
+              "id": "q1",
+              "prompt": "Mitkä olivat hankkeen kaksi päätavoitetta?",
+              "options": [
+                "pysäköinnin lisääminen ja valaistus",
+                "sadeveden pidätys ja lämpökuorman pienentäminen",
+                "uudet kahvilat ja terassit",
+                "kattojen maalaaminen"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "q2",
+              "prompt": "Mitä mittauksissa havaittiin selvästi?",
+              "options": [
+                "hulevesivirtaama kasvoi",
+                "viherkatot tasoittivat veden virtaamaa",
+                "rakennukset lämpenivät enemmän",
+                "ylläpitoa ei tarvittu"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "q3",
+              "prompt": "Mihin kritiikki erityisesti kohdistui?",
+              "options": [
+                "asuntojen määrään",
+                "ylläpitokustannuksiin ja osaamisvaatimuksiin",
+                "hankkeen nimeen",
+                "kasvilajien väriin"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "q4",
+              "prompt": "Milloin laajennuksesta päätetään?",
+              "options": [
+                "heti kesällä",
+                "kun vuoden data on valmis",
+                "kun kolmen vuoden seurantadata on valmis",
+                "ei koskaan"
+              ],
+              "correct_index": 2
+            }
+          ],
+          "timing": {
+            "recommended_minutes": 15
+          }
+        }
+      }
+    ],
+    "listening": [
+      {
+        "id": "002c4c7f-35a6-5e24-912e-553a504ee196",
+        "version": "3.2.0",
+        "task_type": "listening_mcq_set",
+        "level_band": "B1_B2",
+        "skill": "listening",
+        "difficulty": 0.542,
+        "language": "fi",
+        "source": {
+          "origin": "listening",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Kuuntele asiantuntijahaastattelu unen merkityksestä ja vastaa kysymyksiin.",
+          "materials": {
+            "transcript": "Toimittaja: Tänään puhumme unen tärkeydestä. Tutkija Laura Niemi on vieraana. Laura, miksi uni on niin tärkeää?\nLaura: Uni on elintärkeää sekä keholle että mielelle. Unen aikana aivot käsittelevät päivän tapahtumia ja järjestelevät muistoja. Myös keho palautuu ja solut uusiutuvat.\nToimittaja: Kuinka paljon unta keskimäärin tarvitaan?\nLaura: Se vaihtelee iän mukaan. Aikuiset tarvitsevat yleensä 7–9 tuntia. Nuoret ja lapset enemmän. On myös yksilöllisiä eroja – jotkut pärjäävät vähemmällä, mutta se on harvinaista.\nToimittaja: Mitä tapahtuu, jos nukkuu liian vähän?\nLaura: Pitkäaikainen univaje vaikuttaa keskittymiskykyyn, muistiin ja mielialaan. Se lisää myös riskiä sairastua esimerkiksi sydän- ja verisuonitauteihin. Jo yhden yön valvominen heikentää suorituskykyä.\nToimittaja: Entä onko totta, että viikonloppuna voi nukkua \"varastoon\"?\nLaura: Valitettavasti ei. Vaikka viikonloppuna voi vähän korjata vajetta, se ei täysin kompensoi viikon aikana kertynyttä univelkaa. Paras tapa on yrittää nukkua säännöllisesti.\nToimittaja: Mitä vinkkejä annat hyvään uneen?\nLaura: Rutiinit ovat tärkeitä – pyri nukkumaan ja heräämään samaan aikaan. Vältä kofeiinia iltaisin ja vähennä ruutuaikaa ennen nukkumaanmenoa. Myös liikunta päivällä auttaa nukahtamaan.",
+            "audio_asset_id": "1a45251e-68ea-4c91-98b1-03ec9f5b288b"
+          },
+          "questions": [
+            {
+              "id": "q1",
+              "prompt": "Mitä unen aikana tapahtuu asiantuntijan mukaan?",
+              "options": [
+                "Keho lepää, mutta aivot eivät tee mitään",
+                "Aivot käsittelevät tapahtumia ja keho palautuu",
+                "Vain keho lepää",
+                "Ihminen ei näe unia"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "q2",
+              "prompt": "Kuinka paljon unta aikuiset yleensä tarvitsevat?",
+              "options": [
+                "5–6 tuntia",
+                "7–9 tuntia",
+                "9–11 tuntia",
+                "Yli 12 tuntia"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "q3",
+              "prompt": "Voiko univelkaa korjata nukkumalla viikonloppuna?",
+              "options": [
+                "Kyllä, täysin",
+                "Vain vähän, ei täysin",
+                "Ei ollenkaan",
+                "Vain jos nukkuu yli 12 tuntia"
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "q4",
+              "prompt": "Mikä ei ole hyvä vinkki hyvään uneen?",
+              "options": [
+                "Säännölliset rutiinit",
+                "Kofeiini illalla",
+                "Liikunta päivällä",
+                "Vähän ruutuaikaa ennen nukkumaanmenoa"
+              ],
+              "correct_index": 1
+            }
+          ],
+          "timing": {
+            "recommended_minutes": 2
+          }
+        }
+      },
+      {
+        "id": "00a3e047-9233-5382-80ba-b4cdfa460ae0",
+        "version": "3.2.0",
+        "task_type": "listening_mcq_set",
+        "level_band": "B1_B2",
+        "skill": "listening",
+        "difficulty": 0.543,
+        "language": "fi",
+        "source": {
+          "origin": "listening",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Kuuntele tiedote kaupungin uudesta kulttuurikeskuksesta ja vastaa.",
+          "materials": {
+            "transcript": "Tämä on kaupungin kulttuuripalvelujen tiedote. Olemme iloisia voidessamme ilmoittaa, että uusi kulttuurikeskus Kulttuuritehdas avaa ovensa 1.10. Kulttuuritehdas sijaitsee vanhassa teollisuusrakennuksessa osoitteessa Tehtaankatu 15. Kulttuuritehtaaseen tulee monipuolisia tiloja eri taiteenaloille. Siellä on teatterisali, konserttisali, näyttelytila, työpajatiloja ja kahvila. Kulttuuritehtaassa tulee toimimaan useita kulttuuriyhdistyksiä ja taiteilijoita. Tarjolla on kursseja, työpajoja, näyttelyitä ja esityksiä niin ammattilaisille kuin harrastajillekin. Avajaisviikonloppuna 1.–2.10. on avoimet ovet. Ohjelmassa on esittelykierroksia, työpajoja ja esityksiä. Tervetuloa tutustumaan uuteen kulttuurin keskittymään!",
+            "audio_asset_id": "d1e2f3a4-b5c6-7d8e-9f0a-1b2c3d4e5f6a"
+          },
+          "questions": [
+            {
+              "id": "lq1",
+              "prompt": "Mistä kaupungin kulttuuripalvelut tiedottavat?",
+              "options": [
+                "Uuden museon avajaisista.",
+                "Uuden kulttuurikeskuksen avajaisista.",
+                "Uuden teatterin avajaisista.",
+                "Uuden konserttisalin avajaisista."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq2",
+              "prompt": "Minä päivänä Kulttuuritehdas avataan?",
+              "options": [
+                "1.9.",
+                "1.10.",
+                "1.11.",
+                "1.12."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq3",
+              "prompt": "Mikä oli entinen rakennus, johon Kulttuuritehdas tulee?",
+              "options": [
+                "Vanha koulu.",
+                "Vanha teollisuusrakennus.",
+                "Vanha sairaala.",
+                "Vanha asema."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq4",
+              "prompt": "Mitä tiloja Kulttuuritehtaassa on?",
+              "options": [
+                "Vain teatterisali.",
+                "Teatterisali, konserttisali, näyttelytila, työpajatiloja ja kahvila.",
+                "Vain konserttisali ja kahvila.",
+                "Vain työpajatiloja."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq5",
+              "prompt": "Ketä varten Kulttuuritehdas on tarkoitettu?",
+              "options": [
+                "Vain ammattilaisille.",
+                "Sekä ammattilaisille että harrastajille.",
+                "Vain lapsille.",
+                "Vain eläkeläisille."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq6",
+              "prompt": "Mitä avajaisviikonloppuna on ohjelmassa?",
+              "options": [
+                "Vain konsertteja.",
+                "Esittelykierroksia, työpajoja ja esityksiä.",
+                "Vain työpajoja.",
+                "Vain näyttelyitä."
+              ],
+              "correct_index": 1
+            }
+          ],
+          "timing": {
+            "recommended_minutes": 2
+          }
+        }
+      },
+      {
+        "id": "00fbe4bf-dcea-51b4-a9a0-5ef519f208c2",
+        "version": "3.2.0",
+        "task_type": "listening_mcq_set",
+        "level_band": "B1_B2",
+        "skill": "listening",
+        "difficulty": 0.543,
+        "language": "fi",
+        "source": {
+          "origin": "listening",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Kuuntele tiedote kaupungin uudesta liikuntapalvelusta ja vastaa.",
+          "materials": {
+            "transcript": "Tämä on kaupungin liikuntapalvelujen tiedote. Olemme uudistaneet liikuntapalvelujamme. Uusi verkkosivustomme on avattu, josta löytyvät kaikki liikuntapaikat, kurssit ja tapahtumat. Sivuilta voi myös varata vuoroja liikuntapaikkoihin. Olemme myös lisänneet maksuttomia liikuntamahdollisuuksia. Esimerkiksi ulkokuntosaleja on nyt viisi eri puolilla kaupunkia. Lisäksi järjestämme maksuttomia ohjattuja liikuntatuokioita puistoissa kesäkuukausina. Uusi uimahalli Kivikossa avataan elokuussa. Uimahallissa on 50 metrin allas, hyppyallas ja palju. Lisäksi laajennamme ikäihmisille suunnattuja liikuntaryhmiä. Tavoitteenamme on, että jokainen löytäisi itselleen sopivan tavan liikkua. Tervetuloa mukaan!",
+            "audio_asset_id": "b3c4d5e6-f7a8-9b0c-1d2e-3f4a5b6c7d8e"
+          },
+          "questions": [
+            {
+              "id": "lq1",
+              "prompt": "Mistä kaupungin liikuntapalvelut tiedottavat?",
+              "options": [
+                "Uuden jäähallin avajaisista.",
+                "Liikuntapalvelujen uudistuksesta.",
+                "Liikuntapaikkojen sulkemisesta.",
+                "Liikuntamaksujen korotuksesta."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq2",
+              "prompt": "Mitä uudella verkkosivulla voi tehdä?",
+              "options": [
+                "Vain katsoa tietoja.",
+                "Löytää liikuntapaikat, kurssit ja varata vuoroja.",
+                "Vain varata uimahalliaikoja.",
+                "Vain ilmoittautua kursseille."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq3",
+              "prompt": "Kuinka monta uutta ulkokuntosalia on rakennettu?",
+              "options": [
+                "Kaksi.",
+                "Kolme.",
+                "Viisi.",
+                "Kahdeksan."
+              ],
+              "correct_index": 2
+            },
+            {
+              "id": "lq4",
+              "prompt": "Milloin uusi uimahalli Kivikossa avataan?",
+              "options": [
+                "Kesäkuussa.",
+                "Heinäkuussa.",
+                "Elokuussa.",
+                "Syyskuussa."
+              ],
+              "correct_index": 2
+            },
+            {
+              "id": "lq5",
+              "prompt": "Mitä uudessa uimahallissa on?",
+              "options": [
+                "Vain 25 metrin allas.",
+                "50 metrin allas, hyppyallas ja palju.",
+                "Vain palju ja hyppyallas.",
+                "Vain lastenallas."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq6",
+              "prompt": "Ketä varten liikuntaryhmiä laajennetaan?",
+              "options": [
+                "Lapsia.",
+                "Nuoria.",
+                "Ikäihmisiä.",
+                "Työikäisiä."
+              ],
+              "correct_index": 2
+            }
+          ],
+          "timing": {
+            "recommended_minutes": 2
+          }
+        }
+      },
+      {
+        "id": "0155a68b-04dd-5d61-b1ff-0f7b2d5cc78f",
+        "version": "3.2.0",
+        "task_type": "listening_mcq_set",
+        "level_band": "B1_B2",
+        "skill": "listening",
+        "difficulty": 0.537,
+        "language": "fi",
+        "source": {
+          "origin": "listening",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Kuuntele tiedote kaupungin uudesta koulusta ja vastaa.",
+          "materials": {
+            "transcript": "Tämä on kaupungin opetuspalvelujen tiedote. Uusi monitoimikoulu Kivikkoon avaa ovensa elokuussa 2026. Kouluun tulee tilat noin 600 oppilaalle esikoulusta yhdeksänteen luokkaan. Koulussa on modernit ja joustavat oppimisympäristöt. Luokkahuoneiden sijaan koulussa on avoimia oppimisalueita, ryhmätyötiloja ja rauhallisia tiloja itsenäiseen työskentelyyn. Koulussa on myös liikuntasali, uima-allas, kirjasto ja ruokala. Erityistä huomiota on kiinnitetty sisäilman laatuun ja energiatehokkuuteen. Koulu on rakennettu puusta ja siinä on aurinkopaneelit katolla. Koulun pihasta tulee monipuolinen liikunta- ja oleskelualue, jossa on muun muassa tekonurmi, kiipeilytelineitä ja katettu ulkoluokka. Koulu toimii myös alueen asukkaiden kohtaamispaikkana iltaisin ja viikonloppuisin, jolloin liikuntatilat ja kirjasto ovat vapaasti käytettävissä. Tervetuloa tutustumaan uuteen kouluun avajaispäivänä 15.8.2026.",
+            "audio_asset_id": "d9e0f1a2-b3c4-5d6e-7f8a-9b0c1d2e3f4a"
+          },
+          "questions": [
+            {
+              "id": "lq1",
+              "prompt": "Mistä kaupungin opetuspalvelut tiedottavat?",
+              "options": [
+                "Uuden päiväkodin avajaisista.",
+                "Uuden koulun avaamisesta.",
+                "Koulujen loma-ajoista.",
+                "Kouluruokailun muutoksista."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq2",
+              "prompt": "Milloin uusi koulu avataan?",
+              "options": [
+                "Elokuussa 2025.",
+                "Elokuussa 2026.",
+                "Elokuussa 2027.",
+                "Elokuussa 2028."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq3",
+              "prompt": "Kuinka monelle oppilaalle koulussa on tilat?",
+              "options": [
+                "Noin 400.",
+                "Noin 500.",
+                "Noin 600.",
+                "Noin 700."
+              ],
+              "correct_index": 2
+            },
+            {
+              "id": "lq4",
+              "prompt": "Millaisia oppimisympäristöjä koulussa on?",
+              "options": [
+                "Perinteisiä luokkahuoneita.",
+                "Avoimia oppimisalueita, ryhmätyötiloja ja rauhallisia tiloja.",
+                "Vain luentosaleja.",
+                "Vain ulkotiloja."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq5",
+              "prompt": "Mitä erityistä koulun rakentamisessa on huomioitu?",
+              "options": [
+                "Halvat materiaalit.",
+                "Sisäilman laatu ja energiatehokkuus.",
+                "Nopea rakennusaika.",
+                "Korkea kerrosluku."
+              ],
+              "correct_index": 1
+            },
+            {
+              "id": "lq6",
+              "prompt": "Milloin koulun tilat ovat asukkaiden käytettävissä?",
+              "options": [
+                "Vain kouluaikana.",
+                "Iltaisin ja viikonloppuisin.",
+                "Vain kesällä.",
+                "Ei koskaan."
+              ],
+              "correct_index": 1
+            }
+          ],
+          "timing": {
+            "recommended_minutes": 2
+          }
+        }
+      }
+    ],
+    "writing": [
+      {
+        "id": "00116c99-59d7-5e7e-9de9-1422a536146c",
+        "version": "3.2.0",
+        "task_type": "writing_prompt",
+        "level_band": "B1_B2",
+        "skill": "writing",
+        "difficulty": 0.519,
+        "language": "fi",
+        "source": {
+          "origin": "writing",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Olet tilannut lehden tai lehtitilauksen. Kirjoita palaute kustantajalle.",
+          "materials": {
+            "scenario": "Palaute lehtitilauksesta"
+          },
+          "items": [
+            {
+              "id": "item_1",
+              "prompt": "Olet tilannut lehden tai lehtitilauksen. Kirjoita palaute kustantajalle."
+            }
+          ],
+          "rubric": "Olet tilannut lehden tai lehtitilauksen. Kirjoita palaute kustantajalle.",
+          "timing": {
+            "recommended_minutes": 20
+          }
+        }
+      },
+      {
+        "id": "00207553-0133-5541-b917-f65123609ae1",
+        "version": "3.2.0",
+        "task_type": "writing_prompt",
+        "level_band": "B1_B2",
+        "skill": "writing",
+        "difficulty": 0.539,
+        "language": "fi",
+        "source": {
+          "origin": "recovered",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Kirjoita mielipideteksti siitä, pitäisikö työnantajien tarjota enemmän etätyömahdollisuuksia. Esitä kantasi selvästi, perustele sitä usealla syyllä ja huomioi myös vastakkainen näkökulma.",
+          "materials": {
+            "scenario": "Kirjoita mielipideteksti siitä, pitäisikö työnantajien tarjota enemmän etätyömahdollisuuksia. Esitä kantasi selvästi, perustele sitä usealla syyllä ja huomioi myös vastakkainen näkökulma."
+          },
+          "items": [
+            {
+              "id": "04a2113c-a66d-50be-ba96-d1e2f108c58c",
+              "prompt": "Kirjoita mielipideteksti siitä, pitäisikö työnantajien tarjota enemmän etätyömahdollisuuksia. Esitä kantasi selvästi, perustele sitä usealla syyllä ja huomioi myös vastakkainen näkökulma."
+            }
+          ],
+          "rubric": "Kirjoita mielipideteksti siitä, pitäisikö työnantajien tarjota enemmän etätyömahdollisuuksia. Esitä kantasi selvästi, perustele sitä usealla syyllä ja huomioi myös vastakkainen näkökulma.",
+          "timing": {
+            "recommended_minutes": 20
+          }
+        }
+      }
+    ],
+    "speaking": [
+      {
+        "id": "0008a646-3f51-52aa-a756-c6dfaf7bbf5c",
+        "version": "3.2.0",
+        "task_type": "speaking_roleplay",
+        "level_band": "B1_B2",
+        "skill": "speaking",
+        "difficulty": 0.506,
+        "language": "fi",
+        "source": {
+          "origin": "recovered",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Keskustele suomeksi.",
+          "materials": {
+            "roles": {
+              "user": "asiakas",
+              "partner": "kampaaja"
+            }
+          },
+          "items": [
+            {
+              "id": "srp195_01",
+              "ai_first_turn_fi": "Hei, etsitkö lahjaa?"
+            }
+          ],
+          "rubric": "Keskustele suomeksi.",
+          "timing": {
+            "recommended_minutes": 3
+          }
+        }
+      },
+      {
+        "id": "0157cfb9-63b5-5f5f-8b8b-428d68ad2138",
+        "version": "3.2.0",
+        "task_type": "speaking_roleplay",
+        "level_band": "B1_B2",
+        "skill": "speaking",
+        "difficulty": 0.507,
+        "language": "fi",
+        "source": {
+          "origin": "recovered",
+          "generator": "engine.tools.reconstruct_salvage_to_certified_v3_2",
+          "generated_at": null
+        },
+        "quality": {
+          "certification": {
+            "status": "uncertified",
+            "certified_at": null,
+            "certified_by": null
+          }
+        },
+        "content": {
+          "instruction": "Keskustele suomeksi.",
+          "materials": {
+            "roles": {
+              "user": "asiakas",
+              "partner": "uimahallin työntekijä"
+            }
+          },
+          "items": [
+            {
+              "id": "srp169_01",
+              "ai_first_turn_fi": "Hei, miten voin auttaa?"
+            }
+          ],
+          "rubric": "Keskustele suomeksi.",
+          "timing": {
+            "recommended_minutes": 3
+          }
+        }
+      }
+    ]
+  },
+  "answers": {},
+  "audio_answers": {},
+  "writing_answers": {},
+  "speaking_runtime": {},
+  "start_time": 1775074031.6340542,
+  "completed": false
+}

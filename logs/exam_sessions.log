@@ -1,0 +1,5 @@
+{"event": "session_created", "timestamp": "2026-04-01T20:07:11.635666+00:00", "session_id": "c8a53740-11e1-49ef-9d8f-de731aaec980", "level_band": "B1_B2"}
+{"event": "SPEAKING_MODE", "timestamp": "2026-04-01T20:07:11.638100+00:00", "task_id": "0008a646-3f51-52aa-a756-c6dfaf7bbf5c", "speaking_mode": "conversation"}
+{"event": "SPEAKING_MODE", "timestamp": "2026-04-01T20:07:11.638649+00:00", "task_id": "0157cfb9-63b5-5f5f-8b8b-428d68ad2138", "speaking_mode": "conversation"}
+{"event": "SPEAKING_MODE", "timestamp": "2026-04-01T20:07:51.792104+00:00", "task_id": "0008a646-3f51-52aa-a756-c6dfaf7bbf5c", "speaking_mode": "conversation"}
+{"event": "SPEAKING_MODE", "timestamp": "2026-04-01T20:07:51.792462+00:00", "task_id": "0157cfb9-63b5-5f5f-8b8b-428d68ad2138", "speaking_mode": "conversation"}
