@@ -6,8 +6,10 @@ type NetworkState = {
 };
 
 function getCurrentOfflineState() {
-  if (typeof navigator !== "undefined" && typeof navigator.onLine === "boolean") {
-    return !navigator.onLine;
+  const onlineState = (globalThis as Record<string, unknown>).onLine;
+
+  if (typeof onlineState === "boolean") {
+    return !onlineState;
   }
 
   return false;
@@ -24,16 +26,21 @@ export const useNetworkStore = create<NetworkState>((set) => ({
 
     update();
 
-    if (typeof window === "undefined" || !window.addEventListener) {
+    const target = globalThis as {
+      addEventListener?: (event: string, listener: () => void) => void;
+      removeEventListener?: (event: string, listener: () => void) => void;
+    };
+
+    if (!target.addEventListener || !target.removeEventListener) {
       return () => undefined;
     }
 
-    window.addEventListener("online", update);
-    window.addEventListener("offline", update);
+    target.addEventListener("online", update);
+    target.addEventListener("offline", update);
 
     return () => {
-      window.removeEventListener("online", update);
-      window.removeEventListener("offline", update);
+      target.removeEventListener?.("online", update);
+      target.removeEventListener?.("offline", update);
     };
   },
 }));

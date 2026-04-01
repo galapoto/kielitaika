@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { audioManager } from "@core/audio/audioManager";
+import { createSafeInterval } from "@core/utils/timerSafe";
 import {
   advanceExamSession,
   clearExamSession,
@@ -132,7 +133,7 @@ export default function useYkiExam() {
       return;
     }
 
-    const interval = setInterval(() => {
+    return createSafeInterval(() => {
       void runAction(
         async () =>
           (await resumeExamSession()) ?? {
@@ -144,8 +145,6 @@ export default function useYkiExam() {
         { preserveVisibleData: true },
       );
     }, 5000);
-
-    return () => clearInterval(interval);
   }, [state.data?.session_id, state.data?.current_view.view_key, state.data?.navigation.read_only]);
 
   return {

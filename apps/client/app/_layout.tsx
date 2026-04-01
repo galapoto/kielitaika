@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 
+import ErrorBoundary from "@ui/system/ErrorBoundary";
 import { useAuthStore } from "../state/authStore";
 
 export default function Layout() {
@@ -11,15 +12,17 @@ export default function Layout() {
   }, [hydrateSession]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="auth" />
-      <Stack.Screen name="daily-practice" />
-      <Stack.Screen name="learning" />
-      <Stack.Screen name="professional-finnish" />
-      <Stack.Screen name="speaking-practice" />
-      <Stack.Screen name="yki-exam" />
-      <Stack.Screen name="yki-practice" />
-    </Stack>
+    <ErrorBoundary>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="daily-practice" />
+        <Stack.Screen name="learning" />
+        <Stack.Screen name="professional-finnish" />
+        <Stack.Screen name="speaking-practice" />
+        <Stack.Screen name="yki-exam" />
+        <Stack.Screen name="yki-practice" />
+      </Stack>
+    </ErrorBoundary>
   );
 }

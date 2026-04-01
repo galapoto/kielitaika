@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 
-import { audioManager } from "@core/audio/audioManager";
 import { getApiBaseUrl } from "@core/api/apiConfig";
+import { audioManager } from "@core/audio/audioManager";
 import SpeakingPracticeScreen from "@ui/screens/SpeakingPracticeScreen";
-
-import useSpeakingPractice from "../hooks/useSpeakingPractice";
+import useSpeakingPractice from "@ui/hooks/useSpeakingPractice";
 
 type Props = {
   onBack: () => void;

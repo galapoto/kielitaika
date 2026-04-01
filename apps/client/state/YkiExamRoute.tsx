@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useFocusEffect } from "expo-router";
 
 import { audioManager } from "@core/audio/audioManager";
+import { createSafeInterval, createSafeTimeout } from "@core/utils/timerSafe";
 import { animation } from "@ui/tokens";
 import ApplicationErrorScreen from "@ui/screens/ApplicationErrorScreen";
 import YkiExamScreen from "@ui/screens/YkiExamScreen";
@@ -169,7 +171,7 @@ export default function YkiExamRoute({ onExit }: Props) {
   const [activeRequest, setActiveRequest] = useState<PendingAction>(null);
   const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
   const previousViewRef = useRef<ViewSnapshot | null>(null);
-  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transitionTimerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setAnswerDraft(data?.current_view.submitted_answer ?? "");
@@ -184,11 +186,9 @@ export default function YkiExamRoute({ onExit }: Props) {
       return;
     }
 
-    const timer = setInterval(() => {
+    return createSafeInterval(() => {
       setCountdownSeconds((current) => Math.max(0, current - 1));
     }, 1000);
-
-    return () => clearInterval(timer);
   }, [data?.session_id, data?.current_view.view_key, data?.navigation.read_only]);
 
   useEffect(() => {
@@ -216,10 +216,10 @@ export default function YkiExamRoute({ onExit }: Props) {
     setTransitionLabel(nextTransitionLabel);
 
     if (transitionTimerRef.current) {
-      clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current();
     }
 
-    transitionTimerRef.current = setTimeout(() => {
+    transitionTimerRef.current = createSafeTimeout(() => {
       setTransitionLabel(null);
       transitionTimerRef.current = null;
     }, animation.duration.normal);
@@ -228,11 +228,20 @@ export default function YkiExamRoute({ onExit }: Props) {
   useEffect(
     () => () => {
       if (transitionTimerRef.current) {
-        clearTimeout(transitionTimerRef.current);
+        transitionTimerRef.current();
+        transitionTimerRef.current = null;
       }
     },
     [],
   );
+
+  useFocusEffect(() => {
+    return () => {
+      void audioManager.stop();
+      void audioManager.stopRecording();
+      setRecording(false);
+    };
+  });
 
   async function runExamAction(kind: PendingAction, action: () => Promise<unknown>) {
     setRuntimeMessage(null);

@@ -5,7 +5,7 @@ import {
   startSpeakingPracticeSession,
   submitSpeakingPracticeResponse,
   type SpeakingPracticeSession,
-} from "../services/speakingPracticeService";
+} from "@core/services/speakingPracticeService";
 
 type ErrorState = {
   code?: string;

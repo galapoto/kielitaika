@@ -1,10 +1,10 @@
-import Button from "../primitives/Button";
-import Card from "../primitives/Card";
-import Input from "../primitives/Input";
-import Row from "../primitives/Row";
-import ScreenContainer from "../primitives/ScreenContainer";
-import Stack from "../primitives/Stack";
-import Text from "../primitives/Text";
+import Button from "@ui/primitives/Button";
+import Card from "@ui/primitives/Card";
+import Input from "@ui/primitives/Input";
+import Row from "@ui/primitives/Row";
+import ScreenContainer from "@ui/primitives/ScreenContainer";
+import Stack from "@ui/primitives/Stack";
+import Text from "@ui/primitives/Text";
 
 type Prompt = {
   id: string;

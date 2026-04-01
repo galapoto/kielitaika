@@ -581,24 +581,6 @@ export async function downloadPracticeCertification(sessionId: string) {
     return result;
   }
 
-  const serialized = JSON.stringify(result.data, null, 2);
-  const filename = `${sessionId}-certification.json`;
-
-  if (
-    typeof window !== "undefined" &&
-    typeof Blob !== "undefined" &&
-    typeof URL !== "undefined" &&
-    typeof document !== "undefined"
-  ) {
-    const blob = new Blob([serialized], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }
-
   return {
     ok: true,
     data: result.data,
