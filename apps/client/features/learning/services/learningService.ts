@@ -1,18 +1,10 @@
 import { apiClient, ContractViolationError } from "@core/api/apiClient";
-import {
-  validateDueReviewUnitsPayload,
-  validateLearningDebugStatePayload,
-  validateLearningModulesPayload,
-  validateLearningUnitPayload,
-  validateRelatedUnitsPayload,
-} from "@core/api/governedResponseValidation";
+import { validateLearningModulesPayload } from "@core/api/governedResponseValidation";
 
 type ApiError = {
   code?: string;
   message: string;
-  event_id?: string | null;
   traceReference?: string | null;
-  trace_id?: string | null;
 };
 
 type ApiResponse<T> = {
@@ -21,478 +13,166 @@ type ApiResponse<T> = {
   error: ApiError | null;
 };
 
-export type LearningUnit = {
-  id: string;
-  kind: string;
-  level: string;
-  difficultyLevel: "easy" | "medium" | "hard";
-  title: string;
-  summary: string;
-  example: string;
-  details: Record<string, string>;
-  moduleIds: string[];
-  relatedUnitIds: string[];
+export type LearningExerciseProgress = {
+  exerciseId: string;
+  attempted: boolean;
+  lastCorrect: boolean | null;
+  lastSubmittedAnswer: string | null;
 };
 
-export type LearningUnitProgressSummary = {
-  user_id: string;
-  unit_id: string;
-  attempts: number;
-  correct_attempts: number;
-  last_attempt_at: string | null;
-  last_practiced_at: string | null;
-  next_review_at: string | null;
-  review_interval_days: number;
-  streak_correct: number;
-  mastery_score: number;
-  mastery_level: "weak" | "improving" | "mastered";
-  due_for_review: boolean;
-  urgency: "scheduled" | "due_now" | "overdue";
-  days_overdue: number;
-  recent_mistake: boolean;
-  regression_detected: boolean;
-  stagnated: boolean;
-  stagnation_reason: string | null;
-  stagnation_detected_at: string | null;
-  previous_mastery_score: number;
-  yki_influence_count: number;
-  signal_history: Array<{
-    user_id: string;
-    module_id: string;
-    unit_id: string;
-    signal_source: string;
-    is_correct: boolean;
-    task_type: string | null;
-    task_section: string | null;
-    difficulty_level: string | null;
-    recorded_at: string;
-    previous_mastery_score: number;
-    updated_mastery_score: number;
-    improvement_delta: number;
-    effectiveness_score: number;
-    stagnated: boolean;
-    impact_label: string;
-  }>;
-  policy_version: string;
+export type LearningLessonProgress = {
+  completed: boolean;
+  completedAt: string | null;
+  answeredExerciseIds: string[];
+  allExercisesCorrect: boolean;
+  exerciseProgress: LearningExerciseProgress[];
+};
+
+export type LearningLessonExercise = {
+  id: string;
+  title: string;
+  prompt: string;
+  inputMode: "choice" | "text";
+  options: string[];
+  explanation: string;
+  deterministicKey: string;
+};
+
+export type LearningLessonItem = {
+  id: string;
+  label: string;
+  value: string;
+};
+
+export type LearningLesson = {
+  id: string;
+  title: string;
+  summary: string;
+  explanation: string;
+  examples: string[];
+  items: LearningLessonItem[];
+  exercises: LearningLessonExercise[];
+  progress: LearningLessonProgress;
 };
 
 export type LearningModule = {
   id: string;
   title: string;
   description: string;
-  level: string;
-  focusTags: string[];
-  unitIds: string[];
-  unitCount: number;
-  units: LearningUnit[];
-  matchedWeaknesses?: string[];
-  lowMasteryUnitIds?: string[];
-  dueReviewUnitIds?: string[];
-  recentMistakeUnitIds?: string[];
-  regressionUnitIds?: string[];
-  stagnatedUnitIds?: string[];
-  suggested?: boolean;
-  suggestionReason?: string | null;
-  recommendationRejectedBecause?: string[];
-  whyThisWasSelected?: {
-    decision_version: string;
-    policy_version: string;
-    decision_policy_version: string;
-    governance_version: string;
-    change_reference: string | null;
-    weak_patterns_used: string[];
-    mastery_score_used: {
-      module_mastery_score: number;
-      low_mastery_unit_ids: string[];
-    };
-    due_review_used: {
-      unit_ids: string[];
-      count: number;
-    };
-    regression_flag: boolean;
-    regression_unit_ids: string[];
-    stagnated_unit_ids: string[];
-    difficulty_adjustment: string;
-    weights_used: Record<string, number>;
-    base_weights: Record<string, number>;
-    adaptive_weight_modifier: {
-      weights: Record<string, number>;
-      adjustments: Record<string, number>;
-      rawAdjustments: Record<string, number>;
-      averageEffectiveness: number;
-      averageImprovementDelta: number;
-      attemptHistoryDepth: number;
-      measuredOutcomeCount: number;
-      stagnatedUnitIds: string[];
-      retryLogic: string | null;
-      variationUnitIds: string[];
-      rejectionReasons: string[];
-      reasoning: string[];
-      moduleOutcomeStatuses: Array<{
-        unitId: string;
-        status: string;
-        effectivenessScore: number;
-        improvementDelta: number;
-      }>;
-      ykiInfluenceCount: number;
-      policyVersion: string;
-      appliedConstraints: string[];
-      clampedValues: string[];
-      rejectedAdaptiveChanges: string[];
-      ykiInfluenceBonus: number;
-    };
-    policy_constraints: string[];
-    clamped_values: string[];
-    rejected_adaptive_changes: string[];
-  };
-  scoreBreakdown?: {
-    weak_pattern: {
-      factor_score: number;
-      weight: number;
-      weighted_score: number;
-    };
-    low_mastery: {
-      factor_score: number;
-      weight: number;
-      weighted_score: number;
-    };
-    due_review: {
-      factor_score: number;
-      weight: number;
-      weighted_score: number;
-    };
-    regression: {
-      factor_score: number;
-      weight: number;
-      weighted_score: number;
-    };
-    difficulty_alignment: {
-      factor_score: number;
-      weight: number;
-      weighted_score: number;
-    };
-    final_score: number;
-  };
+  levelId: string;
+  levelLabel: string;
+  currentLessonId: string;
+  completedLessonCount: number;
+  totalLessonCount: number;
+  progressPercent: number;
+  lessons: LearningLesson[];
 };
 
-export type DueReviewUnit = {
-  unit: LearningUnit;
-  progress: LearningUnitProgressSummary;
-  urgency: "due_now" | "overdue";
-  reviewPriorityScore: number;
-};
-
-export type LearningModulesData = {
+export type LearningLevel = {
+  id: string;
+  title: string;
+  cefr: string;
+  description: string;
   modules: LearningModule[];
-  suggestedModules: LearningModule[];
-  currentLevel: string | null;
-  weakPatterns: string[];
-  lowMasteryUnitIds: string[];
-  dueReviewUnitIds: string[];
-  stagnatedUnitIds: string[];
-  weightsUsed: Record<string, number>;
+};
+
+export type LearningModuleProgress = {
+  moduleId: string;
+  title: string;
+  completedLessonCount: number;
+  totalLessonCount: number;
+  currentLessonId: string;
+  progressPercent: number;
+};
+
+export type LearningLatestEvaluation = {
+  lessonId: string;
+  exerciseId: string;
+  correct: boolean;
+  submittedAnswer: string;
+  expectedAnswer: string;
+  explanation: string;
+};
+
+export type LearningSystemData = {
+  levels: LearningLevel[];
+  moduleProgress: LearningModuleProgress[];
+  currentLevelId: string | null;
+  currentModuleId: string | null;
+  currentLessonId: string | null;
+  completedLessonIds: string[];
+  completedLessonCount: number;
+  totalLessonCount: number;
+  latestEvaluation: LearningLatestEvaluation | null;
+  latestTransition: string | null;
   decisionVersion: string;
   policyVersion: string;
-  decisionPolicyVersion: string;
   governanceVersion: string;
   changeReference: string | null;
   governanceStatus: "governed" | "legacy_uncontrolled";
 };
 
-export type LearningDebugState = {
-  decisionVersion: string;
-  policyVersion: string;
-  decisionPolicyVersion: string;
-  governanceVersion: string;
-  changeReference: string | null;
-  governanceStatus: "governed" | "legacy_uncontrolled";
-  currentLevel: string | null;
-  weakPatterns: string[];
-  unitMastery: Array<{
-    unit: LearningUnit;
-    progress: LearningUnitProgressSummary;
-  }>;
-  dueReviewUnits: DueReviewUnit[];
-  stagnationConfig: {
-    attemptThreshold: number;
-    improvementEpsilon: number;
-    retryLimit: number;
-    policyVersion: string;
-    escalationPath: string[];
-  };
-  policyConfig: {
-    policy_version: string;
-    decision_version: string;
-    decision_policy_version: string;
-    governance_version: string;
-    change_reference: string | null;
-    governance_status: string;
-    lastApprovedChange: {
-      change_id: string;
-      change_type: string;
-      affected_component: string;
-      previous_version: string | null;
-      new_version: string;
-      justification: string;
-      actor_id: string;
-      timestamp: string;
-    } | null;
-    rules: {
-      adaptation: {
-        weight_multiplier_min: number;
-        weight_multiplier_max: number;
-        max_weight_adjustment: number;
-        yki_influence_max_bonus: number;
-      };
-      stagnation: {
-        threshold_attempts: number;
-        improvement_epsilon: number;
-        retry_limit: number;
-        escalation_path: string[];
-      };
-      yki: {
-        exam_mode_locked: boolean;
-        max_influence_contribution: number;
-      };
-    };
-  };
-  stagnatedUnits: Array<{
-    unitId: string;
-    title: string;
-    attempts: number;
-    masteryScore: number;
-    stagnationReason: string | null;
-    retrySuggestion: string;
-    alternativeUnit: LearningUnit | null;
-    switchDifficultyTo: "easy" | "medium" | "hard";
-    retryCount: number;
-    policyStage: string;
-    policyVersion: string;
-  }>;
-  regressionFlags: Array<{
-    unitId: string;
-    title: string;
-    previousMasteryScore: number;
-    masteryScore: number;
-  }>;
-  recommendationReasoning: Array<{
-      moduleId: string;
-      title: string;
-      suggested: boolean;
-      suggestionReason: string | null;
-      suggestionScore: number;
-      scoreBreakdown: LearningModule["scoreBreakdown"];
-      whyThisWasSelected: LearningModule["whyThisWasSelected"];
-      recommendationRejectedBecause: string[];
-    }>;
-  recommendationOutcomes: Array<{
-    user_id: string;
-    module_id: string;
-    unit_id: string;
-    decision_version: string;
-    policy_version: string;
-    recommended_at: string;
-    baseline_mastery_score: number;
-    subsequent_attempts: number;
-    improvement_delta: number;
-    effectiveness_score: number;
-    latest_mastery_score: number;
-    status: string;
-    factors_used: string[];
-    weights_used: Record<string, number>;
-    retry_count: number;
-    policy_stage: string;
-    policy_trace: {
-      policy_version: string;
-      retry_limit: number;
-      retry_count: number;
-      policy_stage: string;
-      signal_source: string;
-    };
-    attempt_history: Array<{
-      attempt_number: number;
-      mastery_score: number;
-      improvement_delta: number;
-      signal_source: string;
-      task_type: string | null;
-      task_section: string | null;
-      difficulty_level: string | null;
-      recorded_at: string;
-    }>;
-    impact_label: string;
-  }>;
-  recommendationEffectiveness: {
-    overallAverageEffectiveness: number;
-    measuredOutcomeCount: number;
-    stagnatedOutcomeCount: number;
-    factorAverages: Record<
-      string,
-      {
-        average_effectiveness: number;
-        average_improvement_delta: number;
-        samples: number;
-        stagnated_count: number;
-        impact_label: string;
+function normalizeError(
+  error:
+    | {
+        code?: string;
+        event_id?: string | null;
+        message?: string;
+        traceReference?: string | null;
+        trace_id?: string | null;
       }
-    >;
-    improvementTrends: Array<{
-      unitId: string;
-      moduleId: string;
-      decisionVersion: string;
-      subsequentAttempts: number;
-      improvementDelta: number;
-      effectivenessScore: number;
-      impactLabel: string;
-      status: string;
-    }>;
-  };
-  improvementTrends: Array<{
-    unitId: string;
-    moduleId: string;
-    decisionVersion: string;
-    subsequentAttempts: number;
-    improvementDelta: number;
-    effectivenessScore: number;
-    impactLabel: string;
-    status: string;
-  }>;
-  ykiInfluenceLogs: Array<{
-    user_id: string;
-    module_id: string;
-    unit_id: string;
-    signal_source: string;
-    is_correct: boolean;
-    task_type: string | null;
-    task_section: string | null;
-    difficulty_level: string | null;
-    recorded_at: string;
-    previous_mastery_score: number;
-    updated_mastery_score: number;
-    improvement_delta: number;
-    effectiveness_score: number;
-    stagnated: boolean;
-    impact_label: string;
-  }>;
-  auditTimeline: Array<{
-    event_id: string;
-    timestamp: string;
-    user_id: string;
-    session_id: string | null;
-    event_type: string;
-    trace_id: string | null;
-    request_payload_hash: string;
-    response_payload_hash: string;
-    contract_version: string;
-    session_hash: string | null;
-    task_sequence_hash: string | null;
-    decision_version: string;
-    policy_version: string;
-    governance_version: string;
-    change_reference: string | null;
-    previous_event_hash: string | null;
-    event_hash: string | null;
-    input_snapshot: Record<string, unknown>;
-    output_snapshot: Record<string, unknown>;
-    constraint_metadata: Record<string, unknown>;
-  }>;
-  auditReplay: {
-    userId: string | null;
-    sessionId: string | null;
-    orderedEventIds: string[];
-    eventCounts: Record<string, number>;
-    decisionVersions: string[];
-    policyVersions: string[];
-    recommendationSequence: Array<Record<string, unknown>>;
-    ykiTaskFlow: Array<Record<string, unknown>>;
-    unitProgressFlow: Array<Record<string, unknown>>;
-    decisionsMade: Array<Record<string, unknown>>;
-    responseSequence: Array<Record<string, unknown>>;
-    finalSessionHash: string | null;
-    finalTaskSequenceHash: string | null;
-    trusted: boolean;
-    integrity: {
-      ok: boolean;
-      integrityStatus: string;
-      chainLength: number;
-      failureIndex: number | null;
-      failureEventId: string | null;
-      failureReason: string | null;
-      legacyEventCount: number;
-      streamKey: string | null;
-    };
-  };
-  auditVerification: {
-    ok: boolean;
-    issues: string[];
-    trusted: boolean;
-    integrity: {
-      ok: boolean;
-      integrityStatus: string;
-      chainLength: number;
-      failureIndex: number | null;
-      failureEventId: string | null;
-      failureReason: string | null;
-      legacyEventCount: number;
-      streamKey: string | null;
-    };
-    sessionChecks?: Array<{
-      sessionId: string | null;
-      ok: boolean;
-      issues: string[];
-      trusted: boolean;
-      integrity: {
-        ok: boolean;
-        integrityStatus: string;
-        chainLength: number;
-        failureIndex: number | null;
-        failureEventId: string | null;
-        failureReason: string | null;
-        legacyEventCount: number;
-        streamKey: string | null;
-      };
-    }>;
-  };
-  weightsUsed: Record<string, number>;
-};
-
-export type RelatedUnitsData = {
-  unit: LearningUnit;
-  relatedUnits: LearningUnit[];
-};
-
-export type DueReviewUnitsData = {
-  units: DueReviewUnit[];
-};
-
-function normalizeError(error: ApiError | null): ApiError {
+    | null
+    | undefined,
+): ApiError {
   if (!error) {
-    return { code: "CONTRACT_VIOLATION", message: "CONTRACT_VIOLATION", traceReference: null };
+    return {
+      code: "CONTRACT_VIOLATION",
+      message: "CONTRACT_VIOLATION",
+      traceReference: null,
+    };
   }
 
-  const traceReference =
-    error.trace_id || error.event_id
-      ? `Trace ${error.trace_id ?? "none"}${error.event_id ? ` | Event ${error.event_id}` : ""}`
-      : null;
-
   return {
-    code: error.code ?? "CONTRACT_VIOLATION",
-    event_id: error.event_id ?? null,
-    message: error.message || error.code || "CONTRACT_VIOLATION",
-    traceReference,
-    trace_id: error.trace_id ?? null,
+    code: typeof error.code === "string" ? error.code : "CONTRACT_VIOLATION",
+    message: typeof error.message === "string" ? error.message : "CONTRACT_VIOLATION",
+    traceReference:
+      typeof error.traceReference === "string"
+        ? error.traceReference
+        : typeof error.trace_id === "string"
+          ? error.trace_id
+          : null,
   };
 }
 
-async function withLearningValidation<TInput, TOutput>(
+async function withLearningValidation(
   path: string,
-  validate: (payload: TInput) => TOutput,
-): Promise<ApiResponse<TOutput>> {
-  let response: ApiResponse<TOutput>;
-
+  options: {
+    body?: Record<string, unknown>;
+    method?: "GET" | "POST";
+  } = {},
+) {
   try {
-    response = (await apiClient(path, {}, {
-      validateData: (payload) => validate(payload as TInput),
-    })) as ApiResponse<TOutput>;
+    const response = await apiClient<Record<string, unknown>>(path, {
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      method: options.method ?? "GET",
+    }, {
+      validateData: (payload: Record<string, unknown>) =>
+        validateLearningModulesPayload(payload),
+    });
+
+    if (!response.ok || !response.data) {
+      return {
+        ok: false,
+        data: null,
+        error: normalizeError(response.error),
+      };
+    }
+
+    return {
+      ok: true,
+      data: response.data as LearningSystemData,
+      error: null,
+    };
   } catch (error) {
     if (error instanceof ContractViolationError) {
       return {
@@ -508,48 +188,37 @@ async function withLearningValidation<TInput, TOutput>(
 
     throw error;
   }
-
-  if (!response.ok || !response.data) {
-    return {
-      ok: false,
-      data: null,
-      error: normalizeError(response.error),
-    };
-  }
-
-  return {
-    ok: true,
-    data: response.data,
-    error: null,
-  };
 }
 
-export async function getLearningModules() {
-  return withLearningValidation("/api/v1/learning/modules", (payload) =>
-    validateLearningModulesPayload(payload as Record<string, unknown>),
-  ) as Promise<ApiResponse<LearningModulesData>>;
+export async function getLearningSystem() {
+  return withLearningValidation("/api/v1/learning/modules") as Promise<
+    ApiResponse<LearningSystemData>
+  >;
 }
 
-export async function getLearningUnit(unitId: string) {
-  return withLearningValidation(`/api/v1/learning/unit/${unitId}`, (payload) =>
-    validateLearningUnitPayload(payload as Record<string, unknown>),
-  ) as Promise<ApiResponse<LearningUnit>>;
+export async function submitLearningLessonAnswer(
+  moduleId: string,
+  lessonId: string,
+  exerciseId: string,
+  answer: string,
+) {
+  return withLearningValidation(
+    `/api/v1/learning/modules/${moduleId}/lessons/${lessonId}/answer`,
+    {
+      body: {
+        answer,
+        exerciseId,
+      },
+      method: "POST",
+    },
+  ) as Promise<ApiResponse<LearningSystemData>>;
 }
 
-export async function getRelatedUnits(unitId: string) {
-  return withLearningValidation(`/api/v1/learning/related/${unitId}`, (payload) =>
-    validateRelatedUnitsPayload(payload as Record<string, unknown>),
-  ) as Promise<ApiResponse<RelatedUnitsData>>;
-}
-
-export async function getDueReviewUnits() {
-  return withLearningValidation("/api/v1/learning/review/due", (payload) =>
-    validateDueReviewUnitsPayload(payload as Record<string, unknown>),
-  ) as Promise<ApiResponse<DueReviewUnitsData>>;
-}
-
-export async function getLearningDebugState() {
-  return withLearningValidation("/api/v1/debug/user-learning-state", (payload) =>
-    validateLearningDebugStatePayload(payload as Record<string, unknown>),
-  ) as Promise<ApiResponse<LearningDebugState>>;
+export async function completeLearningLesson(moduleId: string, lessonId: string) {
+  return withLearningValidation(
+    `/api/v1/learning/modules/${moduleId}/lessons/${lessonId}/complete`,
+    {
+      method: "POST",
+    },
+  ) as Promise<ApiResponse<LearningSystemData>>;
 }

@@ -10,8 +10,7 @@ import {
 } from "../features/yki-practice/services/ykiPracticeService";
 import { clearExamSession } from "../features/yki-exam/services/ykiExamService";
 import {
-  getLearningDebugState,
-  getLearningModules,
+  getLearningSystem,
 } from "../features/learning/services/learningService";
 import ApplicationErrorScreen from "@ui/screens/ApplicationErrorScreen";
 import Card from "@ui/primitives/Card";
@@ -91,34 +90,21 @@ function isFeatureEntryScreen(
 }
 
 async function validateLearningGuard(): Promise<LearningGuardResult> {
-  const [modulesResponse, debugResponse] = await Promise.all([
-    getLearningModules(),
-    getLearningDebugState(),
-  ]);
+  const learningResponse = await getLearningSystem();
 
-  if (!modulesResponse.ok || !modulesResponse.data || !debugResponse.ok || !debugResponse.data) {
+  if (!learningResponse.ok || !learningResponse.data) {
     return {
-      code: modulesResponse.error?.code ?? debugResponse.error?.code ?? "CONTRACT_VIOLATION",
-      ok: false,
-    };
-  }
-
-  if (
-    modulesResponse.data.governanceStatus !== "governed" ||
-    debugResponse.data.governanceStatus !== "governed"
-  ) {
-    return {
-      code: "LEARNING_STATE_INVALID",
+      code: learningResponse.error?.code ?? "CONTRACT_VIOLATION",
       ok: false,
     };
   }
 
   return {
-    decisionVersion: debugResponse.data.decisionVersion,
-    governanceStatus: debugResponse.data.governanceStatus,
-    governanceVersion: debugResponse.data.governanceVersion,
+    decisionVersion: learningResponse.data.decisionVersion,
+    governanceStatus: learningResponse.data.governanceStatus,
+    governanceVersion: learningResponse.data.governanceVersion,
     ok: true,
-    policyVersion: debugResponse.data.policyVersion,
+    policyVersion: learningResponse.data.policyVersion,
   };
 }
 

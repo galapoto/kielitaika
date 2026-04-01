@@ -112,6 +112,18 @@ function inferActionType(path: string, method: string) {
     return "DAILY_PRACTICE_SESSION_START";
   }
 
+  if (path === "/api/v1/learning/modules" && method === "GET") {
+    return "LEARNING_SYSTEM_LOAD";
+  }
+
+  if (/^\/api\/v1\/learning\/modules\/[^/]+\/lessons\/[^/]+\/answer$/.test(path) && method === "POST") {
+    return "LEARNING_LESSON_ANSWER";
+  }
+
+  if (/^\/api\/v1\/learning\/modules\/[^/]+\/lessons\/[^/]+\/complete$/.test(path) && method === "POST") {
+    return "LEARNING_LESSON_COMPLETE";
+  }
+
   if (/^\/api\/v1\/daily-practice\/[^/]+$/.test(path) && method === "GET") {
     return "DAILY_PRACTICE_SESSION_LOAD";
   }

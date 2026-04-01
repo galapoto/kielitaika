@@ -417,24 +417,106 @@ const dueReviewUnitSchema = objectSchema({
   reviewPriorityScore: numberSchema,
 });
 
-const learningModulesDataSchema = objectSchema(
-  {
-    modules: arraySchema(learningModuleSchema),
-    suggestedModules: arraySchema(learningModuleSchema),
-    currentLevel: nullableSchema(stringSchema),
-    weakPatterns: arraySchema(stringSchema),
-    lowMasteryUnitIds: arraySchema(stringSchema),
-    dueReviewUnitIds: arraySchema(stringSchema),
-    stagnatedUnitIds: arraySchema(stringSchema),
-    weightsUsed: recordSchema(numberSchema),
-    decisionVersion: stringSchema,
-    policyVersion: stringSchema,
-    decisionPolicyVersion: stringSchema,
-    governanceVersion: stringSchema,
-    changeReference: nullableSchema(stringSchema),
-  },
-  {},
+const learningLessonItemSchema = objectSchema({
+  id: stringSchema,
+  label: stringSchema,
+  value: stringSchema,
+});
+
+const learningLessonExerciseProgressSchema = objectSchema({
+  exerciseId: stringSchema,
+  attempted: booleanSchema,
+  lastCorrect: nullableSchema(booleanSchema),
+  lastSubmittedAnswer: nullableSchema(stringSchema),
+});
+
+const learningLessonProgressSchema = objectSchema({
+  completed: booleanSchema,
+  completedAt: nullableSchema(stringSchema),
+  answeredExerciseIds: arraySchema(stringSchema),
+  allExercisesCorrect: booleanSchema,
+  exerciseProgress: arraySchema(learningLessonExerciseProgressSchema),
+});
+
+const learningLessonExerciseSchema = objectSchema({
+  id: stringSchema,
+  title: stringSchema,
+  prompt: stringSchema,
+  inputMode: enumSchema(["choice", "text"]),
+  options: arraySchema(stringSchema),
+  explanation: stringSchema,
+  deterministicKey: stringSchema,
+});
+
+const structuredLearningLessonSchema = objectSchema({
+  id: stringSchema,
+  title: stringSchema,
+  summary: stringSchema,
+  explanation: stringSchema,
+  examples: arraySchema(stringSchema),
+  items: arraySchema(learningLessonItemSchema),
+  exercises: arraySchema(learningLessonExerciseSchema),
+  progress: learningLessonProgressSchema,
+});
+
+const structuredLearningModuleSchema = objectSchema({
+  id: stringSchema,
+  title: stringSchema,
+  description: stringSchema,
+  levelId: stringSchema,
+  levelLabel: stringSchema,
+  currentLessonId: stringSchema,
+  completedLessonCount: numberSchema,
+  totalLessonCount: numberSchema,
+  progressPercent: numberSchema,
+  lessons: arraySchema(structuredLearningLessonSchema),
+});
+
+const structuredLearningLevelSchema = objectSchema({
+  id: stringSchema,
+  title: stringSchema,
+  cefr: stringSchema,
+  description: stringSchema,
+  modules: arraySchema(structuredLearningModuleSchema),
+});
+
+const structuredLearningModuleProgressSchema = objectSchema({
+  moduleId: stringSchema,
+  title: stringSchema,
+  completedLessonCount: numberSchema,
+  totalLessonCount: numberSchema,
+  currentLessonId: stringSchema,
+  progressPercent: numberSchema,
+});
+
+const learningLatestEvaluationSchema = nullableSchema(
+  objectSchema({
+    lessonId: stringSchema,
+    exerciseId: stringSchema,
+    correct: booleanSchema,
+    submittedAnswer: stringSchema,
+    expectedAnswer: stringSchema,
+    explanation: stringSchema,
+  }),
 );
+
+const learningModulesDataSchema = objectSchema({
+  levels: arraySchema(structuredLearningLevelSchema),
+  moduleProgress: arraySchema(structuredLearningModuleProgressSchema),
+  currentLevelId: nullableSchema(stringSchema),
+  currentModuleId: nullableSchema(stringSchema),
+  currentLessonId: nullableSchema(stringSchema),
+  completedLessonIds: arraySchema(stringSchema),
+  completedLessonCount: numberSchema,
+  totalLessonCount: numberSchema,
+  latestEvaluation: learningLatestEvaluationSchema,
+  latestTransition: nullableSchema(stringSchema),
+  decisionVersion: stringSchema,
+  policyVersion: stringSchema,
+  governanceVersion: stringSchema,
+  changeReference: nullableSchema(stringSchema),
+  governanceStatus: enumSchema(["governed", "legacy_uncontrolled"]),
+});
 
 const policyConfigSchema = objectSchema({
   policy_version: stringSchema,

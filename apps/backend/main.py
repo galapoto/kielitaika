@@ -5,6 +5,8 @@ from fastapi.responses import FileResponse
 from api_contract import failure, record_contract_action, resolve_trace_id, success
 from audit.audit_logger import next_event_id
 from learning.adapter import (
+    answer_learning_lesson,
+    complete_learning_system_lesson,
     get_learning_debug_state,
     get_learning_due_review,
     get_learning_module_progress,
@@ -162,6 +164,75 @@ def learning_modules(request: Request):
         request,
         get_learning_modules(),
         event_type="LEARNING_MODULES_LOADED",
+    )
+
+
+@app.post("/api/v1/learning/modules/{module_id}/lessons/{lesson_id}/answer")
+def learning_lesson_answer(module_id: str, lesson_id: str, body: dict, request: Request):
+    exercise_id = body.get("exerciseId")
+    answer = body.get("answer")
+
+    if not isinstance(exercise_id, str) or not isinstance(answer, str):
+        return _failure_response(
+            request,
+            "LEARNING_ANSWER_INVALID",
+            event_type="LEARNING_LESSON_ANSWERED",
+            request_payload={
+                "module_id": module_id,
+                "lesson_id": lesson_id,
+                "body": body,
+            },
+        )
+
+    updated = answer_learning_lesson(module_id, lesson_id, exercise_id, answer)
+
+    if not updated:
+        return _failure_response(
+            request,
+            "LEARNING_LESSON_NOT_FOUND",
+            event_type="LEARNING_LESSON_ANSWERED",
+            request_payload={
+                "module_id": module_id,
+                "lesson_id": lesson_id,
+                "exercise_id": exercise_id,
+            },
+        )
+
+    return _success_response(
+        request,
+        updated,
+        event_type="LEARNING_LESSON_ANSWERED",
+        request_payload={
+            "module_id": module_id,
+            "lesson_id": lesson_id,
+            "exercise_id": exercise_id,
+        },
+    )
+
+
+@app.post("/api/v1/learning/modules/{module_id}/lessons/{lesson_id}/complete")
+def learning_lesson_complete(module_id: str, lesson_id: str, request: Request):
+    updated = complete_learning_system_lesson(module_id, lesson_id)
+
+    if not updated:
+        return _failure_response(
+            request,
+            "LEARNING_LESSON_NOT_FOUND",
+            event_type="LEARNING_LESSON_COMPLETED",
+            request_payload={
+                "module_id": module_id,
+                "lesson_id": lesson_id,
+            },
+        )
+
+    return _success_response(
+        request,
+        updated,
+        event_type="LEARNING_LESSON_COMPLETED",
+        request_payload={
+            "module_id": module_id,
+            "lesson_id": lesson_id,
+        },
     )
 
 

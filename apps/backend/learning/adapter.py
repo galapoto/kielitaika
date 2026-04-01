@@ -2,7 +2,6 @@ from learning.graph_service import (
     get_related_units,
     get_unit,
     get_user_learning_debug_state,
-    list_modules_for_user,
 )
 from learning.practice_service import generate_practice, generate_practice_from_weakness
 from learning.progress_service import (
@@ -11,11 +10,38 @@ from learning.progress_service import (
     get_unit_progress,
     record_practice_result,
 )
+from learning.system_service import (
+    complete_learning_lesson,
+    get_learning_system,
+    submit_learning_lesson_answer,
+)
 from yki.session_store import DEFAULT_USER_ID
 
 
 def get_learning_modules():
-    return list_modules_for_user()
+    return get_learning_system()
+
+
+def get_learning_system_state(user_id: str = DEFAULT_USER_ID):
+    return get_learning_system(user_id)
+
+
+def answer_learning_lesson(
+    module_id: str,
+    lesson_id: str,
+    exercise_id: str,
+    answer: str,
+    user_id: str = DEFAULT_USER_ID,
+):
+    return submit_learning_lesson_answer(module_id, lesson_id, exercise_id, answer, user_id)
+
+
+def complete_learning_system_lesson(
+    module_id: str,
+    lesson_id: str,
+    user_id: str = DEFAULT_USER_ID,
+):
+    return complete_learning_lesson(module_id, lesson_id, user_id)
 
 
 def get_learning_unit(unit_id: str):

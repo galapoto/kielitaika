@@ -32,48 +32,92 @@ function loadValidatorModule() {
 }
 
 function createLearningModulesPayload() {
-  const unit = {
-    id: "unit-1",
-    kind: "grammar",
-    level: "B1",
-    difficultyLevel: "medium",
-    title: "Partitive basics",
-    summary: "Practice the partitive case.",
-    example: "Juon kahvia.",
-    details: {
-      rule: "Partitive marks incomplete or partial objects.",
-    },
-    moduleIds: ["module-1"],
-    relatedUnitIds: [],
-  };
-
-  const module = {
-    id: "module-1",
-    title: "Partitive",
-    description: "Core partitive practice",
-    level: "B1",
-    focusTags: ["grammar"],
-    unitIds: ["unit-1"],
-    unitCount: 1,
-    units: [unit],
-  };
-
   return {
-    modules: [module],
-    suggestedModules: [module],
-    currentLevel: "B1",
-    weakPatterns: ["partitive"],
-    lowMasteryUnitIds: ["unit-1"],
-    dueReviewUnitIds: [],
-    stagnatedUnitIds: [],
-    weightsUsed: {
-      low_mastery: 0.4,
-    },
+    levels: [
+      {
+        id: "level-a1-foundations",
+        title: "Foundations",
+        cefr: "A1",
+        description: "Structured starter lessons",
+        modules: [
+          {
+            id: "module-1",
+            title: "Daily Routines",
+            description: "Present tense basics",
+            levelId: "level-a1-foundations",
+            levelLabel: "A1",
+            currentLessonId: "lesson-1",
+            completedLessonCount: 0,
+            totalLessonCount: 1,
+            progressPercent: 0,
+            lessons: [
+              {
+                id: "lesson-1",
+                title: "Present tense",
+                summary: "Describe routines",
+                explanation: "Use the present tense for routine actions.",
+                examples: ["Mina opiskelen suomea."],
+                items: [
+                  {
+                    id: "item-1",
+                    label: "Pattern",
+                    value: "mina opiskelen",
+                  },
+                ],
+                exercises: [
+                  {
+                    id: "exercise-1",
+                    title: "Verb form",
+                    prompt: "Complete the sentence.",
+                    inputMode: "text",
+                    options: [],
+                    explanation: "The first person needs the matching verb ending.",
+                    deterministicKey: "deterministic-1",
+                  },
+                ],
+                progress: {
+                  completed: false,
+                  completedAt: null,
+                  answeredExerciseIds: [],
+                  allExercisesCorrect: false,
+                  exerciseProgress: [
+                    {
+                      exerciseId: "exercise-1",
+                      attempted: false,
+                      lastCorrect: null,
+                      lastSubmittedAnswer: null,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    moduleProgress: [
+      {
+        moduleId: "module-1",
+        title: "Daily Routines",
+        completedLessonCount: 0,
+        totalLessonCount: 1,
+        currentLessonId: "lesson-1",
+        progressPercent: 0,
+      },
+    ],
+    currentLevelId: "level-a1-foundations",
+    currentModuleId: "module-1",
+    currentLessonId: "lesson-1",
+    completedLessonIds: [],
+    completedLessonCount: 0,
+    totalLessonCount: 1,
+    latestEvaluation: null,
+    latestTransition: null,
     decisionVersion: "decision-v1",
     policyVersion: "policy-v1",
-    decisionPolicyVersion: "decision-policy-v1",
     governanceVersion: "governance-v1",
     changeReference: "change-1",
+    governanceStatus: "governed",
   };
 }
 
