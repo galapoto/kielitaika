@@ -1261,6 +1261,57 @@ const dailyPracticeSessionSchema = objectSchema({
   }),
 });
 
+const speakingPromptAudioSchema = objectSchema({
+  asset_id: stringSchema,
+  url: stringSchema,
+  duration_ms: numberSchema,
+  ready: booleanSchema,
+});
+
+const speakingPromptSchema = objectSchema({
+  id: stringSchema,
+  title: stringSchema,
+  prompt_text: stringSchema,
+  response_guidance: stringSchema,
+  answer_status: enumSchema(["pending", "answered"]),
+  prompt_audio: speakingPromptAudioSchema,
+});
+
+const speakingLatestResultSchema = nullableSchema(
+  objectSchema({
+    prompt_id: stringSchema,
+    correct: booleanSchema,
+    submitted_transcript: stringSchema,
+    expected_response: stringSchema,
+    difference: nullableSchema(stringSchema),
+    evaluation_mode: stringSchema,
+    recording_captured: booleanSchema,
+    capture_mode: enumSchema(["recording_with_transcript", "transcript_only"]),
+  }),
+);
+
+const speakingPracticeSessionSchema = objectSchema({
+  session_id: stringSchema,
+  user_id: stringSchema,
+  status: enumSchema(["active", "completed"]),
+  current_prompt_index: numberSchema,
+  current_prompt: nullableSchema(speakingPromptSchema),
+  latest_result: speakingLatestResultSchema,
+  completion_state: objectSchema({
+    prompts_served: numberSchema,
+    attempts: numberSchema,
+    correct_count: numberSchema,
+    total_count: numberSchema,
+    accuracy: numberSchema,
+    session_complete: booleanSchema,
+  }),
+  actions: objectSchema({
+    play_prompt: booleanSchema,
+    submit: booleanSchema,
+    next: booleanSchema,
+  }),
+});
+
 const authStatusSchema = objectSchema({
   isAuthenticated: booleanSchema,
 });
@@ -1587,5 +1638,10 @@ export function validateYkiExamSessionPayload<T extends Record<string, unknown>>
 
 export function validateDailyPracticeSessionPayload<T extends Record<string, unknown>>(payload: T) {
   validateSchema(payload, dailyPracticeSessionSchema, "dailyPracticeSession");
+  return payload;
+}
+
+export function validateSpeakingPracticeSessionPayload<T extends Record<string, unknown>>(payload: T) {
+  validateSchema(payload, speakingPracticeSessionSchema, "speakingPracticeSession");
   return payload;
 }

@@ -242,6 +242,42 @@ function createYkiSessionPayload() {
   };
 }
 
+function createSpeakingSessionPayload() {
+  return {
+    session_id: "speaking-session-1",
+    user_id: "user-1",
+    status: "active",
+    current_prompt_index: 0,
+    current_prompt: {
+      id: "speaking-intro-1",
+      title: "Introduce yourself",
+      prompt_text: "Kerro lyhyesti kuka olet ja missa asut.",
+      response_guidance: "Say one short sentence about your name and where you live.",
+      answer_status: "pending",
+      prompt_audio: {
+        asset_id: "asset-1",
+        url: "/api/audio/asset-1",
+        duration_ms: 2200,
+        ready: true,
+      },
+    },
+    latest_result: null,
+    completion_state: {
+      prompts_served: 1,
+      attempts: 0,
+      correct_count: 0,
+      total_count: 3,
+      accuracy: 0,
+      session_complete: false,
+    },
+    actions: {
+      play_prompt: true,
+      submit: true,
+      next: false,
+    },
+  };
+}
+
 function run() {
   const {
     ControlledUiValidationError,
@@ -249,6 +285,7 @@ function run() {
     REQUIRED_CONTRACT_VERSION,
     validateApiEnvelope,
     validateLearningModulesPayload,
+    validateSpeakingPracticeSessionPayload,
     validateYkiPracticeSessionPayload,
   } = loadValidatorModule();
 
@@ -285,6 +322,10 @@ function run() {
       return true;
     },
   );
+
+  const validSpeakingPayload = createSpeakingSessionPayload();
+  const validatedSpeaking = validateSpeakingPracticeSessionPayload(validSpeakingPayload);
+  assert.equal(validatedSpeaking.current_prompt.prompt_audio.ready, true);
 
   const validatedEnvelope = validateApiEnvelope(
     {

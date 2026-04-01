@@ -24,6 +24,12 @@ from practice.adapter import (
     start_daily_practice_session,
     submit_daily_practice_answer,
 )
+from speaking.adapter import (
+    advance_speaking_session,
+    get_speaking_session,
+    start_speaking_session,
+    submit_speaking_response,
+)
 from tts.audio_registry import get_audio_asset
 from yki.adapter import (
     advance_governed_exam,
@@ -394,6 +400,93 @@ def daily_practice_next(session_id: str, request: Request):
         request,
         result,
         event_type="DAILY_PRACTICE_SESSION_ADVANCED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/speaking/start")
+def speaking_start(request: Request):
+    return _success_response(
+        request,
+        start_speaking_session(),
+        event_type="SPEAKING_SESSION_STARTED",
+    )
+
+
+@app.get("/api/v1/speaking/{session_id}")
+def speaking_session(session_id: str, request: Request):
+    result = get_speaking_session(session_id)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="SPEAKING_SESSION_LOADED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="SPEAKING_SESSION_LOADED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/speaking/{session_id}/submit")
+def speaking_submit(session_id: str, body: dict, request: Request):
+    transcript = body.get("transcript")
+    recording_captured = body.get("recordingCaptured", False)
+
+    if not isinstance(transcript, str) or not isinstance(recording_captured, bool):
+        return _failure_response(
+            request,
+            "SPEAKING_SUBMISSION_INVALID",
+            event_type="SPEAKING_RESPONSE_SUBMITTED",
+            request_payload={"body": body, "session_id": session_id},
+            session_id=session_id,
+        )
+
+    result = submit_speaking_response(session_id, transcript, recording_captured)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="SPEAKING_RESPONSE_SUBMITTED",
+            request_payload={"body": body, "session_id": session_id},
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="SPEAKING_RESPONSE_SUBMITTED",
+        request_payload={"body": body, "session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/speaking/{session_id}/next")
+def speaking_next(session_id: str, request: Request):
+    result = advance_speaking_session(session_id)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="SPEAKING_SESSION_ADVANCED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="SPEAKING_SESSION_ADVANCED",
         request_payload={"session_id": session_id},
         session_id=session_id,
     )

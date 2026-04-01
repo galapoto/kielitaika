@@ -1,6 +1,6 @@
 import DailyPracticeExperience from "../features/daily-practice/components/DailyPracticeExperience";
+import SpeakingPracticeExperience from "../features/speaking/components/SpeakingPracticeExperience";
 import ProfessionalFinnishScreen from "@ui/screens/ProfessionalFinnishScreen";
-import SpeakingPracticeScreen from "@ui/screens/SpeakingPracticeScreen";
 
 import type { GuardedScreen } from "./navigationModel";
 
@@ -28,9 +28,7 @@ export default function FeatureEntryRoute({
   }
 
   if (screen === "speaking-practice") {
-    return (
-      <SpeakingPracticeScreen onBack={onBack} onOpenYkiPractice={onOpenYkiPractice} />
-    );
+    return <SpeakingPracticeExperience onBack={onBack} onOpenLearning={onOpenLearning} />;
   }
 
   return null;

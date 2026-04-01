@@ -112,6 +112,22 @@ function inferActionType(path: string, method: string) {
     return "DAILY_PRACTICE_SESSION_START";
   }
 
+  if (path === "/api/v1/speaking/start" && method === "POST") {
+    return "SPEAKING_SESSION_START";
+  }
+
+  if (/^\/api\/v1\/speaking\/[^/]+$/.test(path) && method === "GET") {
+    return "SPEAKING_SESSION_LOAD";
+  }
+
+  if (/^\/api\/v1\/speaking\/[^/]+\/submit$/.test(path) && method === "POST") {
+    return "SPEAKING_RESPONSE_SUBMIT";
+  }
+
+  if (/^\/api\/v1\/speaking\/[^/]+\/next$/.test(path) && method === "POST") {
+    return "SPEAKING_SESSION_ADVANCE";
+  }
+
   if (path === "/api/v1/learning/modules" && method === "GET") {
     return "LEARNING_SYSTEM_LOAD";
   }
