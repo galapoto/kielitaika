@@ -1,6 +1,7 @@
 import { apiClient, ContractViolationError } from "@core/api/apiClient";
-import { getApiBaseUrl } from "@core/api/apiConfig";
+import { getAudioBaseUrl, getApiBaseUrl } from "@core/api/apiConfig";
 import { validateYkiExamSessionPayload } from "@core/api/governedResponseValidation";
+import { logger } from "@core/logging/logger";
 import {
   clearPersistedYkiExamSession,
   loadPersistedYkiExamSession,
@@ -164,7 +165,7 @@ export function resolveExamMediaUrl(path: string) {
     return path;
   }
 
-  return `${getApiBaseUrl()}${path}`;
+  return `${getAudioBaseUrl()}${path}`;
 }
 
 export function getListeningPromptAudio(session: YkiExamSession) {
@@ -247,6 +248,10 @@ async function withExamSessionValidation(
 }
 
 async function persistSessionFromResponse(data: YkiExamSession) {
+  logger.info("YKI exam session snapshot persisted.", {
+    actionType: "SESSION_PERSIST",
+    currentScreen: "yki_exam",
+  });
   await persistYkiExamSession({
     sessionId: data.session_id,
     status: data.status,
@@ -332,13 +337,25 @@ export async function getStoredExamSessionState(): Promise<
 }
 
 export async function clearExamSession() {
+  logger.info("YKI exam session was cleared from client persistence.", {
+    actionType: "SESSION_CLEAR",
+    currentScreen: "yki_exam",
+  });
   await clearPersistedYkiExamSession();
 }
 
 export async function fetchExamSession(sessionId: string) {
+  logger.info("YKI exam session load requested.", {
+    actionType: "SESSION_LOAD",
+    currentScreen: "yki_exam",
+  });
   const response = await withExamSessionValidation(`/api/v1/yki/sessions/${sessionId}`, {}, sessionId);
 
   if (response.ok && response.data) {
+    logger.info("YKI exam session load completed.", {
+      actionType: "SESSION_LOAD",
+      currentScreen: "yki_exam",
+    });
     await persistSessionFromResponse(response.data);
   }
 
@@ -346,6 +363,10 @@ export async function fetchExamSession(sessionId: string) {
 }
 
 export async function startExamSession() {
+  logger.info("YKI exam session start requested.", {
+    actionType: "SESSION_START",
+    currentScreen: "yki_exam",
+  });
   let response: ApiResponse<Record<string, unknown>>;
 
   try {
@@ -377,10 +398,18 @@ export async function startExamSession() {
   }
 
   const sessionId = readSessionReference(response.data);
+  logger.info("YKI exam session start completed.", {
+    actionType: "SESSION_START",
+    currentScreen: "yki_exam",
+  });
   return fetchExamSession(sessionId);
 }
 
 export async function resumeExamSession() {
+  logger.info("YKI exam session resume requested.", {
+    actionType: "SESSION_RESUME",
+    currentScreen: "yki_exam",
+  });
   const persisted = await getStoredExamSessionState();
 
   if (!persisted) {
@@ -405,10 +434,21 @@ export async function resumeExamSession() {
     await clearExamSession();
   }
 
+  if (response.ok) {
+    logger.info("YKI exam session resume completed.", {
+      actionType: "SESSION_RESUME",
+      currentScreen: "yki_exam",
+    });
+  }
+
   return response;
 }
 
 export async function advanceExamSession() {
+  logger.info("YKI exam session advance requested.", {
+    actionType: "SESSION_ADVANCE",
+    currentScreen: "yki_exam",
+  });
   const persisted = await getStoredExamSessionState();
 
   if (!persisted?.ok) {
@@ -429,6 +469,10 @@ export async function advanceExamSession() {
 }
 
 export async function submitExamAnswer(answer: string) {
+  logger.info("YKI exam answer submission requested.", {
+    actionType: "SESSION_SUBMIT",
+    currentScreen: "yki_exam",
+  });
   const persisted = await getStoredExamSessionState();
 
   if (!persisted?.ok) {
@@ -457,6 +501,10 @@ export async function submitExamAnswer(answer: string) {
 }
 
 export async function submitExamAudio(audio: string) {
+  logger.info("YKI exam audio submission requested.", {
+    actionType: "SESSION_SUBMIT",
+    currentScreen: "yki_exam",
+  });
   const persisted = await getStoredExamSessionState();
 
   if (!persisted?.ok) {
@@ -485,6 +533,10 @@ export async function submitExamAudio(audio: string) {
 }
 
 export async function playExamPrompt() {
+  logger.info("YKI exam prompt playback requested.", {
+    actionType: "SESSION_PLAYBACK",
+    currentScreen: "yki_exam",
+  });
   const persisted = await getStoredExamSessionState();
 
   if (!persisted?.ok) {

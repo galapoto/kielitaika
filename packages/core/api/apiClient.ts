@@ -6,6 +6,7 @@ import {
   REQUIRED_CONTRACT_VERSION,
   validateApiEnvelope,
 } from "./governedResponseValidation";
+import { logger } from "@core/logging/logger";
 
 type ContractValidator<T> = (payload: Record<string, unknown>) => T;
 
@@ -428,6 +429,13 @@ export async function apiClient<T>(
     headers.set("Authorization", `Bearer ${authToken}`);
   }
 
+  const actionType = inferActionType(path, method);
+  logger.info("API request started.", {
+    actionType,
+    endpoint: path,
+    statusCode: null,
+  });
+
   try {
     const res = await fetch(`${getApiBaseUrl()}${path}`, {
       ...options,
@@ -466,13 +474,33 @@ export async function apiClient<T>(
       );
     }
 
+    logger.info("API request completed.", {
+      actionType,
+      endpoint: path,
+      retryable: payload.error?.retryable ?? null,
+      statusCode: res.status,
+    });
+
     return payload as ApiResponse<T>;
   } catch (error) {
     if (error instanceof ContractViolationError || error instanceof ControlledUiValidationError) {
       const contractError = normalizeContractError(error, path);
       recordApiContractIssue(contractError.path, contractError.code, contractError.message);
+      logger.error("API request failed with a contract violation.", {
+        actionType,
+        endpoint: path,
+        retryable: false,
+        statusCode: null,
+      });
       throw contractError;
     }
+
+    logger.error("API request failed with a transport error.", {
+      actionType,
+      endpoint: path,
+      retryable: true,
+      statusCode: null,
+    });
 
     return {
       ok: false,

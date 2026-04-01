@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useRouter } from "expo-router";
 
 import { setAuthToken } from "@core/api/apiClient";
+import { logger } from "@core/logging/logger";
 import {
   clearPracticeSession,
   resumePracticeSession,
@@ -131,6 +132,14 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
 
   useEffect(() => startMonitoring(), [startMonitoring]);
 
+  useEffect(() => {
+    logger.setCurrentScreen(activeScreen);
+    logger.info("Screen transition resolved.", {
+      actionType: "SCREEN_TRANSITION",
+      currentScreen: activeScreen,
+    });
+  }, [activeScreen]);
+
   async function clearRuntimePersistence() {
     await Promise.all([
       clearPersistedLearningSession(),
@@ -145,6 +154,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     requested: GuardedScreen | RequestedScreen,
     ykiSessionId: string | null = null,
   ) {
+    logger.setLastUserAction(`navigate:${screen}`);
     resolveScreen(screen, ykiSessionId);
     await persistNavigationState({
       activeScreen: screen,
@@ -159,6 +169,10 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       await clearRuntimePersistence();
     }
 
+    logger.warn("Navigation was blocked by runtime validation.", {
+      actionType: "NAVIGATION_BLOCKED",
+      currentScreen: errorState.requestedScreen,
+    });
     setNavigationError(errorState);
   }
 

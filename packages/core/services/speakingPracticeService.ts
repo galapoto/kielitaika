@@ -1,5 +1,6 @@
 import { apiClient, ContractViolationError } from "@core/api/apiClient";
 import { validateSpeakingPracticeSessionPayload } from "@core/api/governedResponseValidation";
+import { logger } from "@core/logging/logger";
 
 type ApiError = {
   code?: string;
@@ -126,12 +127,20 @@ async function withSpeakingValidation(
 }
 
 export async function startSpeakingPracticeSession() {
+  logger.info("Speaking practice session start requested.", {
+    actionType: "SESSION_START",
+    currentScreen: "speaking_practice",
+  });
   return withSpeakingValidation("/api/v1/speaking/start", {
     method: "POST",
   });
 }
 
 export async function fetchSpeakingPracticeSession(sessionId: string) {
+  logger.info("Speaking practice session load requested.", {
+    actionType: "SESSION_LOAD",
+    currentScreen: "speaking_practice",
+  });
   return withSpeakingValidation(`/api/v1/speaking/${sessionId}`);
 }
 
@@ -140,6 +149,10 @@ export async function submitSpeakingPracticeResponse(
   transcript: string,
   recordingCaptured: boolean,
 ) {
+  logger.info("Speaking practice session submission requested.", {
+    actionType: "SESSION_SUBMIT",
+    currentScreen: "speaking_practice",
+  });
   return withSpeakingValidation(`/api/v1/speaking/${sessionId}/submit`, {
     method: "POST",
     headers: {
@@ -150,6 +163,10 @@ export async function submitSpeakingPracticeResponse(
 }
 
 export async function advanceSpeakingPracticeSession(sessionId: string) {
+  logger.info("Speaking practice session advance requested.", {
+    actionType: "SESSION_ADVANCE",
+    currentScreen: "speaking_practice",
+  });
   return withSpeakingValidation(`/api/v1/speaking/${sessionId}/next`, {
     method: "POST",
   });

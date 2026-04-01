@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getApiBaseUrl } from "@core/api/apiConfig";
+import { getAudioBaseUrl } from "@core/api/apiConfig";
 import { audioManager } from "@core/audio/audioManager";
 import SpeakingPracticeScreen from "@ui/screens/SpeakingPracticeScreen";
 import useSpeakingPractice from "@ui/hooks/useSpeakingPractice";
@@ -42,7 +42,7 @@ export default function SpeakingPracticeExperience({ onBack, onOpenLearning }: P
     setAudioState("playing");
 
     try {
-      await audioManager.play(`${getApiBaseUrl()}${data.current_prompt.prompt_audio.url}`);
+      await audioManager.play(`${getAudioBaseUrl()}${data.current_prompt.prompt_audio.url}`);
     } finally {
       setAudioState("idle");
     }

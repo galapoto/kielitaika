@@ -7,6 +7,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build": "npx expo export --platform web",
     "controlled_ui_contract_validation": "node tests/controlled_ui_contract_validation.test.cjs",
     "ui_cutover_enforcement": "node tests/ui_cutover_enforcement.test.cjs",
     "ui_token_enforcement": "node tests/ui_token_enforcement.test.cjs",

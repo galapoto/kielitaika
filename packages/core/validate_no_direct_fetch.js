@@ -7,6 +7,15 @@ const ROOTS = [
   path.join(process.cwd(), "backend"),
 ];
 
+const IGNORED_DIRECTORIES = new Set([
+  ".git",
+  ".venv",
+  "__pycache__",
+  "build",
+  "dist",
+  "node_modules",
+]);
+
 function scan(dir) {
   if (!fs.existsSync(dir)) {
     return;
@@ -19,7 +28,7 @@ function scan(dir) {
     const stat = fs.statSync(full);
 
     if (stat.isDirectory()) {
-      if (file === "node_modules" || file === ".git") {
+      if (IGNORED_DIRECTORIES.has(file)) {
         continue;
       }
       scan(full);
