@@ -1,4 +1,4 @@
-import DailyPracticeScreen from "@ui/screens/DailyPracticeScreen";
+import DailyPracticeExperience from "../features/daily-practice/components/DailyPracticeExperience";
 import ProfessionalFinnishScreen from "@ui/screens/ProfessionalFinnishScreen";
 import SpeakingPracticeScreen from "@ui/screens/SpeakingPracticeScreen";
 
@@ -18,7 +18,7 @@ export default function FeatureEntryRoute({
   onOpenYkiPractice,
 }: Props) {
   if (screen === "daily-practice") {
-    return <DailyPracticeScreen onBack={onBack} onOpenLearning={onOpenLearning} />;
+    return <DailyPracticeExperience onBack={onBack} onOpenLearning={onOpenLearning} />;
   }
 
   if (screen === "professional-finnish") {

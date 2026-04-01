@@ -108,6 +108,22 @@ function inferActionType(path: string, method: string) {
     return "YKI_EXAM_SESSION_START";
   }
 
+  if (path === "/api/v1/daily-practice/start" && method === "POST") {
+    return "DAILY_PRACTICE_SESSION_START";
+  }
+
+  if (/^\/api\/v1\/daily-practice\/[^/]+$/.test(path) && method === "GET") {
+    return "DAILY_PRACTICE_SESSION_LOAD";
+  }
+
+  if (/^\/api\/v1\/daily-practice\/[^/]+\/submit$/.test(path) && method === "POST") {
+    return "DAILY_PRACTICE_ANSWER_SUBMIT";
+  }
+
+  if (/^\/api\/v1\/daily-practice\/[^/]+\/next$/.test(path) && method === "POST") {
+    return "DAILY_PRACTICE_SESSION_ADVANCE";
+  }
+
   if (/^\/api\/v1\/yki\/sessions\/[^/]+$/.test(path) && method === "GET") {
     return "YKI_EXAM_SESSION_LOAD";
   }

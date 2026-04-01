@@ -1135,6 +1135,50 @@ const ykiExamSessionSchema = objectSchema({
   runtime: unknownRecordSchema(),
 });
 
+const dailyPracticeExerciseSchema = objectSchema({
+  id: stringSchema,
+  type: enumSchema([
+    "vocabulary_selection",
+    "sentence_completion",
+    "grammar_selection",
+  ]),
+  title: stringSchema,
+  prompt: stringSchema,
+  options: arraySchema(stringSchema),
+  input_mode: enumSchema(["choice", "text"]),
+  answer_status: enumSchema(["pending", "answered"]),
+});
+
+const dailyPracticeResultSchema = nullableSchema(
+  objectSchema({
+    exercise_id: stringSchema,
+    type: stringSchema,
+    correct: booleanSchema,
+    submitted_answer: stringSchema,
+    expected_answer: stringSchema,
+    explanation: nullableSchema(stringSchema),
+  }),
+);
+
+const dailyPracticeSessionSchema = objectSchema({
+  session_id: stringSchema,
+  user_id: stringSchema,
+  status: enumSchema(["active", "completed"]),
+  current_exercise_index: numberSchema,
+  current_exercise: nullableSchema(dailyPracticeExerciseSchema),
+  latest_result: dailyPracticeResultSchema,
+  completion_state: objectSchema({
+    completed_count: numberSchema,
+    total_count: numberSchema,
+    accuracy: numberSchema,
+    session_complete: booleanSchema,
+  }),
+  actions: objectSchema({
+    submit: booleanSchema,
+    next: booleanSchema,
+  }),
+});
+
 const authStatusSchema = objectSchema({
   isAuthenticated: booleanSchema,
 });
@@ -1456,5 +1500,10 @@ export function validateYkiPracticeSessionPayload<
 
 export function validateYkiExamSessionPayload<T extends Record<string, unknown>>(payload: T) {
   validateSchema(payload, ykiExamSessionSchema, "ykiExamSession");
+  return payload;
+}
+
+export function validateDailyPracticeSessionPayload<T extends Record<string, unknown>>(payload: T) {
+  validateSchema(payload, dailyPracticeSessionSchema, "dailyPracticeSession");
   return payload;
 }

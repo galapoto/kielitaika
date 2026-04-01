@@ -16,6 +16,12 @@ from learning.adapter import (
     get_related_learning_units,
     submit_learning_progress,
 )
+from practice.adapter import (
+    advance_daily_practice_session,
+    get_daily_practice_session,
+    start_daily_practice_session,
+    submit_daily_practice_answer,
+)
 from tts.audio_registry import get_audio_asset
 from yki.adapter import (
     advance_governed_exam,
@@ -243,6 +249,82 @@ def learning_review_due(request: Request):
         request,
         {"units": get_learning_due_review()},
         event_type="LEARNING_DUE_REVIEW_LOADED",
+    )
+
+
+@app.post("/api/v1/daily-practice/start")
+def daily_practice_start(request: Request):
+    return _success_response(
+        request,
+        start_daily_practice_session(),
+        event_type="DAILY_PRACTICE_SESSION_STARTED",
+    )
+
+
+@app.get("/api/v1/daily-practice/{session_id}")
+def daily_practice_session(session_id: str, request: Request):
+    result = get_daily_practice_session(session_id)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="DAILY_PRACTICE_SESSION_LOADED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="DAILY_PRACTICE_SESSION_LOADED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/daily-practice/{session_id}/submit")
+def daily_practice_submit(session_id: str, body: dict, request: Request):
+    answer = body.get("answer")
+    result = submit_daily_practice_answer(session_id, answer)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="DAILY_PRACTICE_ANSWER_SUBMITTED",
+            request_payload={"answer": answer, "session_id": session_id},
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="DAILY_PRACTICE_ANSWER_SUBMITTED",
+        request_payload={"answer": answer, "session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/daily-practice/{session_id}/next")
+def daily_practice_next(session_id: str, request: Request):
+    result = advance_daily_practice_session(session_id)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="DAILY_PRACTICE_SESSION_ADVANCED",
+            request_payload={"session_id": session_id},
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="DAILY_PRACTICE_SESSION_ADVANCED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
     )
 
 
