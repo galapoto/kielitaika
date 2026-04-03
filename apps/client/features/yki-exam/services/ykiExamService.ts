@@ -160,7 +160,17 @@ type PersistedExamSuccess = {
 let inFlightStartExamSession: Promise<ApiResponse<YkiExamSession>> | null = null;
 
 function buildStartExamRequestBody() {
-  return env.YKI_EXAM_MODE === "production" ? {} : { mode: env.YKI_EXAM_MODE };
+  const payload: Record<string, string> = {};
+
+  if (env.YKI_EXAM_MODE !== "production") {
+    payload.mode = env.YKI_EXAM_MODE;
+  }
+
+  if (env.YKI_EXAM_SEED.trim()) {
+    payload.seed = env.YKI_EXAM_SEED.trim();
+  }
+
+  return payload;
 }
 
 function validateExamSessionReferencePayload(payload: Record<string, unknown>) {
@@ -183,6 +193,48 @@ export function resolveExamMediaUrl(path: string) {
 
 export function getListeningPromptAudio(session: YkiExamSession) {
   return session.current_view.playback?.audio ?? null;
+}
+
+export async function reportYkiExamForensicEvent(
+  sessionId: string,
+  eventType: string,
+  details: Record<string, unknown> = {},
+) {
+  if (!sessionId) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl()}/api/v1/yki/sessions/${sessionId}/forensics/client`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          event_type: eventType,
+          ...details,
+        }),
+      },
+    );
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchYkiExamForensics(sessionId: string) {
+  if (!sessionId) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/v1/yki/sessions/${sessionId}/forensics`);
+    return await response.json();
+  } catch {
+    return null;
+  }
 }
 
 function normalizeError(error: ApiError | null): ApiError {

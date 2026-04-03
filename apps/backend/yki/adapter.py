@@ -35,3 +35,15 @@ def answer_governed_audio(session_id: str, audio_ref: str):
 
 def play_governed_listening_prompt(session_id: str):
     return _run(orchestrator.play_audio(session_id))
+
+
+def record_governed_forensic_event(session_id: str, payload: dict | None = None):
+    return _run(orchestrator.record_client_event(session_id, payload))
+
+
+def get_governed_forensics(session_id: str):
+    return _run(orchestrator.get_forensics(session_id))
+
+
+def get_latest_governed_session_reference():
+    return _run(orchestrator.get_latest_session_reference())

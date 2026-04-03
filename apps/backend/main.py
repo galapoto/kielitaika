@@ -39,8 +39,11 @@ from yki.adapter import (
     advance_governed_exam,
     answer_governed_audio,
     answer_governed_task,
+    get_latest_governed_session_reference,
+    get_governed_forensics,
     get_governed_exam,
     play_governed_listening_prompt,
+    record_governed_forensic_event,
     start_governed_exam,
 )
 from yki.contracts import DEFAULT_USER_ID
@@ -707,6 +710,29 @@ def yki_sessions_start(body: dict | None, request: Request):
     )
 
 
+@app.get("/api/v1/yki/sessions/latest")
+def yki_sessions_latest(request: Request):
+    result = get_latest_governed_session_reference()
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_RUNTIME_LATEST_LOADED",
+            request_payload={},
+            retryable=False,
+            session_id=None,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_RUNTIME_LATEST_LOADED",
+        request_payload={},
+        session_id=result["session_id"],
+    )
+
+
 @app.get("/api/v1/yki/sessions/{session_id}")
 def yki_sessions_get(session_id: str, request: Request):
     session = get_governed_exam(session_id)
@@ -819,6 +845,53 @@ def yki_sessions_play(session_id: str, request: Request):
         request,
         result,
         event_type="YKI_EXAM_RUNTIME_PLAYED",
+        request_payload={"session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/yki/sessions/{session_id}/forensics/client")
+def yki_sessions_forensics_client(session_id: str, body: dict | None, request: Request):
+    payload = body or {}
+    result = record_governed_forensic_event(session_id, payload)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_FORENSIC_EVENT_RECORDED",
+            request_payload={"session_id": session_id, "payload": payload},
+            retryable=False,
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_FORENSIC_EVENT_RECORDED",
+        request_payload={"session_id": session_id, "payload": payload},
+        session_id=session_id,
+    )
+
+
+@app.get("/api/v1/yki/sessions/{session_id}/forensics")
+def yki_sessions_forensics_get(session_id: str, request: Request):
+    result = get_governed_forensics(session_id)
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_FORENSIC_LOG_LOADED",
+            request_payload={"session_id": session_id},
+            retryable=False,
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_FORENSIC_LOG_LOADED",
         request_payload={"session_id": session_id},
         session_id=session_id,
     )

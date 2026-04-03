@@ -59,8 +59,10 @@ type Props = {
   actionStates: {
     next: ButtonVisualState;
     option: ButtonVisualState;
+    pausePrompt: ButtonVisualState;
     playPrompt: ButtonVisualState;
     retry: ButtonVisualState;
+    resumePrompt: ButtonVisualState;
     startRecording: ButtonVisualState;
     stopRecording: ButtonVisualState;
     submit: ButtonVisualState;
@@ -95,12 +97,15 @@ type Props = {
   transitionLabel: string | null;
   onAnswerChange: (value: string) => void;
   onNext: () => void;
+  onPausePrompt: () => void;
   onPlayPrompt: () => void;
   onRetry: () => void;
+  onResumePrompt: () => void;
   onSelectChoice: (option: string) => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
   onSubmitText: () => void;
+  promptPlaybackPaused: boolean;
 };
 
 function formatTokenLabel(value: string | null | undefined) {
@@ -153,6 +158,7 @@ function buildActionButton(
   onPress: () => void,
   state: ButtonVisualState,
   tone: "primary" | "surface" = "primary",
+  testID?: string,
 ) {
   if (!action) {
     return null;
@@ -160,10 +166,12 @@ function buildActionButton(
 
   return (
     <Button
+      accessibilityLabel={action.label}
       disabled={disabled || !action.enabled}
       label={action.label}
       onPress={onPress}
       state={state}
+      testID={testID}
       tone={tone}
     />
   );
@@ -227,12 +235,15 @@ export default function YkiExamScreen({
   transitionLabel,
   onAnswerChange,
   onNext,
+  onPausePrompt,
   onPlayPrompt,
   onRetry,
+  onResumePrompt,
   onSelectChoice,
   onStartRecording,
   onStopRecording,
   onSubmitText,
+  promptPlaybackPaused,
 }: Props) {
   const isReadOnly = readOnly || examStatus === "read_only" || currentView.kind === "exam_complete";
   const selectedChoice = currentView.submitted_answer ?? answerDraft;
@@ -249,25 +260,31 @@ export default function YkiExamScreen({
           <Stack gap="xs">
             {transportErrorMessage ? (
               <Button
+                accessibilityLabel="Retry Sync"
                 label="Retry Sync"
                 onPress={onRetry}
                 state={actionStates.retry}
+                testID="yki-retry-sync"
               />
             ) : null}
 
             {currentView.input_mode === "audio" && !currentView.response_locked ? (
               <>
                 <Button
+                  accessibilityLabel="Start Recording"
                   disabled={busy || recording}
                   label="Start Recording"
                   onPress={onStartRecording}
                   state={actionStates.startRecording}
+                  testID="yki-start-recording"
                 />
                 <Button
+                  accessibilityLabel="Stop And Submit"
                   disabled={busy || !recording}
                   label="Stop And Submit"
                   onPress={onStopRecording}
                   state={actionStates.stopRecording}
+                  testID="yki-stop-recording"
                   tone="surface"
                 />
               </>
@@ -279,8 +296,34 @@ export default function YkiExamScreen({
                   false,
                   onSubmitText,
                   actionStates.submit,
+                  "primary",
+                  "yki-submit-text",
                 )
               : null}
+
+            {currentView.playback?.ready ? (
+              promptPlaybackPaused ? (
+                <Button
+                  accessibilityLabel="Resume Prompt"
+                  disabled={busy}
+                  label="Resume Prompt"
+                  onPress={onResumePrompt}
+                  state={actionStates.resumePrompt}
+                  testID="yki-resume-prompt"
+                  tone="surface"
+                />
+              ) : (
+                <Button
+                  accessibilityLabel="Pause Prompt"
+                  disabled={busy || currentView.playback.count === 0}
+                  label="Pause Prompt"
+                  onPress={onPausePrompt}
+                  state={actionStates.pausePrompt}
+                  testID="yki-pause-prompt"
+                  tone="surface"
+                />
+              )
+            ) : null}
 
             {buildActionButton(
               currentView.actions.play_prompt,
@@ -288,6 +331,7 @@ export default function YkiExamScreen({
               onPlayPrompt,
               actionStates.playPrompt,
               "surface",
+              "yki-play-prompt",
             )}
 
             {buildActionButton(
@@ -296,6 +340,7 @@ export default function YkiExamScreen({
               onNext,
               actionStates.next,
               currentView.input_mode === "text" ? "surface" : "primary",
+              "yki-next",
             )}
           </Stack>
         )
@@ -470,7 +515,7 @@ export default function YkiExamScreen({
                     <Stack gap="xs">
                       <Text variant="bodyStrong">Select one answer</Text>
                       <Stack gap="xs">
-                        {currentView.options.map((option) => {
+                        {currentView.options.map((option, index) => {
                           const isSelected = selectedChoice === option;
                           const optionState =
                             currentView.response_locked
@@ -483,11 +528,13 @@ export default function YkiExamScreen({
 
                           return (
                             <Button
+                              accessibilityLabel={option}
                               key={option}
                               disabled={busy || currentView.response_locked}
                               label={option}
                               onPress={() => onSelectChoice(option)}
                               state={optionState}
+                              testID={`yki-option-${index}`}
                               tone={isSelected ? "primary" : "surface"}
                             />
                           );
@@ -506,6 +553,7 @@ export default function YkiExamScreen({
                         multiline
                         onChangeText={onAnswerChange}
                         placeholder="Write your response"
+                        testID="yki-written-response"
                         value={answerDraft}
                       />
                       <Text tone="muted">

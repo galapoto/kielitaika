@@ -18,6 +18,7 @@ LISTENING_PLAYBACK_LIMIT = 1
 WRITING_MINIMUM_WORDS = 80
 WRITING_RECOMMENDED_MAX_WORDS = 180
 SPEAKING_MAX_RECORDING_SECONDS = 30
+MAX_FORENSIC_EVENTS = 200
 DEFAULT_USER_ID = "local-user"
 ENGINE_STATE_SOURCE_PATH = "/api/v1/yki/sessions/{session_id}"
 LEVEL_MAPPING = {
@@ -61,6 +62,15 @@ def build_runtime_manifest() -> dict[str, Any]:
         },
         "speaking": {
             "maxRecordingSeconds": SPEAKING_MAX_RECORDING_SECONDS,
+        },
+        "forensics": {
+            "automation": {
+                "requested_mode": "production",
+                "requested_seed": None,
+            },
+            "event_count": 0,
+            "events": [],
+            "last_event": None,
         },
     }
 
@@ -166,6 +176,88 @@ def activate_section(session: OrchestratedSession, section: str, now: datetime |
             datetime.fromisoformat(started_at) + timedelta(seconds=int(session.timing_manifest.get(section, 0)))
         ).isoformat(),
     }
+
+
+def ensure_forensic_runtime(runtime: dict[str, Any]) -> dict[str, Any]:
+    forensic = runtime.get("forensics")
+    if not isinstance(forensic, dict):
+        forensic = {}
+        runtime["forensics"] = forensic
+
+    automation = forensic.get("automation")
+    if not isinstance(automation, dict):
+        automation = {}
+        forensic["automation"] = automation
+
+    automation.setdefault("requested_mode", "production")
+    automation.setdefault("requested_seed", None)
+
+    events = forensic.get("events")
+    if not isinstance(events, list):
+        events = []
+        forensic["events"] = events
+
+    forensic["event_count"] = len(events)
+    forensic.setdefault("last_event", events[-1] if events else None)
+    return forensic
+
+
+def set_forensic_automation(
+    session: OrchestratedSession,
+    *,
+    requested_mode: str,
+    requested_seed: str | None,
+):
+    forensic = ensure_forensic_runtime(session.runtime)
+    forensic["automation"] = {
+        "requested_mode": requested_mode,
+        "requested_seed": requested_seed,
+    }
+
+
+def append_forensic_event(
+    session: OrchestratedSession,
+    *,
+    source: str,
+    event_type: str,
+    current_time: datetime | None = None,
+    details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    now = current_time or utc_now()
+    forensic = ensure_forensic_runtime(session.runtime)
+    current_section = session.state.section
+    current_view_key = view_key_for_state(session.state, session.structure)
+
+    section_remaining_seconds = 0
+    if current_section:
+        expires_at = session.section_windows.get(current_section, {}).get("expires_at")
+        if expires_at:
+            section_remaining_seconds = max(
+                0,
+                int((datetime.fromisoformat(expires_at) - now).total_seconds()),
+            )
+
+    exam_expires_at = datetime.fromisoformat(session.started_at) + timedelta(
+        seconds=sum(session.timing_manifest.values())
+    )
+    event = {
+        "index": forensic["event_count"] + 1,
+        "timestamp": now.isoformat(),
+        "source": source,
+        "event_type": event_type,
+        "status": session.status,
+        "section": current_section,
+        "view_key": current_view_key,
+        "exam_remaining_seconds": max(0, int((exam_expires_at - now).total_seconds())),
+        "section_remaining_seconds": section_remaining_seconds,
+        "details": details or {},
+    }
+    forensic["events"].append(event)
+    if len(forensic["events"]) > MAX_FORENSIC_EVENTS:
+        forensic["events"] = forensic["events"][-MAX_FORENSIC_EVENTS:]
+    forensic["event_count"] = len(forensic["events"])
+    forensic["last_event"] = forensic["events"][-1]
+    return event
 
 
 def compute_task_sequence_hash(structure: dict[str, list[dict[str, Any]]]) -> str:

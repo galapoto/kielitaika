@@ -4,18 +4,22 @@ import { colors, componentSizes, radius } from "../tokens";
 import Text from "./Text";
 
 type Props = {
+  accessibilityLabel?: string;
   disabled?: boolean;
   label: string;
   onPress?: () => void;
   state?: "default" | "loading" | "locked";
+  testID?: string;
   tone?: "primary" | "surface";
 };
 
 export default function Button({
+  accessibilityLabel,
   disabled = false,
   label,
   onPress,
   state = "default",
+  testID,
   tone = "primary",
 }: Props) {
   const resolvedState = disabled
@@ -30,8 +34,12 @@ export default function Button({
 
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
+      accessible
       disabled={disabled || state === "loading" || state === "locked"}
       onPress={onPress}
+      testID={testID}
       style={(state) => {
         const pressedStyle =
           resolvedState === "default" && state.pressed ? palette.pressed : null;

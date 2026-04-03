@@ -7,6 +7,7 @@ import {
   clearExamSession,
   getListeningPromptAudio,
   playExamPrompt,
+  reportYkiExamForensicEvent,
   resolveExamMediaUrl,
   resumeExamSession,
   startExamSession,
@@ -60,6 +61,12 @@ export default function useYkiExam() {
     }
 
     if (!response.ok || !response.data) {
+      if (response.error?.code && state.data?.session_id) {
+        void reportYkiExamForensicEvent(state.data.session_id, "CLIENT_RESPONSE_ERROR", {
+          error_code: response.error.code,
+          error_message: response.error.message,
+        });
+      }
       if (response.error?.code === "TRANSPORT_ERROR") {
         setState((current) => ({
           ...current,
@@ -80,6 +87,14 @@ export default function useYkiExam() {
       return;
     }
 
+    void reportYkiExamForensicEvent(response.data.session_id, "CLIENT_RESPONSE_APPLIED", {
+      status: response.data.status,
+      section: response.data.current_section,
+      view_key: response.data.current_view.view_key,
+      view_kind: response.data.current_view.kind,
+      exam_remaining_seconds: response.data.timing_manifest.exam_remaining_seconds,
+      section_remaining_seconds: response.data.timing_manifest.current_section_remaining_seconds,
+    });
     setState({
       data: response.data,
       fatalError: null,
@@ -90,6 +105,9 @@ export default function useYkiExam() {
   }
 
   async function hydrate() {
+    if (state.data?.session_id) {
+      void reportYkiExamForensicEvent(state.data.session_id, "CLIENT_HYDRATE_REQUESTED");
+    }
     const resumed = await resumeExamSession();
 
     if (!resumed) {

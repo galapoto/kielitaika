@@ -13,11 +13,14 @@ from yki.contracts import (
     DEFAULT_USER_ID,
     OrchestratedSession,
     activate_section,
+    append_forensic_event,
     clamp_score,
     coerce_audio_duration_seconds,
     compute_session_hash,
     get_current_task,
     new_orchestrated_session,
+    ensure_forensic_runtime,
+    set_forensic_automation,
     build_timing_manifest_from_minutes,
 )
 from yki.engine_client import EngineClient
@@ -41,8 +44,27 @@ class YKIOrchestrator:
         self.now_provider = now_provider or (lambda: datetime.now(UTC))
 
     async def start_session(self, user_id: str = DEFAULT_USER_ID, payload: dict | None = None):
-        engine_data = await self.engine.start_exam(payload or {})
+        effective_payload = payload or {}
+        engine_data = await self.engine.start_exam(effective_payload)
         session = self._initialize_session(engine_data, user_id=user_id)
+        set_forensic_automation(
+            session,
+            requested_mode=str(effective_payload.get("mode") or "production"),
+            requested_seed=(
+                str(effective_payload["seed"])
+                if isinstance(effective_payload.get("seed"), str) and effective_payload["seed"].strip()
+                else None
+            ),
+        )
+        append_forensic_event(
+            session,
+            source="server",
+            event_type="SESSION_STARTED",
+            current_time=self.now_provider(),
+            details={
+                "engine_session_id": session.engine_session_id,
+            },
+        )
         self.registry.save(session)
         return {"session_id": session.session_id}
 
@@ -51,6 +73,12 @@ class YKIOrchestrator:
         self._enforce_timing(session)
         engine_data = await self.engine.get_session(session.engine_session_id)
         session.last_engine_data = engine_data
+        append_forensic_event(
+            session,
+            source="server",
+            event_type="SESSION_LOADED",
+            current_time=self.now_provider(),
+        )
         self.registry.save(session)
         return build_governed_session_payload(
             session,
@@ -62,9 +90,19 @@ class YKIOrchestrator:
         session = self._get_required_session(session_id)
         self._enforce_timing(session)
         self._enforce_next_section_availability(session)
+        previous_view_key = session.state.section and session.state.view_type
         session.state = compute_next_state(session, "next")
         await self._refresh_engine_data(session)
         self._maybe_finalize_session(session)
+        append_forensic_event(
+            session,
+            source="server",
+            event_type="STATE_ADVANCED",
+            current_time=self.now_provider(),
+            details={
+                "previous_view_type": previous_view_key,
+            },
+        )
         self._persist(session)
         return {"session_id": session.session_id}
 
@@ -99,6 +137,16 @@ class YKIOrchestrator:
         session.answers[task["id"]] = answer
         session.state = compute_next_state(session, "answer")
         await self._refresh_engine_data(session)
+        append_forensic_event(
+            session,
+            source="server",
+            event_type="ANSWER_SUBMITTED",
+            current_time=self.now_provider(),
+            details={
+                "task_id": task["id"],
+                "task_kind": task["kind"],
+            },
+        )
         self._persist(session)
         return {"session_id": session.session_id}
 
@@ -117,6 +165,16 @@ class YKIOrchestrator:
             raise InvalidTransition("PLAYBACK_LIMIT_REACHED")
         session.audio_playback[task["id"]] = play_count + 1
         session.state = compute_next_state(session, "play_audio")
+        append_forensic_event(
+            session,
+            source="server",
+            event_type="PROMPT_PLAYBACK_RECORDED",
+            current_time=self.now_provider(),
+            details={
+                "task_id": task["id"],
+                "playback_count": session.audio_playback[task["id"]],
+            },
+        )
         self._persist(session)
         return {"session_id": session.session_id}
 
@@ -142,8 +200,63 @@ class YKIOrchestrator:
         session.recordings[task["id"]] = audio_ref
         session.state = compute_next_state(session, "record")
         await self._refresh_engine_data(session)
+        append_forensic_event(
+            session,
+            source="server",
+            event_type="RECORDING_SUBMITTED",
+            current_time=self.now_provider(),
+            details={
+                "task_id": task["id"],
+                "task_kind": task["kind"],
+                "audio_ref": audio_ref,
+            },
+        )
         self._persist(session)
         return {"session_id": session.session_id}
+
+    async def record_client_event(self, session_id: str, payload: dict | None = None):
+        session = self._get_required_session(session_id)
+        forensic = ensure_forensic_runtime(session.runtime)
+        details = payload if isinstance(payload, dict) else {}
+        event_type = details.get("event_type")
+        if not isinstance(event_type, str) or not event_type:
+            event_type = "CLIENT_EVENT"
+        event = append_forensic_event(
+            session,
+            source="client",
+            event_type=event_type,
+            current_time=self.now_provider(),
+            details={
+                key: value
+                for key, value in details.items()
+                if key != "event_type"
+            },
+        )
+        self._persist(session)
+        return {
+            "session_id": session.session_id,
+            "event_index": event["index"],
+            "event_count": forensic["event_count"],
+        }
+
+    async def get_forensics(self, session_id: str):
+        session = self._get_required_session(session_id)
+        forensic = ensure_forensic_runtime(session.runtime)
+        return {
+            "session_id": session.session_id,
+            "forensics": forensic,
+        }
+
+    async def get_latest_session_reference(self):
+        session = self.registry.get_latest()
+        if not session:
+            raise SessionNotFound()
+        return {
+            "session_id": session.session_id,
+            "status": session.status,
+            "current_section": session.state.section,
+            "view_key": session.state.view_type,
+        }
 
     def _get_required_session(self, session_id: str) -> OrchestratedSession:
         session = self.registry.get(session_id)

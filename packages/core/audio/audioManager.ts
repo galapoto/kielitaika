@@ -139,6 +139,48 @@ export const audioManager = {
     }
   },
 
+  async pause() {
+    if (!currentSound) {
+      logger.warn("Audio pause requested without active playback.", {
+        actionType: "AUDIO_PAUSE",
+      });
+      return false;
+    }
+
+    await currentSound.pauseAsync();
+    logger.info("Audio playback paused.", {
+      actionType: "AUDIO_PAUSE",
+    });
+    return true;
+  },
+
+  async resume() {
+    if (!currentSound) {
+      logger.warn("Audio resume requested without active playback.", {
+        actionType: "AUDIO_RESUME",
+      });
+      return false;
+    }
+
+    await currentSound.playAsync();
+    logger.info("Audio playback resumed.", {
+      actionType: "AUDIO_RESUME",
+    });
+    return true;
+  },
+
+  async isPlaying() {
+    if (!currentSound) {
+      return false;
+    }
+
+    const status = await currentSound.getStatusAsync();
+    if (!status.isLoaded) {
+      return false;
+    }
+    return Boolean(status.isPlaying);
+  },
+
   async stop() {
     if (currentSound) {
       await currentSound.stopAsync();

@@ -8,6 +8,7 @@ import ApplicationErrorScreen from "@ui/screens/ApplicationErrorScreen";
 import YkiExamScreen from "@ui/screens/YkiExamScreen";
 
 import useYkiExam from "../features/yki-exam/hooks/useYkiExam";
+import { reportYkiExamForensicEvent } from "../features/yki-exam/services/ykiExamService";
 
 type Props = {
   onExit: () => void;
@@ -15,8 +16,10 @@ type Props = {
 
 type PendingAction =
   | "advance"
+  | "pause_prompt"
   | "play_prompt"
   | "retry"
+  | "resume_prompt"
   | "start_recording"
   | "submit"
   | null;
@@ -169,13 +172,26 @@ export default function YkiExamRoute({ onExit }: Props) {
   const [countdownSeconds, setCountdownSeconds] = useState(0);
   const [runtimeMessage, setRuntimeMessage] = useState<string | null>(null);
   const [activeRequest, setActiveRequest] = useState<PendingAction>(null);
+  const [promptPlaybackPaused, setPromptPlaybackPaused] = useState(false);
   const [transitionLabel, setTransitionLabel] = useState<string | null>(null);
   const previousViewRef = useRef<ViewSnapshot | null>(null);
   const transitionTimerRef = useRef<(() => void) | null>(null);
 
+  function reportForensics(eventType: string, details: Record<string, unknown> = {}) {
+    if (!data?.session_id) {
+      return;
+    }
+
+    void reportYkiExamForensicEvent(data.session_id, eventType, details);
+  }
+
   useEffect(() => {
     setAnswerDraft(data?.current_view.submitted_answer ?? "");
   }, [data?.current_view.view_key, data?.current_view.submitted_answer]);
+
+  useEffect(() => {
+    setPromptPlaybackPaused(false);
+  }, [data?.current_view.view_key]);
 
   useEffect(() => {
     setCountdownSeconds(data?.timing_manifest.current_section_remaining_seconds ?? 0);
@@ -194,6 +210,29 @@ export default function YkiExamRoute({ onExit }: Props) {
   useEffect(() => {
     setRuntimeMessage(humanizeRuntimeMessage(notice));
   }, [notice]);
+
+  useEffect(() => {
+    if (!data) {
+      return;
+    }
+
+    reportForensics("CLIENT_VIEW_RENDERED", {
+      section: data.current_section,
+      status: data.status,
+      view_key: data.current_view.view_key,
+      view_kind: data.current_view.kind,
+      exam_remaining_seconds: data.timing_manifest.exam_remaining_seconds,
+      section_remaining_seconds: data.timing_manifest.current_section_remaining_seconds,
+    });
+  }, [
+    data?.session_id,
+    data?.status,
+    data?.current_section,
+    data?.current_view.view_key,
+    data?.current_view.kind,
+    data?.timing_manifest.exam_remaining_seconds,
+    data?.timing_manifest.current_section_remaining_seconds,
+  ]);
 
   useEffect(() => {
     if (!data) {
@@ -248,9 +287,21 @@ export default function YkiExamRoute({ onExit }: Props) {
   async function runExamAction(kind: PendingAction, action: () => Promise<unknown>) {
     setRuntimeMessage(null);
     setActiveRequest(kind);
+    reportForensics("CLIENT_ACTION_STARTED", {
+      action: kind,
+    });
 
     try {
       await action();
+      reportForensics("CLIENT_ACTION_COMPLETED", {
+        action: kind,
+      });
+    } catch (error) {
+      reportForensics("CLIENT_ACTION_FAILED", {
+        action: kind,
+        error_message: error instanceof Error ? error.message : "UNKNOWN_ERROR",
+      });
+      throw error;
     } finally {
       setActiveRequest((current) => (current === kind ? null : current));
     }
@@ -263,6 +314,7 @@ export default function YkiExamRoute({ onExit }: Props) {
     try {
       await audioManager.startRecording();
       setRecording(true);
+      reportForensics("CLIENT_RECORDING_STARTED");
     } catch (error) {
       setRecording(false);
       setRuntimeMessage(
@@ -270,6 +322,9 @@ export default function YkiExamRoute({ onExit }: Props) {
           error instanceof Error ? error.message : "MICROPHONE_PERMISSION_DENIED",
         ),
       );
+      reportForensics("CLIENT_RECORDING_FAILED", {
+        error_message: error instanceof Error ? error.message : "MICROPHONE_PERMISSION_DENIED",
+      });
     } finally {
       setActiveRequest((current) => (current === "start_recording" ? null : current));
     }
@@ -282,6 +337,9 @@ export default function YkiExamRoute({ onExit }: Props) {
     try {
       const audioUri = await audioManager.stopRecording();
       setRecording(false);
+      reportForensics("CLIENT_RECORDING_STOPPED", {
+        audio_uri_present: Boolean(audioUri),
+      });
 
       if (!audioUri) {
         setRuntimeMessage(humanizeRuntimeMessage("AUDIO_SUBMISSION_FAILED"));
@@ -296,8 +354,37 @@ export default function YkiExamRoute({ onExit }: Props) {
           error instanceof Error ? error.message : "AUDIO_SUBMISSION_FAILED",
         ),
       );
+      reportForensics("CLIENT_RECORDING_SUBMIT_FAILED", {
+        error_message: error instanceof Error ? error.message : "AUDIO_SUBMISSION_FAILED",
+      });
     } finally {
       setActiveRequest((current) => (current === "submit" ? null : current));
+    }
+  }
+
+  async function handlePausePrompt() {
+    setActiveRequest("pause_prompt");
+    try {
+      const paused = await audioManager.pause();
+      if (paused) {
+        setPromptPlaybackPaused(true);
+        reportForensics("CLIENT_PROMPT_PAUSED");
+      }
+    } finally {
+      setActiveRequest((current) => (current === "pause_prompt" ? null : current));
+    }
+  }
+
+  async function handleResumePrompt() {
+    setActiveRequest("resume_prompt");
+    try {
+      const resumed = await audioManager.resume();
+      if (resumed) {
+        setPromptPlaybackPaused(false);
+        reportForensics("CLIENT_PROMPT_RESUMED");
+      }
+    } finally {
+      setActiveRequest((current) => (current === "resume_prompt" ? null : current));
     }
   }
 
@@ -319,8 +406,10 @@ export default function YkiExamRoute({ onExit }: Props) {
         actionStates={{
           next: "default",
           option: "default",
+          pausePrompt: "default",
           playPrompt: "default",
           retry: "default",
+          resumePrompt: "default",
           startRecording: "default",
           stopRecording: "default",
           submit: "default",
@@ -349,10 +438,12 @@ export default function YkiExamRoute({ onExit }: Props) {
         examStatus="loading"
         onAnswerChange={setAnswerDraft}
         onNext={() => undefined}
+        onPausePrompt={() => undefined}
         onPlayPrompt={() => undefined}
         onRetry={() => {
           void refresh();
         }}
+        onResumePrompt={() => undefined}
         onSelectChoice={() => undefined}
         onStartRecording={() => undefined}
         onStopRecording={() => undefined}
@@ -370,6 +461,7 @@ export default function YkiExamRoute({ onExit }: Props) {
         sectionProgress={[]}
         transportErrorMessage={humanizeRuntimeMessage(transportError?.message ?? null)}
         transitionLabel={null}
+        promptPlaybackPaused={false}
       />
     );
   }
@@ -408,6 +500,12 @@ export default function YkiExamRoute({ onExit }: Props) {
             : data.current_view.response_locked
               ? "locked"
               : "default",
+        pausePrompt:
+          activeRequest === "pause_prompt"
+            ? "loading"
+            : promptPlaybackPaused || (data.current_view.playback?.count ?? 0) === 0
+              ? "locked"
+              : "default",
         playPrompt:
           activeRequest === "play_prompt"
             ? "loading"
@@ -415,6 +513,12 @@ export default function YkiExamRoute({ onExit }: Props) {
               ? "locked"
               : "default",
         retry: activeRequest === "retry" ? "loading" : "default",
+        resumePrompt:
+          activeRequest === "resume_prompt"
+            ? "loading"
+            : promptPlaybackPaused
+              ? "default"
+              : "locked",
         startRecording:
           activeRequest === "start_recording"
             ? "loading"
@@ -448,15 +552,35 @@ export default function YkiExamRoute({ onExit }: Props) {
 
         void runExamAction("advance", advance);
       }}
+      onPausePrompt={() => {
+        if (loading || !data.current_view.playback?.count) {
+          return;
+        }
+
+        void handlePausePrompt();
+      }}
       onPlayPrompt={() => {
         if (!data.current_view.actions.play_prompt?.enabled || loading) {
           return;
         }
 
-        void runExamAction("play_prompt", playPrompt);
+        void runExamAction("play_prompt", async () => {
+          await playPrompt();
+          setPromptPlaybackPaused(false);
+          reportForensics("CLIENT_PROMPT_PLAYED", {
+            playback_remaining: data.current_view.playback?.remaining ?? null,
+          });
+        });
       }}
       onRetry={() => {
         void runExamAction("retry", refresh);
+      }}
+      onResumePrompt={() => {
+        if (loading || !promptPlaybackPaused) {
+          return;
+        }
+
+        void handleResumePrompt();
       }}
       onSelectChoice={(option) => {
         if (loading || data.current_view.response_locked) {
@@ -504,6 +628,7 @@ export default function YkiExamRoute({ onExit }: Props) {
       sectionProgress={data.section_progress}
       transportErrorMessage={transportErrorMessage}
       transitionLabel={transitionLabel}
+      promptPlaybackPaused={promptPlaybackPaused}
     />
   );
 }

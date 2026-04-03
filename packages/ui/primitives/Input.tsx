@@ -3,7 +3,9 @@ import { StyleSheet, TextInput } from "react-native";
 
 import { colors, componentSizes, radius, typography } from "../tokens";
 
-type Props = Omit<ComponentProps<typeof TextInput>, "placeholderTextColor" | "style">;
+type Props = Omit<ComponentProps<typeof TextInput>, "placeholderTextColor" | "style"> & {
+  testID?: string;
+};
 
 export default function Input(props: Props) {
   const editableState = props.editable === false ? "readOnly" : "editable";

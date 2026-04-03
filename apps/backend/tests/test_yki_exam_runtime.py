@@ -9,7 +9,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from yki.adapter import (
     advance_governed_exam,
     answer_governed_task,
+    get_governed_forensics,
     get_governed_exam,
+    get_latest_governed_session_reference,
+    record_governed_forensic_event,
     play_governed_listening_prompt,
     start_governed_exam,
 )
@@ -26,10 +29,11 @@ class YkiExamRuntimeTests(unittest.TestCase):
     def test_start_forwards_explicit_engine_mode(self):
         orchestrator = install_fake_orchestrator()
 
-        started = start_governed_exam({"mode": "test"})
+        started = start_governed_exam({"mode": "test", "seed": "fixed-seed"})
 
         self.assertIn("session_id", started)
         self.assertEqual(orchestrator.engine.start_payloads[-1]["mode"], "test")
+        self.assertEqual(orchestrator.engine.start_payloads[-1]["seed"], "fixed-seed")
 
     def test_governed_exam_starts_on_reading_passage(self):
         started = start_governed_exam()
@@ -191,6 +195,38 @@ class YkiExamRuntimeTests(unittest.TestCase):
         failed = start_governed_exam()
 
         self.assertEqual(failed["error"], "ENGINE_TIMEOUT")
+
+    def test_runtime_forensics_capture_server_and_client_events(self):
+        session_id = start_governed_exam({"mode": "test", "seed": "fixed-seed"})["session_id"]
+
+        get_governed_exam(session_id)
+        record_governed_forensic_event(
+            session_id,
+            {
+                "event_type": "CLIENT_VIEW_RENDERED",
+                "view_key": "reading:reading-passage-1",
+            },
+        )
+
+        forensic = get_governed_forensics(session_id)
+
+        self.assertEqual(forensic["session_id"], session_id)
+        self.assertEqual(
+            forensic["forensics"]["automation"]["requested_seed"],
+            "fixed-seed",
+        )
+        self.assertGreaterEqual(forensic["forensics"]["event_count"], 2)
+        self.assertEqual(
+            forensic["forensics"]["last_event"]["event_type"],
+            "CLIENT_VIEW_RENDERED",
+        )
+
+    def test_latest_session_reference_matches_started_session(self):
+        started = start_governed_exam()
+
+        latest = get_latest_governed_session_reference()
+
+        self.assertEqual(latest["session_id"], started["session_id"])
 
 
 if __name__ == "__main__":
