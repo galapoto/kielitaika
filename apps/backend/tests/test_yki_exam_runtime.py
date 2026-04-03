@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from yki.adapter import (
     advance_governed_exam,
@@ -11,15 +12,12 @@ from yki.adapter import (
     play_governed_listening_prompt,
     start_governed_exam,
 )
-import yki.session_store as session_store
-from yki.storage import InMemorySessionStorage, _history, _sessions
+from yki_test_support import complete_exam, install_fake_orchestrator
 
 
 class YkiExamRuntimeTests(unittest.TestCase):
     def setUp(self):
-        session_store.storage = InMemorySessionStorage()
-        _sessions.clear()
-        _history.clear()
+        install_fake_orchestrator()
 
     def test_governed_exam_starts_on_reading_passage(self):
         started = start_governed_exam()
@@ -33,15 +31,23 @@ class YkiExamRuntimeTests(unittest.TestCase):
         self.assertTrue(session["navigation"]["forward_only"])
         self.assertIsNone(session["current_view"]["question"])
 
-    def test_runtime_advances_prompt_then_questions_then_listening_prompt(self):
+    def test_runtime_requires_answers_and_playback_before_progressing(self):
         session_id = start_governed_exam()["session_id"]
 
         advanced = advance_governed_exam(session_id)
         self.assertEqual(advanced["session_id"], session_id)
         reading_question = get_governed_exam(session_id)
         self.assertEqual(reading_question["current_view"]["kind"], "reading_question")
+        self.assertFalse(reading_question["current_view"]["actions"]["next"]["enabled"])
+
+        rejected = advance_governed_exam(session_id)
+        self.assertEqual(rejected["error"], "TASK_NOT_ANSWERED")
 
         answer_governed_task(session_id, "To collect practical Finnish-learning ideas for onboarding.")
+        submitted = get_governed_exam(session_id)
+        self.assertTrue(submitted["current_view"]["response_locked"])
+        self.assertTrue(submitted["current_view"]["actions"]["next"]["enabled"])
+
         advance_governed_exam(session_id)
         answer_governed_task(session_id, "The supervisor")
         advance_governed_exam(session_id)
@@ -51,25 +57,19 @@ class YkiExamRuntimeTests(unittest.TestCase):
 
         advance_governed_exam(session_id)
         listening_prompt = get_governed_exam(session_id)
-
         self.assertEqual(listening_prompt["current_section"], "listening")
         self.assertEqual(listening_prompt["current_view"]["kind"], "listening_prompt")
-        self.assertIsNone(listening_prompt["current_view"]["question"])
-        self.assertEqual(listening_prompt["current_view"]["playback"]["remaining"], 1)
+        self.assertFalse(listening_prompt["current_view"]["actions"]["next"]["enabled"])
 
         play_governed_listening_prompt(session_id)
-        playback_locked = get_governed_exam(session_id)
-        self.assertEqual(playback_locked["current_view"]["playback"]["remaining"], 0)
+        playback_unlocked = get_governed_exam(session_id)
+        self.assertEqual(playback_unlocked["current_view"]["playback"]["remaining"], 0)
+        self.assertTrue(playback_unlocked["current_view"]["actions"]["next"]["enabled"])
 
-    def test_exam_completes_in_read_only_mode_after_forward_only_runtime(self):
+    def test_exam_completes_in_read_only_mode_after_explicit_submissions(self):
         session_id = start_governed_exam()["session_id"]
 
-        for _ in range(20):
-            current = get_governed_exam(session_id)
-            if current["status"] == "read_only":
-                break
-            result = advance_governed_exam(session_id)
-            self.assertNotIn("error", result)
+        complete_exam(session_id)
 
         completed = get_governed_exam(session_id)
 
@@ -80,6 +80,14 @@ class YkiExamRuntimeTests(unittest.TestCase):
 
         rejected = answer_governed_task(session_id, "late answer")
         self.assertEqual(rejected["error"], "SESSION_READ_ONLY")
+
+    def test_engine_failures_fail_closed(self):
+        install_fake_orchestrator(raise_on_get=True)
+        session_id = start_governed_exam()["session_id"]
+
+        failed = get_governed_exam(session_id)
+
+        self.assertEqual(failed["error"], "ENGINE_UNAVAILABLE")
 
 
 if __name__ == "__main__":
