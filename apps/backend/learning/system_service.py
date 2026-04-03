@@ -10,7 +10,7 @@ from learning.system_models import (
     LearningSystemModule,
 )
 from practice.engine import evaluate_exercise_answer
-from yki.session_store import DEFAULT_USER_ID
+from yki.contracts import DEFAULT_USER_ID
 
 
 @dataclass

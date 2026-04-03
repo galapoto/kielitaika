@@ -33,24 +33,13 @@ from speaking.adapter import (
 from tts.audio_registry import get_audio_asset
 from yki.adapter import (
     advance_governed_exam,
-    advance_task,
     answer_governed_audio,
     answer_governed_task,
-    answer_audio,
-    answer_task,
-    get_exam,
-    get_exam_certificate,
     get_governed_exam,
-    get_task,
-    get_user_progress_history,
-    next_section,
     play_governed_listening_prompt,
-    play_current_listening_prompt,
-    resume_exam,
-    start_exam,
     start_governed_exam,
 )
-from yki.session_store import DEFAULT_USER_ID
+from yki.contracts import DEFAULT_USER_ID
 from yki_practice.adapter import (
     export_yki_certification,
     get_yki_certification,
@@ -658,18 +647,26 @@ def yki_practice_submit(session_id: str, body: dict, request: Request):
 
 @app.post("/api/v1/yki/start")
 def yki_start(request: Request):
-    session = start_exam()
-    return _success_response(
+    return _failure_response(
         request,
-        session,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_EXAM_SESSION_STARTED",
-        session_id=session.get("session_id") if isinstance(session, dict) else None,
+        message="Use /api/v1/yki/sessions/start.",
     )
 
 
 @app.post("/api/v1/yki/sessions/start")
 def yki_sessions_start(request: Request):
     session = start_governed_exam()
+
+    if isinstance(session, dict) and "error" in session:
+        return _failure_response(
+            request,
+            session["error"],
+            event_type="YKI_EXAM_RUNTIME_STARTED",
+            retryable=session["error"] in {"ENGINE_TIMEOUT", "ENGINE_UNAVAILABLE"},
+        )
+
     return _success_response(
         request,
         session,
@@ -841,278 +838,119 @@ def yki_certification_export(session_id: str, request: Request):
 
 @app.get("/api/v1/yki/resume/{session_id}")
 def yki_resume(session_id: str, request: Request):
-    session = resume_exam(session_id)
-
-    if isinstance(session, dict) and "error" in session:
-        return _failure_response(
-            request,
-            session["error"],
-            event_type="YKI_EXAM_SESSION_RESUMED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-
-    return _success_response(
+    return _failure_response(
         request,
-        session,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_EXAM_SESSION_RESUMED",
         request_payload={"session_id": session_id},
         session_id=session_id,
+        message="Use /api/v1/yki/sessions/{session_id}.",
     )
 
 
 @app.get("/api/v1/yki/history")
 def yki_history(request: Request):
-    return _success_response(
+    return _failure_response(
         request,
-        get_user_progress_history(),
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_HISTORY_LOADED",
+        message="Use /api/v1/yki/sessions/{session_id} for governed runtime state.",
     )
 
 
 @app.get("/api/v1/yki/{session_id}")
 def yki_get(session_id: str, request: Request):
-    session = get_exam(session_id)
-
-    if not session:
-        return _failure_response(
-            request,
-            "SESSION_NOT_FOUND",
-            event_type="YKI_EXAM_SESSION_LOADED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-    if isinstance(session, dict) and "error" in session:
-        return _failure_response(
-            request,
-            session["error"],
-            event_type="YKI_EXAM_SESSION_LOADED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-
-    return _success_response(
+    return _failure_response(
         request,
-        session,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_EXAM_SESSION_LOADED",
         request_payload={"session_id": session_id},
         session_id=session_id,
+        message="Use /api/v1/yki/sessions/{session_id}.",
     )
 
 
 @app.get("/api/v1/yki/{session_id}/certificate")
 def yki_certificate(session_id: str, request: Request):
-    certificate = get_exam_certificate(session_id)
-
-    if not certificate:
-        return _failure_response(
-            request,
-            "EXAM_NOT_FINISHED",
-            event_type="YKI_CERTIFICATE_LOADED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-    if isinstance(certificate, dict) and "error" in certificate:
-        return _failure_response(
-            request,
-            certificate["error"],
-            event_type="YKI_CERTIFICATE_LOADED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-
-    return _success_response(
+    return _failure_response(
         request,
-        certificate,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_CERTIFICATE_LOADED",
         request_payload={"session_id": session_id},
         session_id=session_id,
+        message="Use /api/v1/yki/certification/{session_id}.",
     )
 
 
 @app.post("/api/v1/yki/{session_id}/next")
 def yki_next(session_id: str, request: Request):
-    session = next_section(session_id)
-
-    if not session:
-        return _failure_response(
-            request,
-            "SESSION_NOT_FOUND",
-            event_type="YKI_EXAM_SECTION_ADVANCED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-    if isinstance(session, dict) and "error" in session:
-        return _failure_response(
-            request,
-            session["error"],
-            event_type="YKI_EXAM_SECTION_ADVANCED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-
-    return _success_response(
+    return _failure_response(
         request,
-        session,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_EXAM_SECTION_ADVANCED",
         request_payload={"session_id": session_id},
         session_id=session_id,
+        message="Use /api/v1/yki/sessions/{session_id}/next.",
     )
 
 
 @app.get("/api/v1/yki/{session_id}/task")
 def yki_task(session_id: str, request: Request):
-    task = get_task(session_id)
-
-    if not task:
-        return _failure_response(
-            request,
-            "NO_TASK_AVAILABLE",
-            event_type="YKI_EXAM_TASK_LOADED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-    if isinstance(task, dict) and "error" in task:
-        return _failure_response(
-            request,
-            task["error"],
-            event_type="YKI_EXAM_TASK_LOADED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-
-    return _success_response(
+    return _failure_response(
         request,
-        task,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_EXAM_TASK_LOADED",
         request_payload={"session_id": session_id},
         session_id=session_id,
+        message="Use /api/v1/yki/sessions/{session_id}.",
     )
 
 
 @app.post("/api/v1/yki/{session_id}/task/next")
 def yki_next_task(session_id: str, request: Request):
-    session = advance_task(session_id)
-
-    if not session:
-        return _failure_response(
-            request,
-            "SESSION_NOT_FOUND",
-            event_type="YKI_EXAM_TASK_ADVANCED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-    if isinstance(session, dict) and "error" in session:
-        return _failure_response(
-            request,
-            session["error"],
-            event_type="YKI_EXAM_TASK_ADVANCED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-
-    return _success_response(
+    return _failure_response(
         request,
-        session,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_EXAM_TASK_ADVANCED",
         request_payload={"session_id": session_id},
         session_id=session_id,
+        message="Use /api/v1/yki/sessions/{session_id}/next.",
     )
 
 
 @app.post("/api/v1/yki/{session_id}/task/answer")
 def yki_answer(session_id: str, body: dict, request: Request):
-    answer = body.get("answer")
-    result = answer_task(session_id, answer)
-
-    request_payload = {"answer": answer, "session_id": session_id}
-
-    if not result:
-        return _failure_response(
-            request,
-            "ANSWER_SUBMISSION_FAILED",
-            event_type="YKI_EXAM_TASK_ANSWERED",
-            request_payload=request_payload,
-            session_id=session_id,
-        )
-    if isinstance(result, dict) and "error" in result:
-        return _failure_response(
-            request,
-            result["error"],
-            event_type="YKI_EXAM_TASK_ANSWERED",
-            request_payload=request_payload,
-            session_id=session_id,
-        )
-
-    return _success_response(
+    return _failure_response(
         request,
-        result,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_EXAM_TASK_ANSWERED",
-        request_payload=request_payload,
+        request_payload={"answer": body.get("answer"), "session_id": session_id},
         session_id=session_id,
+        message="Use /api/v1/yki/sessions/{session_id}/answer.",
     )
 
 
 @app.post("/api/v1/yki/{session_id}/task/audio")
 def yki_audio(session_id: str, body: dict, request: Request):
-    audio_ref = body.get("audio")
-    result = answer_audio(session_id, audio_ref)
-
-    request_payload = {"audio": audio_ref, "session_id": session_id}
-
-    if not result:
-        return _failure_response(
-            request,
-            "AUDIO_SUBMISSION_FAILED",
-            event_type="YKI_EXAM_AUDIO_ANSWERED",
-            request_payload=request_payload,
-            session_id=session_id,
-        )
-    if isinstance(result, dict) and "error" in result:
-        return _failure_response(
-            request,
-            result["error"],
-            event_type="YKI_EXAM_AUDIO_ANSWERED",
-            request_payload=request_payload,
-            session_id=session_id,
-        )
-
-    return _success_response(
+    return _failure_response(
         request,
-        result,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_EXAM_AUDIO_ANSWERED",
-        request_payload=request_payload,
+        request_payload={"audio": body.get("audio"), "session_id": session_id},
         session_id=session_id,
+        message="Use /api/v1/yki/sessions/{session_id}/audio.",
     )
 
 
 @app.post("/api/v1/yki/{session_id}/task/play")
 def yki_play_task(session_id: str, request: Request):
-    result = play_current_listening_prompt(session_id)
-
-    if not result:
-        return _failure_response(
-            request,
-            "PLAYBACK_FAILED",
-            event_type="YKI_EXAM_TASK_PLAYED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-    if isinstance(result, dict) and "error" in result:
-        return _failure_response(
-            request,
-            result["error"],
-            event_type="YKI_EXAM_TASK_PLAYED",
-            request_payload={"session_id": session_id},
-            session_id=session_id,
-        )
-
-    return _success_response(
+    return _failure_response(
         request,
-        result,
+        "YKI_LEGACY_ENDPOINT_DISABLED",
         event_type="YKI_EXAM_TASK_PLAYED",
         request_payload={"session_id": session_id},
         session_id=session_id,
+        message="Use /api/v1/yki/sessions/{session_id}/play.",
     )
 
 

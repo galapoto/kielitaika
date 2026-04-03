@@ -12,6 +12,9 @@ from yki.adapter import (
     play_governed_listening_prompt,
     start_governed_exam,
 )
+from yki.errors import EngineFailure
+from yki.orchestrator import YKIOrchestrator
+from yki.session_registry import SessionRegistry
 from yki_test_support import complete_exam, install_fake_orchestrator
 
 
@@ -88,6 +91,38 @@ class YkiExamRuntimeTests(unittest.TestCase):
         failed = get_governed_exam(session_id)
 
         self.assertEqual(failed["error"], "ENGINE_UNAVAILABLE")
+
+    def test_start_fails_closed_on_invalid_engine_response(self):
+        class InvalidStartEngine:
+            async def start_exam(self, payload=None):
+                return {"invalid": True}
+
+        from yki import adapter as yki_adapter
+
+        yki_adapter.orchestrator = YKIOrchestrator(
+            engine=InvalidStartEngine(),
+            registry=SessionRegistry(),
+        )
+
+        failed = start_governed_exam()
+
+        self.assertEqual(failed["error"], "ENGINE_INVALID_RESPONSE")
+
+    def test_start_fails_closed_on_engine_timeout(self):
+        class TimeoutStartEngine:
+            async def start_exam(self, payload=None):
+                raise EngineFailure("ENGINE_TIMEOUT")
+
+        from yki import adapter as yki_adapter
+
+        yki_adapter.orchestrator = YKIOrchestrator(
+            engine=TimeoutStartEngine(),
+            registry=SessionRegistry(),
+        )
+
+        failed = start_governed_exam()
+
+        self.assertEqual(failed["error"], "ENGINE_TIMEOUT")
 
 
 if __name__ == "__main__":

@@ -88,6 +88,7 @@ class SessionState:
 class OrchestratedSession:
     session_id: str
     engine_session_id: str
+    engine_session_token: str | None
     user_id: str
     state: SessionState
     structure: dict[str, list[dict[str, Any]]]
@@ -169,6 +170,7 @@ def compute_session_hash(session: OrchestratedSession) -> str:
 
 def new_orchestrated_session(
     engine_session_id: str,
+    engine_session_token: str | None,
     structure: dict[str, list[dict[str, Any]]],
     user_id: str = DEFAULT_USER_ID,
 ) -> OrchestratedSession:
@@ -176,6 +178,7 @@ def new_orchestrated_session(
     session = OrchestratedSession(
         session_id=str(uuid4()),
         engine_session_id=engine_session_id,
+        engine_session_token=engine_session_token,
         user_id=user_id,
         state=SessionState(view_type=structure["reading"][0]["kind"], section="reading", index=0),
         structure=structure,

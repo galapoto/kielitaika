@@ -15,7 +15,7 @@ from learning.system_service import (
     get_learning_system,
     submit_learning_lesson_answer,
 )
-from yki.session_store import DEFAULT_USER_ID
+from yki.contracts import DEFAULT_USER_ID
 
 
 def get_learning_modules():

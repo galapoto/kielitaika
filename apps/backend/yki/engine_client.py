@@ -18,7 +18,10 @@ class EngineClient:
         self.timeout_seconds = timeout_seconds
 
     async def start_exam(self, payload: dict | None = None):
-        return await self._request("POST", "/exam/start", json=payload or {})
+        effective_payload = payload or {"level_band": "B1_B2"}
+        if "level_band" not in effective_payload:
+            effective_payload = {**effective_payload, "level_band": "B1_B2"}
+        return await self._request("POST", "/exam/start", json=effective_payload)
 
     async def get_session(self, session_id: str):
         return await self._request("GET", f"/exam/{session_id}")
@@ -26,8 +29,14 @@ class EngineClient:
     async def submit_answer(self, session_id: str, payload: dict):
         return await self._request("POST", f"/exam/{session_id}/answer", json=payload)
 
+    async def submit_writing(self, session_id: str, payload: dict):
+        return await self._request("POST", f"/exam/{session_id}/writing", json=payload)
+
     async def submit_audio(self, session_id: str, payload: dict):
         return await self._request("POST", f"/exam/{session_id}/audio", json=payload)
+
+    async def submit_speaking(self, session_id: str, payload: dict):
+        return await self._request("POST", f"/exam/{session_id}/speaking", json=payload)
 
     async def get_certificate(self, session_id: str):
         return await self._request("GET", f"/exam/{session_id}/certificate")

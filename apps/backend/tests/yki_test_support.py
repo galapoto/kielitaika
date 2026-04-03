@@ -154,6 +154,7 @@ class FakeEngineClient:
         self.counter += 1
         session_id = f"engine-session-{self.counter}"
         session = {
+            "session_id": session_id,
             "engine_session_token": session_id,
             "sections": deepcopy(build_engine_sections(missing_audio=self.missing_audio)),
             "responses": {},
@@ -169,11 +170,20 @@ class FakeEngineClient:
         return deepcopy(self.sessions[session_id])
 
     async def submit_answer(self, session_id: str, payload: dict):
-        self.sessions[session_id]["responses"][payload["question_id"]] = payload["answer"]
+        key = payload.get("question_id") or payload.get("task_id")
+        self.sessions[session_id]["responses"][key] = payload["answer"]
+        return {"ok": True}
+
+    async def submit_writing(self, session_id: str, payload: dict):
+        self.sessions[session_id]["responses"][payload["task_id"]] = payload["text"]
         return {"ok": True}
 
     async def submit_audio(self, session_id: str, payload: dict):
-        self.sessions[session_id]["responses"][payload["task_id"]] = payload["audio"]
+        self.sessions[session_id]["responses"][payload["task_id"]] = payload.get("audio_file_path") or payload.get("audio")
+        return {"ok": True}
+
+    async def submit_speaking(self, session_id: str, payload: dict):
+        self.sessions[session_id]["responses"][payload["item_id"]] = payload["audio_file_path"]
         return {"ok": True}
 
 

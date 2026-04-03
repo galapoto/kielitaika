@@ -1,4 +1,4 @@
-from yki.session_store import DEFAULT_USER_ID
+from yki.contracts import DEFAULT_USER_ID
 from yki_practice.service import (
     get_practice_certification,
     get_practice_certification_export,

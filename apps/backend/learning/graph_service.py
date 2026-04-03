@@ -20,7 +20,8 @@ from learning.progress_service import (
     register_recommendation_outcomes,
 )
 from learning.repository import repository
-from yki.session_store import DEFAULT_USER_ID, get_progress_history
+from yki.contracts import DEFAULT_USER_ID
+from yki.session_store import get_progress_history
 
 LEVEL_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"]
 

@@ -2,7 +2,7 @@ from learning.graph_service import list_modules_for_user
 from learning.progress_service import get_unit_progress
 from learning.models import GrammarUnit, PhraseUnit, VocabularyUnit
 from learning.repository import repository
-from yki.session_store import DEFAULT_USER_ID
+from yki.contracts import DEFAULT_USER_ID
 
 GRAMMAR_PRACTICE_TEMPLATES = {
     "grammar-verb-present": {

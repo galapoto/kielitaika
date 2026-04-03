@@ -10,7 +10,7 @@ from learning.policy_engine import (
 )
 from learning.progress_models import RecommendationOutcome, UserModuleProgress, UserUnitProgress
 from learning.repository import repository
-from yki.session_store import DEFAULT_USER_ID
+from yki.contracts import DEFAULT_USER_ID
 
 _unit_progress_store: dict[tuple[str, str], UserUnitProgress] = {}
 _module_progress_store: dict[tuple[str, str], UserModuleProgress] = {}

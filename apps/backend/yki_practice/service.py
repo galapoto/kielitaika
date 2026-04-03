@@ -17,7 +17,7 @@ from learning.policy_engine import is_exam_mode_locked
 from learning.progress_service import record_practice_result
 from learning.repository import repository
 from utils.hash_utils import deterministic_hash
-from yki.session_store import DEFAULT_USER_ID
+from yki.contracts import DEFAULT_USER_ID
 from yki_practice.certification_service import (
     create_certification_record,
     export_certification,
