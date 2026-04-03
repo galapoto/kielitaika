@@ -156,6 +156,14 @@ type PersistedExamSuccess = {
   viewKey: string;
 };
 
+let inFlightStartExamSession: Promise<ApiResponse<YkiExamSession>> | null = null;
+
+function validateExamSessionReferencePayload(payload: Record<string, unknown>) {
+  return {
+    session_id: readSessionReference(payload),
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -269,6 +277,7 @@ async function runMutationAndRefresh(
   try {
     mutationResponse = (await apiClient(path, options, {
       sessionId,
+      validateData: validateExamSessionReferencePayload,
     })) as ApiResponse<Record<string, unknown>>;
   } catch (error) {
     if (error instanceof ContractViolationError) {
@@ -363,46 +372,62 @@ export async function fetchExamSession(sessionId: string) {
 }
 
 export async function startExamSession() {
-  logger.info("YKI exam session start requested.", {
-    actionType: "SESSION_START",
-    currentScreen: "yki_exam",
-  });
-  let response: ApiResponse<Record<string, unknown>>;
+  if (inFlightStartExamSession) {
+    return inFlightStartExamSession;
+  }
 
-  try {
-    response = (await apiClient("/api/v1/yki/sessions/start", { method: "POST" })) as ApiResponse<
-      Record<string, unknown>
-    >;
-  } catch (error) {
-    if (error instanceof ContractViolationError) {
+  inFlightStartExamSession = (async () => {
+    logger.info("YKI exam session start requested.", {
+      actionType: "SESSION_START",
+      currentScreen: "yki_exam",
+    });
+    let response: ApiResponse<Record<string, unknown>>;
+
+    try {
+      response = (await apiClient(
+        "/api/v1/yki/sessions/start",
+        { method: "POST" },
+        {
+          validateData: validateExamSessionReferencePayload,
+        },
+      )) as ApiResponse<Record<string, unknown>>;
+    } catch (error) {
+      if (error instanceof ContractViolationError) {
+        return {
+          ok: false,
+          data: null,
+          error: {
+            code: error.code,
+            message: error.code,
+            traceReference: null,
+          },
+        } satisfies ApiResponse<YkiExamSession>;
+      }
+
+      throw error;
+    }
+
+    if (!response.ok || !response.data) {
       return {
         ok: false,
         data: null,
-        error: {
-          code: error.code,
-          message: error.code,
-          traceReference: null,
-        },
+        error: normalizeError(response.error),
       } satisfies ApiResponse<YkiExamSession>;
     }
 
-    throw error;
-  }
+    const sessionId = readSessionReference(response.data);
+    logger.info("YKI exam session start completed.", {
+      actionType: "SESSION_START",
+      currentScreen: "yki_exam",
+    });
+    return fetchExamSession(sessionId);
+  })();
 
-  if (!response.ok || !response.data) {
-    return {
-      ok: false,
-      data: null,
-      error: normalizeError(response.error),
-    } satisfies ApiResponse<YkiExamSession>;
+  try {
+    return await inFlightStartExamSession;
+  } finally {
+    inFlightStartExamSession = null;
   }
-
-  const sessionId = readSessionReference(response.data);
-  logger.info("YKI exam session start completed.", {
-    actionType: "SESSION_START",
-    currentScreen: "yki_exam",
-  });
-  return fetchExamSession(sessionId);
 }
 
 export async function resumeExamSession() {

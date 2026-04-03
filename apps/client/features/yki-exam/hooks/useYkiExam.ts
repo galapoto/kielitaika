@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { audioManager } from "@core/audio/audioManager";
 import { createSafeInterval } from "@core/utils/timerSafe";
@@ -39,6 +39,7 @@ const initialState: HookState = {
 
 export default function useYkiExam() {
   const [state, setState] = useState<HookState>(initialState);
+  const hydratedRef = useRef(false);
 
   function applyResponse(
     response:
@@ -125,6 +126,10 @@ export default function useYkiExam() {
   }
 
   useEffect(() => {
+    if (hydratedRef.current) {
+      return;
+    }
+    hydratedRef.current = true;
     void hydrate();
   }, []);
 
