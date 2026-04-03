@@ -1,53 +1,114 @@
+from learning.policy_engine import build_deterministic_seed, deterministic_order_key
+from learning.practice_service import generate_exercises_for_unit
+from learning.repository import repository
 from utils.hash_utils import deterministic_hash
 
+DAILY_PRACTICE_SESSION_SIZE = 3
 
-def build_exercise_catalog():
-    exercises = [
-        {
-            "id": "daily-vocabulary-1",
-            "type": "vocabulary_selection",
-            "title": "Vocabulary Check",
-            "prompt": "Choose the correct meaning of the Finnish word 'kirja'.",
-            "options": ["book", "door", "window"],
-            "expected_answer": "book",
-            "explanation": "'Kirja' means 'book' in Finnish.",
-            "input_mode": "choice",
-        },
-        {
-            "id": "daily-sentence-1",
-            "type": "sentence_completion",
-            "title": "Sentence Completion",
-            "prompt": "Complete the sentence: Huomenna mina ___ toihin aikaisin.",
-            "options": [],
-            "expected_answer": "menen",
-            "explanation": "'Menen' is the correct first-person singular verb form for going.",
-            "input_mode": "text",
-        },
-        {
-            "id": "daily-grammar-1",
-            "type": "grammar_selection",
-            "title": "Grammar Selection",
-            "prompt": "Choose the correct form: Me ___ kahvia aamulla.",
-            "options": ["juomme", "juon", "juovat"],
-            "expected_answer": "juomme",
-            "explanation": "'Me' requires the plural first-person verb form 'juomme'.",
-            "input_mode": "choice",
-        },
-    ]
 
-    for exercise in exercises:
-        exercise["deterministic_key"] = deterministic_hash(
-            {
-                "expected_answer": exercise["expected_answer"],
-                "id": exercise["id"],
-                "input_mode": exercise["input_mode"],
-                "options": exercise["options"],
-                "prompt": exercise["prompt"],
-                "type": exercise["type"],
-            }
-        )
+def _exercise_title(exercise):
+    title_map = {
+        "word_to_translation": "Vocabulary Check",
+        "translation_to_word": "Translation Recall",
+        "fill_blank": "Grammar Fill-In",
+        "sentence_correction": "Sentence Correction",
+        "complete_sentence": "Phrase Completion",
+        "choose_correct_phrase": "Phrase Match",
+    }
+    return title_map.get(exercise["type"], "Daily Practice")
 
-    return exercises
+
+def _exercise_explanation(exercise):
+    return f"Expected answer: {exercise['correct_answer']}"
+
+
+def _normalize_exercise(exercise):
+    payload = {
+        "id": f"daily-{exercise['id']}",
+        "type": exercise["type"],
+        "title": _exercise_title(exercise),
+        "prompt": exercise["question"],
+        "options": list(exercise.get("options") or []),
+        "expected_answer": exercise["correct_answer"],
+        "explanation": _exercise_explanation(exercise),
+        "input_mode": exercise["input_mode"],
+        "unit_id": exercise["unit_id"],
+        "unit_kind": exercise["unit_kind"],
+        "module_id": exercise["module_id"],
+    }
+    payload["deterministic_key"] = deterministic_hash(
+        {
+            "expected_answer": payload["expected_answer"],
+            "id": payload["id"],
+            "input_mode": payload["input_mode"],
+            "module_id": payload["module_id"],
+            "options": payload["options"],
+            "prompt": payload["prompt"],
+            "type": payload["type"],
+            "unit_id": payload["unit_id"],
+            "unit_kind": payload["unit_kind"],
+        }
+    )
+    return payload
+
+
+def _build_candidate_catalog():
+    catalog = []
+    for unit_id in sorted(repository.units):
+        unit = repository.units[unit_id]
+        for exercise in generate_exercises_for_unit(unit):
+            catalog.append(_normalize_exercise(exercise))
+    return catalog
+
+
+def _select_session_exercises(catalog, *, session_seed: str, limit: int, avoid_ids: set[str] | None = None):
+    avoid_ids = avoid_ids or set()
+    ranked = sorted(
+        catalog,
+        key=lambda exercise: (
+            exercise["id"] in avoid_ids,
+            deterministic_order_key(session_seed, exercise["id"]),
+            exercise["id"],
+        ),
+    )
+
+    selected = []
+    selected_ids = set()
+    seen_unit_ids = set()
+    seen_kinds = set()
+
+    for exercise in ranked:
+        if exercise["id"] in selected_ids or exercise["unit_id"] in seen_unit_ids:
+            continue
+        if exercise["unit_kind"] in seen_kinds:
+            continue
+        selected.append(exercise)
+        selected_ids.add(exercise["id"])
+        seen_unit_ids.add(exercise["unit_id"])
+        seen_kinds.add(exercise["unit_kind"])
+        if len(selected) >= limit:
+            return selected
+
+    for exercise in ranked:
+        if exercise["id"] in selected_ids or exercise["unit_id"] in seen_unit_ids:
+            continue
+        selected.append(exercise)
+        selected_ids.add(exercise["id"])
+        seen_unit_ids.add(exercise["unit_id"])
+        if len(selected) >= limit:
+            return selected
+
+    return selected
+
+
+def build_exercise_catalog(session_id: str | None = None, avoid_ids=None):
+    session_seed = build_deterministic_seed("daily-practice-session", session_id or "preview")
+    return _select_session_exercises(
+        _build_candidate_catalog(),
+        session_seed=session_seed,
+        limit=DAILY_PRACTICE_SESSION_SIZE,
+        avoid_ids=set(avoid_ids or []),
+    )
 
 
 def normalize_answer(answer):

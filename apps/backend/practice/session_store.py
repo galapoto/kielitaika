@@ -5,6 +5,7 @@ from practice.engine import build_exercise_catalog, evaluate_exercise_answer, no
 
 DEFAULT_USER_ID = "local-user"
 _sessions = {}
+_last_exercise_ids = []
 
 
 def build_public_exercise(exercise):
@@ -73,7 +74,7 @@ def create_session():
     session_id = str(uuid.uuid4())
     exercises = []
 
-    for exercise in build_exercise_catalog():
+    for exercise in build_exercise_catalog(session_id=session_id, avoid_ids=_last_exercise_ids):
         exercises.append(
             {
                 **exercise,
@@ -93,6 +94,7 @@ def create_session():
         "submissions": [],
         "latest_result": None,
     }
+    _last_exercise_ids[:] = [exercise["id"] for exercise in exercises]
     _sessions[session_id] = session
     return build_public_session(session)
 
