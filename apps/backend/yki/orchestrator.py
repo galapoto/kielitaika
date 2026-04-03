@@ -182,6 +182,37 @@ class YKIOrchestrator:
         return value if isinstance(value, str) and value else None
 
     def _extract_timing_manifest(self, engine_data: dict) -> dict[str, int]:
+        metadata = engine_data.get("metadata")
+        if isinstance(metadata, dict):
+            duration_profile = metadata.get("duration_profile_seconds")
+            if isinstance(duration_profile, dict):
+                seconds_by_section: dict[str, int] = {}
+                for section in SECTION_ORDER:
+                    duration_seconds = duration_profile.get(section)
+                    if not isinstance(duration_seconds, (int, float)):
+                        break
+                    seconds_by_section[section] = int(duration_seconds)
+                if len(seconds_by_section) == len(SECTION_ORDER):
+                    return seconds_by_section
+
+            timing = metadata.get("timing")
+            if isinstance(timing, dict):
+                sections = timing.get("sections")
+                if isinstance(sections, list):
+                    seconds_by_section: dict[str, int] = {}
+                    for section_payload in sections:
+                        if not isinstance(section_payload, dict):
+                            break
+                        section_name = section_payload.get("section")
+                        duration_seconds = section_payload.get("duration_seconds")
+                        if section_name not in SECTION_ORDER or not isinstance(
+                            duration_seconds, (int, float)
+                        ):
+                            break
+                        seconds_by_section[section_name] = int(duration_seconds)
+                    if len(seconds_by_section) == len(SECTION_ORDER):
+                        return seconds_by_section
+
         timing = engine_data.get("timing")
         if isinstance(timing, dict):
             sections = timing.get("sections")

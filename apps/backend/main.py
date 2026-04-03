@@ -685,14 +685,16 @@ def yki_start(request: Request):
 
 
 @app.post("/api/v1/yki/sessions/start")
-def yki_sessions_start(request: Request):
-    session = start_governed_exam()
+def yki_sessions_start(body: dict | None, request: Request):
+    payload = body or {}
+    session = start_governed_exam(payload)
 
     if isinstance(session, dict) and "error" in session:
         return _failure_response(
             request,
             session["error"],
             event_type="YKI_EXAM_RUNTIME_STARTED",
+            request_payload=payload,
             retryable=session["error"] in {"ENGINE_TIMEOUT", "ENGINE_UNAVAILABLE"},
         )
 
@@ -700,6 +702,7 @@ def yki_sessions_start(request: Request):
         request,
         session,
         event_type="YKI_EXAM_RUNTIME_STARTED",
+        request_payload=payload,
         session_id=session["session_id"],
     )
 

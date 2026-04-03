@@ -23,6 +23,14 @@ class YkiExamRuntimeTests(unittest.TestCase):
     def setUp(self):
         install_fake_orchestrator()
 
+    def test_start_forwards_explicit_engine_mode(self):
+        orchestrator = install_fake_orchestrator()
+
+        started = start_governed_exam({"mode": "test"})
+
+        self.assertIn("session_id", started)
+        self.assertEqual(orchestrator.engine.start_payloads[-1]["mode"], "test")
+
     def test_governed_exam_starts_on_reading_passage(self):
         started = start_governed_exam()
 
@@ -34,6 +42,17 @@ class YkiExamRuntimeTests(unittest.TestCase):
         self.assertFalse(session["navigation"]["back_allowed"])
         self.assertTrue(session["navigation"]["forward_only"])
         self.assertIsNone(session["current_view"]["question"])
+
+    def test_test_mode_uses_engine_duration_profile_seconds(self):
+        started = start_governed_exam({"mode": "test"})
+
+        session = get_governed_exam(started["session_id"])
+
+        self.assertLessEqual(session["timing_manifest"]["exam_remaining_seconds"], 40)
+        self.assertLessEqual(
+            session["timing_manifest"]["sections"]["reading"]["remaining_seconds"],
+            10,
+        )
 
     def test_runtime_requires_answers_and_playback_before_progressing(self):
         session_id = start_governed_exam()["session_id"]

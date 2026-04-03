@@ -1,5 +1,6 @@
 import { apiClient, ContractViolationError } from "@core/api/apiClient";
 import { getAudioBaseUrl, getApiBaseUrl } from "@core/api/apiConfig";
+import { env } from "@core/config/env";
 import { validateYkiExamSessionPayload } from "@core/api/governedResponseValidation";
 import { logger } from "@core/logging/logger";
 import {
@@ -157,6 +158,10 @@ type PersistedExamSuccess = {
 };
 
 let inFlightStartExamSession: Promise<ApiResponse<YkiExamSession>> | null = null;
+
+function buildStartExamRequestBody() {
+  return env.YKI_EXAM_MODE === "production" ? {} : { mode: env.YKI_EXAM_MODE };
+}
 
 function validateExamSessionReferencePayload(payload: Record<string, unknown>) {
   return {
@@ -386,7 +391,13 @@ export async function startExamSession() {
     try {
       response = (await apiClient(
         "/api/v1/yki/sessions/start",
-        { method: "POST" },
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(buildStartExamRequestBody()),
+        },
         {
           validateData: validateExamSessionReferencePayload,
         },

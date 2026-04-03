@@ -156,14 +156,32 @@ class FakeEngineClient:
         self.engine_timing_enforced = engine_timing_enforced
         self.sessions = {}
         self.counter = 0
+        self.start_payloads = []
 
     async def start_exam(self, payload=None):
+        self.start_payloads.append(deepcopy(payload or {}))
         self.counter += 1
         session_id = f"engine-session-{self.counter}"
+        mode = "test" if (payload or {}).get("mode") == "test" else "production"
+        duration_profile_seconds = {
+            "reading": 10,
+            "listening": 10,
+            "writing": 10,
+            "speaking": 10,
+        } if mode == "test" else {
+            "reading": 3600,
+            "listening": 2400,
+            "writing": 3300,
+            "speaking": 1200,
+        }
         session = {
             "session_id": session_id,
             "engine_session_token": session_id,
             "engine_timing_enforced": self.engine_timing_enforced,
+            "metadata": {
+                "mode": mode,
+                "duration_profile_seconds": duration_profile_seconds,
+            },
             "sections": deepcopy(build_engine_sections(missing_audio=self.missing_audio)),
             "responses": {},
         }
@@ -202,7 +220,7 @@ def install_fake_orchestrator(
     engine_timing_enforced: bool = False,
     now_provider=None,
 ):
-    yki_adapter.orchestrator = YKIOrchestrator(
+    orchestrator = YKIOrchestrator(
         engine=FakeEngineClient(
             missing_audio=missing_audio,
             raise_on_get=raise_on_get,
@@ -211,6 +229,8 @@ def install_fake_orchestrator(
         registry=SessionRegistry(),
         now_provider=now_provider,
     )
+    yki_adapter.orchestrator = orchestrator
+    return orchestrator
 
 
 def move_to_listening_prompt(session_id: str):

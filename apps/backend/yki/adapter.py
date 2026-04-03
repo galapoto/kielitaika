@@ -13,8 +13,8 @@ def _run(coro):
         return {"error": exc.code}
 
 
-def start_governed_exam():
-    return _run(orchestrator.start_session())
+def start_governed_exam(payload: dict | None = None):
+    return _run(orchestrator.start_session(payload=payload))
 
 
 def get_governed_exam(session_id: str):

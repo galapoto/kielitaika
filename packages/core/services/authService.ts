@@ -52,6 +52,10 @@ export const authService = {
       });
     } catch (error) {
       if (error instanceof ContractViolationError) {
+        if (env.MOCK_AUTH_FALLBACK_ENABLED) {
+          return mockLogin(email);
+        }
+
         throw new Error(error.code);
       }
 

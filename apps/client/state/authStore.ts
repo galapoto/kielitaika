@@ -72,13 +72,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
   async setAuth(user, token) {
-    await storageService.set(AUTH_SESSION_KEY, {
+    set({
+      hasHydrated: true,
       token,
       user,
     });
 
-    set({
-      hasHydrated: true,
+    void storageService.set(AUTH_SESSION_KEY, {
       token,
       user,
     });
