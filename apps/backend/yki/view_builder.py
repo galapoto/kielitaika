@@ -6,7 +6,6 @@ from yki.contracts import (
     ADAPTIVE_SUGGESTION_MAP,
     ENGINE_STATE_SOURCE_PATH,
     SECTION_ORDER,
-    SECTION_TIME_LIMITS_MINUTES,
     WARNING_THRESHOLD_SECONDS,
     clamp_score,
     current_section_index,
@@ -22,7 +21,12 @@ from yki.contracts import (
 )
 
 
-def build_view(session, engine_data: dict | None = None):
+def build_view(
+    session,
+    engine_data: dict | None = None,
+    current_time: datetime | None = None,
+):
+    now = current_time or datetime.now(UTC)
     if session.state.view_type == "exam_complete":
         return {
             "actions": {
@@ -54,6 +58,13 @@ def build_view(session, engine_data: dict | None = None):
     if session.state.view_type == "section_complete":
         current_section = session.state.section
         current_index = current_section_index(session)
+        next_section = SECTION_ORDER[current_index + 1] if current_index + 1 < len(SECTION_ORDER) else None
+        next_section_started_at = None
+        if next_section:
+            next_section_started_at = session.section_windows[next_section]["started_at"]
+        next_enabled = True
+        if session.engine_timing_enforced and next_section_started_at:
+            next_enabled = now >= datetime.fromisoformat(next_section_started_at)
         next_label = (
             "Complete Exam"
             if current_index == len(SECTION_ORDER) - 1
@@ -62,7 +73,7 @@ def build_view(session, engine_data: dict | None = None):
         return {
             "actions": {
                 "next": {
-                    "enabled": True,
+                    "enabled": next_enabled,
                     "kind": "next",
                     "label": next_label,
                 },
@@ -73,7 +84,11 @@ def build_view(session, engine_data: dict | None = None):
             "input_mode": "none",
             "instructions": [
                 f"{current_section.title()} is sealed.",
-                "Advance forward to continue the orchestrated exam flow.",
+                (
+                    "Advance forward to continue the orchestrated exam flow."
+                    if next_enabled or not next_section
+                    else f"Wait until the {next_section} section window opens."
+                ),
             ],
             "kind": "section_complete",
             "options": [],
@@ -177,8 +192,8 @@ def build_view(session, engine_data: dict | None = None):
     }
 
 
-def build_navigation(session):
-    current_view = build_view(session)
+def build_navigation(session, current_time: datetime | None = None):
+    current_view = build_view(session, current_time=current_time)
     next_action = current_view["actions"]["next"]
     return {
         "back_allowed": False,
@@ -221,8 +236,8 @@ def build_progress(session):
     return rows
 
 
-def build_timing(session):
-    now = datetime.now(UTC)
+def build_timing(session, current_time: datetime | None = None):
+    now = current_time or datetime.now(UTC)
 
     def remaining_seconds(expires_at: str | None) -> int:
         if not expires_at:
@@ -230,7 +245,7 @@ def build_timing(session):
         return max(0, int((datetime.fromisoformat(expires_at) - now).total_seconds()))
 
     exam_expires_at = datetime.fromisoformat(session.started_at) + timedelta(
-        seconds=sum(timedelta_minutes * 60 for timedelta_minutes in SECTION_TIME_LIMITS_MINUTES.values())
+        seconds=sum(session.timing_manifest.values())
     )
     current_section = session.state.section
     current_window = session.section_windows[current_section] if current_section else {
@@ -252,7 +267,7 @@ def build_timing(session):
         "warning_threshold_seconds": WARNING_THRESHOLD_SECONDS,
         "sections": {
             section: {
-                "duration_minutes": SECTION_TIME_LIMITS_MINUTES[section],
+                "duration_minutes": int(session.timing_manifest[section] / 60),
                 "expires_at": session.section_windows[section]["expires_at"],
                 "started_at": session.section_windows[section]["started_at"],
                 "remaining_seconds": remaining_seconds(session.section_windows[section]["expires_at"]),
@@ -272,7 +287,11 @@ def build_completion_state(session):
     }
 
 
-def build_governed_session_payload(session, engine_data: dict | None = None):
+def build_governed_session_payload(
+    session,
+    engine_data: dict | None = None,
+    current_time: datetime | None = None,
+):
     return {
         "session_id": session.session_id,
         "user_id": session.user_id,
@@ -283,9 +302,9 @@ def build_governed_session_payload(session, engine_data: dict | None = None):
         },
         "section_order": SECTION_ORDER,
         "current_section": session.state.section,
-        "current_view": build_view(session, engine_data),
-        "navigation": build_navigation(session),
-        "timing_manifest": build_timing(session),
+        "current_view": build_view(session, engine_data, current_time=current_time),
+        "navigation": build_navigation(session, current_time=current_time),
+        "timing_manifest": build_timing(session, current_time=current_time),
         "completion_state": build_completion_state(session),
         "section_progress": build_progress(session),
         "certificate": session.certificate,

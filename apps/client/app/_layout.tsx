@@ -1,16 +1,8 @@
-import { useEffect } from "react";
 import { Stack } from "expo-router";
 
 import ErrorBoundary from "@ui/system/ErrorBoundary";
-import { useAuthStore } from "../state/authStore";
 
 export default function Layout() {
-  const hydrateSession = useAuthStore((state) => state.hydrateSession);
-
-  useEffect(() => {
-    void hydrateSession();
-  }, [hydrateSession]);
-
   return (
     <ErrorBoundary>
       <Stack screenOptions={{ headerShown: false }}>

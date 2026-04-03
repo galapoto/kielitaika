@@ -8,10 +8,10 @@ from uuid import uuid4
 
 SECTION_ORDER = ["reading", "listening", "writing", "speaking"]
 SECTION_TIME_LIMITS_MINUTES = {
-    "reading": 20,
-    "listening": 20,
-    "writing": 30,
-    "speaking": 30,
+    "reading": 60,
+    "listening": 40,
+    "writing": 55,
+    "speaking": 20,
 }
 WARNING_THRESHOLD_SECONDS = 300
 LISTENING_PLAYBACK_LIMIT = 1
@@ -110,6 +110,7 @@ class OrchestratedSession:
     runtime: dict[str, Any] = field(default_factory=build_runtime_manifest)
     last_engine_data: dict[str, Any] | None = None
     section_windows: dict[str, dict[str, str | None]] = field(default_factory=dict)
+    engine_timing_enforced: bool = True
 
     def __post_init__(self):
         if not self.session_hash:
@@ -118,10 +119,23 @@ class OrchestratedSession:
             )
             self.session_hash = compute_session_hash(self)
         if not self.section_windows:
-            self.section_windows = build_section_windows(self.started_at)
+            self.section_windows = build_section_windows(self.started_at, self.timing_manifest)
 
 
-def build_section_windows(started_at: str) -> dict[str, dict[str, str | None]]:
+def build_timing_manifest_from_minutes(
+    minutes_by_section: dict[str, int] | None = None,
+) -> dict[str, int]:
+    effective_minutes = minutes_by_section or SECTION_TIME_LIMITS_MINUTES
+    return {
+        section: int(effective_minutes[section]) * 60
+        for section in SECTION_ORDER
+    }
+
+
+def build_section_windows(
+    started_at: str,
+    timing_manifest: dict[str, int] | None = None,
+) -> dict[str, dict[str, str | None]]:
     windows: dict[str, dict[str, str | None]] = {}
     for section in SECTION_ORDER:
         windows[section] = {
@@ -130,21 +144,26 @@ def build_section_windows(started_at: str) -> dict[str, dict[str, str | None]]:
         }
 
     current_started_at = datetime.fromisoformat(started_at)
-    first_section = SECTION_ORDER[0]
-    windows[first_section]["started_at"] = started_at
-    windows[first_section]["expires_at"] = (
-        current_started_at + timedelta(minutes=SECTION_TIME_LIMITS_MINUTES[first_section])
-    ).isoformat()
+    effective_manifest = timing_manifest or build_timing_manifest_from_minutes()
+    for section in SECTION_ORDER:
+        duration_seconds = int(effective_manifest.get(section, 0))
+        windows[section]["started_at"] = current_started_at.isoformat()
+        windows[section]["expires_at"] = (
+            current_started_at + timedelta(seconds=duration_seconds)
+        ).isoformat()
+        current_started_at = current_started_at + timedelta(seconds=duration_seconds)
     return windows
 
 
 def activate_section(session: OrchestratedSession, section: str, now: datetime | None = None):
     current_time = now or utc_now()
-    session.section_start_time = current_time.isoformat()
+    existing_window = session.section_windows.get(section) or {}
+    started_at = existing_window.get("started_at") or current_time.isoformat()
+    session.section_start_time = started_at
     session.section_windows[section] = {
-        "started_at": current_time.isoformat(),
-        "expires_at": (
-            current_time + timedelta(minutes=SECTION_TIME_LIMITS_MINUTES[section])
+        "started_at": started_at,
+        "expires_at": existing_window.get("expires_at") or (
+            datetime.fromisoformat(started_at) + timedelta(seconds=int(session.timing_manifest.get(section, 0)))
         ).isoformat(),
     }
 
@@ -173,8 +192,11 @@ def new_orchestrated_session(
     engine_session_token: str | None,
     structure: dict[str, list[dict[str, Any]]],
     user_id: str = DEFAULT_USER_ID,
+    timing_manifest: dict[str, int] | None = None,
+    engine_timing_enforced: bool = True,
 ) -> OrchestratedSession:
     created_at = utc_now_iso()
+    effective_timing_manifest = timing_manifest or build_timing_manifest_from_minutes()
     session = OrchestratedSession(
         session_id=str(uuid4()),
         engine_session_id=engine_session_id,
@@ -184,10 +206,9 @@ def new_orchestrated_session(
         structure=structure,
         started_at=created_at,
         section_start_time=created_at,
-        timing_manifest={
-            section: minutes * 60 for section, minutes in SECTION_TIME_LIMITS_MINUTES.items()
-        },
+        timing_manifest=effective_timing_manifest,
         created_at=created_at,
+        engine_timing_enforced=engine_timing_enforced,
     )
     session.visited_views.append(view_key_for_state(session.state, structure))
     return session

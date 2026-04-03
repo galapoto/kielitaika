@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 
 import { setAuthToken } from "@core/api/apiClient";
 import { logger } from "@core/logging/logger";
@@ -110,6 +110,7 @@ async function validateLearningGuard(): Promise<LearningGuardResult> {
 }
 
 export default function AppShell({ requestedScreen = "root" }: Props) {
+  const pathname = usePathname();
   const router = useRouter();
   const hydrateSession = useAuthStore((state) => state.hydrateSession);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
@@ -139,6 +140,13 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       currentScreen: activeScreen,
     });
   }, [activeScreen]);
+
+  function replaceIfNeeded(screen: GuardedScreen) {
+    const path = getPathForScreen(screen);
+    if (pathname !== path) {
+      router.replace(path);
+    }
+  }
 
   async function clearRuntimePersistence() {
     await Promise.all([
@@ -314,7 +322,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       return;
     }
 
-    router.replace(getPathForScreen("learning"));
+    replaceIfNeeded("learning");
     await resolveAndPersist("learning", "learning");
   }
 
@@ -406,7 +414,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       return;
     }
 
-    router.replace(getPathForScreen("yki-practice"));
+    replaceIfNeeded("yki-practice");
     await resolveAndPersist("yki-practice", "yki-practice", ykiSession.data.session_id);
   }
 
@@ -435,7 +443,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     }
 
     if (persistedNavigation.value.activeScreen === "home") {
-      router.replace(getPathForScreen("home"));
+      replaceIfNeeded("home");
       await resolveAndPersist("home", persistedNavigation.value.requestedScreen);
       return;
     }
@@ -446,13 +454,13 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     }
 
     if (persistedNavigation.value.activeScreen === "yki-exam") {
-      router.replace(getPathForScreen("yki-exam"));
+      replaceIfNeeded("yki-exam");
       await resolveAndPersist("yki-exam", persistedNavigation.value.requestedScreen);
       return;
     }
 
     if (isFeatureEntryScreen(persistedNavigation.value.activeScreen)) {
-      router.replace(getPathForScreen(persistedNavigation.value.activeScreen));
+      replaceIfNeeded(persistedNavigation.value.activeScreen);
       await resolveAndPersist(
         persistedNavigation.value.activeScreen,
         persistedNavigation.value.requestedScreen,
@@ -465,7 +473,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       return;
     }
 
-    router.replace(getPathForScreen("home"));
+    replaceIfNeeded("home");
     await resolveAndPersist("home", "root");
   }
 
@@ -474,7 +482,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
 
     if (!user) {
       if (target === "auth" || target === "root") {
-        router.replace(getPathForScreen("auth"));
+        replaceIfNeeded("auth");
         await clearRuntimePersistence();
         await resolveAndPersist("auth", "auth");
         return;
@@ -494,7 +502,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     }
 
     if (target === "auth") {
-      router.replace(getPathForScreen("home"));
+      replaceIfNeeded("home");
       await resolveAndPersist("home", "root");
       return;
     }
@@ -525,13 +533,13 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     }
 
     if (target === "yki-exam") {
-      router.replace(getPathForScreen("yki-exam"));
+      replaceIfNeeded("yki-exam");
       await resolveAndPersist("yki-exam", target);
       return;
     }
 
     if (isFeatureEntryScreen(target)) {
-      router.replace(getPathForScreen(target));
+      replaceIfNeeded(target);
       await resolveAndPersist(target, target);
       return;
     }
@@ -574,7 +582,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     beginNavigationCheck(screen);
 
     if (screen === "auth") {
-      router.replace(getPathForScreen("auth"));
+      replaceIfNeeded("auth");
       await resolveAndPersist("auth", "auth");
       return;
     }
@@ -590,7 +598,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
 
     if (screen === "home") {
       clearNavigationError();
-      router.replace(getPathForScreen("home"));
+      replaceIfNeeded("home");
       await resolveAndPersist("home", "root");
       return;
     }
@@ -616,21 +624,21 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
         return;
       }
 
-      router.replace(getPathForScreen("learning"));
+      replaceIfNeeded("learning");
       await resolveAndPersist("learning", screen);
       return;
     }
 
     if (screen === "yki-exam") {
       clearNavigationError();
-      router.replace(getPathForScreen("yki-exam"));
+      replaceIfNeeded("yki-exam");
       await resolveAndPersist("yki-exam", screen);
       return;
     }
 
     if (isFeatureEntryScreen(screen)) {
       clearNavigationError();
-      router.replace(getPathForScreen(screen));
+      replaceIfNeeded(screen);
       await resolveAndPersist(screen, screen);
       return;
     }
@@ -647,7 +655,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     const resumedSession = await validateExistingYkiSession();
 
     if (resumedSession.ok) {
-      router.replace(getPathForScreen("yki-practice"));
+      replaceIfNeeded("yki-practice");
       await resolveAndPersist("yki-practice", screen, resumedSession.data.session_id);
       return;
     }
@@ -678,7 +686,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
       return;
     }
 
-    router.replace(getPathForScreen("yki-practice"));
+    replaceIfNeeded("yki-practice");
     await resolveAndPersist("yki-practice", screen, startedSession.data.session_id);
   }
 
@@ -686,7 +694,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     await logout();
     await clearRuntimePersistence();
     setAuthToken(null);
-    router.replace(getPathForScreen("auth"));
+    replaceIfNeeded("auth");
     await resolveAndPersist("auth", "auth");
   }
 

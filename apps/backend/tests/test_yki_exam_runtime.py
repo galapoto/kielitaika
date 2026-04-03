@@ -1,5 +1,6 @@
 import sys
 import unittest
+from datetime import datetime, UTC
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -68,6 +69,29 @@ class YkiExamRuntimeTests(unittest.TestCase):
         playback_unlocked = get_governed_exam(session_id)
         self.assertEqual(playback_unlocked["current_view"]["playback"]["remaining"], 0)
         self.assertTrue(playback_unlocked["current_view"]["actions"]["next"]["enabled"])
+
+    def test_next_section_is_blocked_until_engine_window_opens(self):
+        now = datetime(2026, 4, 3, 12, 0, tzinfo=UTC)
+        install_fake_orchestrator(
+            engine_timing_enforced=True,
+            now_provider=lambda: now,
+        )
+        session_id = start_governed_exam()["session_id"]
+
+        advance_governed_exam(session_id)
+        answer_governed_task(session_id, "To collect practical Finnish-learning ideas for onboarding.")
+        advance_governed_exam(session_id)
+        answer_governed_task(session_id, "The supervisor")
+        advance_governed_exam(session_id)
+
+        section_complete = get_governed_exam(session_id)
+
+        self.assertEqual(section_complete["current_view"]["kind"], "section_complete")
+        self.assertFalse(section_complete["current_view"]["actions"]["next"]["enabled"])
+
+        rejected = advance_governed_exam(session_id)
+
+        self.assertEqual(rejected["error"], "NEXT_SECTION_NOT_AVAILABLE")
 
     def test_exam_completes_in_read_only_mode_after_explicit_submissions(self):
         session_id = start_governed_exam()["session_id"]

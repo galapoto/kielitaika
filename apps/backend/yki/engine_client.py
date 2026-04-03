@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json as jsonlib
+import logging
 import os
 
 from yki.errors import EngineFailure
+
+logger = logging.getLogger(__name__)
 
 
 def get_engine_base_url() -> str:
@@ -48,6 +52,13 @@ class EngineClient:
             raise EngineFailure("HTTPX_UNAVAILABLE") from exc
 
         url = f"{self.base_url or get_engine_base_url()}{path}"
+        if json is not None:
+            logger.warning(
+                "YKI engine request method=%s path=%s payload=%s",
+                method,
+                path,
+                jsonlib.dumps(json, ensure_ascii=True, sort_keys=True),
+            )
         try:
             async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
                 response = await client.request(method, url, json=json)
@@ -56,12 +67,38 @@ class EngineClient:
         except httpx.HTTPError as exc:
             raise EngineFailure("ENGINE_UNAVAILABLE") from exc
 
+        response_text = response.text
         try:
             payload = response.json()
         except ValueError as exc:
+            logger.error(
+                "YKI engine invalid JSON method=%s path=%s status=%s payload=%s response=%s",
+                method,
+                path,
+                response.status_code,
+                jsonlib.dumps(json, ensure_ascii=True, sort_keys=True) if json is not None else "null",
+                response_text,
+            )
             raise EngineFailure("ENGINE_INVALID_JSON") from exc
 
         if response.status_code >= 400:
-            raise EngineFailure("ENGINE_ERROR")
+            logger.error(
+                "YKI engine error method=%s path=%s status=%s payload=%s response=%s",
+                method,
+                path,
+                response.status_code,
+                jsonlib.dumps(json, ensure_ascii=True, sort_keys=True) if json is not None else "null",
+                response_text,
+            )
+            raise EngineFailure(
+                "ENGINE_ERROR",
+                message=response_text or "ENGINE_ERROR",
+                details={
+                    "status_code": response.status_code,
+                    "path": path,
+                    "request_payload": json,
+                    "response_text": response_text,
+                },
+            )
 
         return payload

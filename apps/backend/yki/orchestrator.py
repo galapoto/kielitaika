@@ -17,6 +17,7 @@ from yki.contracts import (
     compute_session_hash,
     get_current_task,
     new_orchestrated_session,
+    build_timing_manifest_from_minutes,
 )
 from yki.engine_client import EngineClient
 from yki.errors import ContractViolation, EngineFailure, InvalidTransition, SessionNotFound
@@ -48,11 +49,16 @@ class YKIOrchestrator:
         engine_data = await self.engine.get_session(session.engine_session_id)
         session.last_engine_data = engine_data
         self.registry.save(session)
-        return build_governed_session_payload(session, engine_data)
+        return build_governed_session_payload(
+            session,
+            engine_data,
+            current_time=self.now_provider(),
+        )
 
     async def next(self, session_id: str):
         session = self._get_required_session(session_id)
         self._enforce_timing(session)
+        self._enforce_next_section_availability(session)
         session.state = compute_next_state(session, "next")
         await self._refresh_engine_data(session)
         self._maybe_finalize_session(session)
@@ -154,6 +160,8 @@ class YKIOrchestrator:
             engine_session_token=engine_session_token,
             structure=structure,
             user_id=user_id,
+            timing_manifest=self._extract_timing_manifest(engine_data),
+            engine_timing_enforced=self._extract_engine_timing_enforced(engine_data),
         )
         session.last_engine_data = engine_data
         activate_section(session, "reading", now=datetime.fromisoformat(session.started_at))
@@ -169,6 +177,30 @@ class YKIOrchestrator:
     def _extract_engine_session_token(self, engine_data: dict) -> str | None:
         value = engine_data.get("engine_session_token")
         return value if isinstance(value, str) and value else None
+
+    def _extract_timing_manifest(self, engine_data: dict) -> dict[str, int]:
+        timing = engine_data.get("timing")
+        if isinstance(timing, dict):
+            sections = timing.get("sections")
+            if isinstance(sections, dict):
+                minutes_by_section: dict[str, int] = {}
+                for section in SECTION_ORDER:
+                    section_payload = sections.get(section)
+                    if not isinstance(section_payload, dict):
+                        break
+                    duration_minutes = section_payload.get("duration_minutes")
+                    if not isinstance(duration_minutes, int):
+                        break
+                    minutes_by_section[section] = duration_minutes
+                if len(minutes_by_section) == len(SECTION_ORDER):
+                    return build_timing_manifest_from_minutes(minutes_by_section)
+        return build_timing_manifest_from_minutes()
+
+    def _extract_engine_timing_enforced(self, engine_data: dict) -> bool:
+        value = engine_data.get("engine_timing_enforced")
+        if isinstance(value, bool):
+            return value
+        return True
 
     def _extract_structure(self, engine_data: dict) -> dict[str, list[dict[str, Any]]]:
         sections = engine_data.get("sections")
@@ -482,6 +514,25 @@ class YKIOrchestrator:
         expires_at = session.section_windows[current_section]["expires_at"]
         if expires_at and current_time > datetime.fromisoformat(expires_at):
             raise ContractViolation("SECTION_EXPIRED")
+
+    def _enforce_next_section_availability(self, session: OrchestratedSession):
+        if not session.engine_timing_enforced:
+            return
+        if session.state.view_type != "section_complete":
+            return
+        current_section = session.state.section
+        if current_section is None:
+            return
+        current_index = SECTION_ORDER.index(current_section)
+        if current_index + 1 >= len(SECTION_ORDER):
+            return
+        next_section = SECTION_ORDER[current_index + 1]
+        next_window = session.section_windows.get(next_section) or {}
+        next_started_at = next_window.get("started_at")
+        if not next_started_at:
+            return
+        if self.now_provider() < datetime.fromisoformat(next_started_at):
+            raise InvalidTransition("NEXT_SECTION_NOT_AVAILABLE")
 
     def _validate_answer(self, task: dict[str, Any], answer: Any) -> str:
         if not isinstance(answer, str):

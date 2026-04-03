@@ -144,9 +144,16 @@ def build_engine_sections(missing_audio: bool = False):
 
 
 class FakeEngineClient:
-    def __init__(self, *, missing_audio: bool = False, raise_on_get: bool = False):
+    def __init__(
+        self,
+        *,
+        missing_audio: bool = False,
+        raise_on_get: bool = False,
+        engine_timing_enforced: bool = False,
+    ):
         self.missing_audio = missing_audio
         self.raise_on_get = raise_on_get
+        self.engine_timing_enforced = engine_timing_enforced
         self.sessions = {}
         self.counter = 0
 
@@ -156,6 +163,7 @@ class FakeEngineClient:
         session = {
             "session_id": session_id,
             "engine_session_token": session_id,
+            "engine_timing_enforced": self.engine_timing_enforced,
             "sections": deepcopy(build_engine_sections(missing_audio=self.missing_audio)),
             "responses": {},
         }
@@ -187,10 +195,21 @@ class FakeEngineClient:
         return {"ok": True}
 
 
-def install_fake_orchestrator(*, missing_audio: bool = False, raise_on_get: bool = False):
+def install_fake_orchestrator(
+    *,
+    missing_audio: bool = False,
+    raise_on_get: bool = False,
+    engine_timing_enforced: bool = False,
+    now_provider=None,
+):
     yki_adapter.orchestrator = YKIOrchestrator(
-        engine=FakeEngineClient(missing_audio=missing_audio, raise_on_get=raise_on_get),
+        engine=FakeEngineClient(
+            missing_audio=missing_audio,
+            raise_on_get=raise_on_get,
+            engine_timing_enforced=engine_timing_enforced,
+        ),
         registry=SessionRegistry(),
+        now_provider=now_provider,
     )
 
 
