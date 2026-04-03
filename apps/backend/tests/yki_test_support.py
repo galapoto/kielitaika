@@ -201,6 +201,7 @@ def install_fake_orchestrator(
     raise_on_get: bool = False,
     engine_timing_enforced: bool = False,
     now_provider=None,
+    validation_mode: bool | None = None,
 ):
     yki_adapter.orchestrator = YKIOrchestrator(
         engine=FakeEngineClient(
@@ -210,6 +211,7 @@ def install_fake_orchestrator(
         ),
         registry=SessionRegistry(),
         now_provider=now_provider,
+        validation_mode=validation_mode,
     )
 
 

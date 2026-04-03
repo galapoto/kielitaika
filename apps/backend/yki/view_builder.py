@@ -63,7 +63,9 @@ def build_view(
         if next_section:
             next_section_started_at = session.section_windows[next_section]["started_at"]
         next_enabled = True
-        if session.engine_timing_enforced and next_section_started_at:
+        if session.validation_mode and next_section:
+            next_enabled = True
+        elif session.engine_timing_enforced and next_section_started_at:
             next_enabled = now >= datetime.fromisoformat(next_section_started_at)
         next_label = (
             "Complete Exam"
