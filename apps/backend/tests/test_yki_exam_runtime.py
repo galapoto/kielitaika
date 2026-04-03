@@ -75,7 +75,6 @@ class YkiExamRuntimeTests(unittest.TestCase):
         install_fake_orchestrator(
             engine_timing_enforced=True,
             now_provider=lambda: now,
-            validation_mode=False,
         )
         session_id = start_governed_exam()["session_id"]
 
@@ -94,12 +93,11 @@ class YkiExamRuntimeTests(unittest.TestCase):
 
         self.assertEqual(rejected["error"], "NEXT_SECTION_NOT_AVAILABLE")
 
-    def test_validation_mode_still_waits_for_engine_window(self):
+    def test_wait_mode_shows_engine_window_blocker(self):
         now = datetime(2026, 4, 3, 12, 0, tzinfo=UTC)
         install_fake_orchestrator(
             engine_timing_enforced=True,
             now_provider=lambda: now,
-            validation_mode=True,
         )
         session_id = start_governed_exam()["session_id"]
 

@@ -1,6 +1,10 @@
+import json
+from urllib.error import HTTPError, URLError
+from urllib.request import urlopen
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from api_contract import failure, record_contract_action, resolve_trace_id, success
 from audit.audit_logger import next_event_id
@@ -40,6 +44,7 @@ from yki.adapter import (
     start_governed_exam,
 )
 from yki.contracts import DEFAULT_USER_ID
+from yki.engine_client import get_engine_base_url
 from yki_practice.adapter import (
     export_yki_certification,
     get_yki_certification,
@@ -57,6 +62,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/engine/health")
+def engine_health():
+    engine_health_url = f"{get_engine_base_url()}/engine/health"
+    try:
+        with urlopen(engine_health_url, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        return payload
+    except HTTPError as exc:
+        return JSONResponse(
+            status_code=exc.code,
+            content={"status": "ERROR", "detail": "ENGINE_HEALTH_HTTP_ERROR"},
+        )
+    except (URLError, TimeoutError, ValueError):
+        return JSONResponse(
+            status_code=503,
+            content={"status": "ERROR", "detail": "ENGINE_UNAVAILABLE"},
+        )
 
 
 @app.get("/api/audio/{audio_id}")

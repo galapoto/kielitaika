@@ -111,7 +111,6 @@ class OrchestratedSession:
     last_engine_data: dict[str, Any] | None = None
     section_windows: dict[str, dict[str, str | None]] = field(default_factory=dict)
     engine_timing_enforced: bool = True
-    validation_mode: bool = False
 
     def __post_init__(self):
         if not self.session_hash:
@@ -195,7 +194,6 @@ def new_orchestrated_session(
     user_id: str = DEFAULT_USER_ID,
     timing_manifest: dict[str, int] | None = None,
     engine_timing_enforced: bool = True,
-    validation_mode: bool = False,
 ) -> OrchestratedSession:
     created_at = utc_now_iso()
     effective_timing_manifest = timing_manifest or build_timing_manifest_from_minutes()
@@ -211,7 +209,6 @@ def new_orchestrated_session(
         timing_manifest=effective_timing_manifest,
         created_at=created_at,
         engine_timing_enforced=engine_timing_enforced,
-        validation_mode=validation_mode,
     )
     session.visited_views.append(view_key_for_state(session.state, structure))
     return session

@@ -3,7 +3,7 @@ from learning.policy_engine import build_deterministic_seed, deterministic_order
 from learning.repository import repository
 from learning.progress_service import get_due_review_units, get_low_mastery_unit_ids
 from yki.contracts import DEFAULT_USER_ID
-from yki.session_store import get_progress_history
+from yki.progress_history import get_progress_history
 
 LEVEL_ORDER = ["A1", "A2", "B1", "B2", "C1", "C2"]
 SECTION_SEQUENCE = ["reading", "listening", "writing", "speaking"]

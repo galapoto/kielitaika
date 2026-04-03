@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime, UTC, timedelta
 from typing import Any
 
@@ -30,24 +29,16 @@ from yki.view_builder import build_certificate, build_governed_session_payload
 logger = logging.getLogger(__name__)
 
 
-def validation_mode_enabled() -> bool:
-    return os.getenv("YKI_VALIDATION_MODE", "").lower() == "true"
-
-
 class YKIOrchestrator:
     def __init__(
         self,
         engine: EngineClient | Any | None = None,
         registry: SessionRegistry | None = None,
         now_provider=None,
-        validation_mode: bool | None = None,
     ):
         self.engine = engine or EngineClient()
         self.registry = registry or SessionRegistry()
         self.now_provider = now_provider or (lambda: datetime.now(UTC))
-        self.validation_mode = (
-            validation_mode if validation_mode is not None else validation_mode_enabled()
-        )
 
     async def start_session(self, user_id: str = DEFAULT_USER_ID, payload: dict | None = None):
         engine_data = await self.engine.start_exam(payload or {})
@@ -174,7 +165,6 @@ class YKIOrchestrator:
             user_id=user_id,
             timing_manifest=self._extract_timing_manifest(engine_data),
             engine_timing_enforced=self._extract_engine_timing_enforced(engine_data),
-            validation_mode=self.validation_mode,
         )
         session.last_engine_data = engine_data
         activate_section(session, "reading", now=datetime.fromisoformat(session.started_at))
@@ -547,11 +537,10 @@ class YKIOrchestrator:
         current_time = self.now_provider()
         if current_time < datetime.fromisoformat(next_started_at):
             logger.info(
-                "Waiting for engine section window section=%s timestamp=%s starts_at=%s validation_mode=%s",
+                "Waiting for engine section window section=%s timestamp=%s starts_at=%s",
                 next_section,
                 current_time.isoformat(),
                 next_started_at,
-                self.validation_mode,
             )
             raise InvalidTransition("NEXT_SECTION_NOT_AVAILABLE")
 
