@@ -544,14 +544,15 @@ class YKIOrchestrator:
         next_started_at = next_window.get("started_at")
         if not next_started_at:
             return
-        if self.now_provider() < datetime.fromisoformat(next_started_at):
-            if self.validation_mode:
-                logger.warning(
-                    "VALIDATION_MODE_OVERRIDE section=%s timestamp=%s",
-                    next_section,
-                    self.now_provider().isoformat(),
-                )
-                return
+        current_time = self.now_provider()
+        if current_time < datetime.fromisoformat(next_started_at):
+            logger.info(
+                "Waiting for engine section window section=%s timestamp=%s starts_at=%s validation_mode=%s",
+                next_section,
+                current_time.isoformat(),
+                next_started_at,
+                self.validation_mode,
+            )
             raise InvalidTransition("NEXT_SECTION_NOT_AVAILABLE")
 
     def _validate_answer(self, task: dict[str, Any], answer: Any) -> str:

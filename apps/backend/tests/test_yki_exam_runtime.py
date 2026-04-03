@@ -94,7 +94,7 @@ class YkiExamRuntimeTests(unittest.TestCase):
 
         self.assertEqual(rejected["error"], "NEXT_SECTION_NOT_AVAILABLE")
 
-    def test_validation_mode_allows_next_section_before_window_opens(self):
+    def test_validation_mode_still_waits_for_engine_window(self):
         now = datetime(2026, 4, 3, 12, 0, tzinfo=UTC)
         install_fake_orchestrator(
             engine_timing_enforced=True,
@@ -111,13 +111,14 @@ class YkiExamRuntimeTests(unittest.TestCase):
 
         section_complete = get_governed_exam(session_id)
         self.assertEqual(section_complete["current_view"]["kind"], "section_complete")
-        self.assertTrue(section_complete["current_view"]["actions"]["next"]["enabled"])
+        self.assertFalse(section_complete["current_view"]["actions"]["next"]["enabled"])
+        self.assertIn(
+            "Waiting for engine section window: listening.",
+            section_complete["current_view"]["instructions"],
+        )
 
-        advanced = advance_governed_exam(session_id)
-        listening = get_governed_exam(advanced["session_id"])
-
-        self.assertEqual(listening["current_section"], "listening")
-        self.assertEqual(listening["current_view"]["kind"], "listening_prompt")
+        rejected = advance_governed_exam(session_id)
+        self.assertEqual(rejected["error"], "NEXT_SECTION_NOT_AVAILABLE")
 
     def test_exam_completes_in_read_only_mode_after_explicit_submissions(self):
         session_id = start_governed_exam()["session_id"]

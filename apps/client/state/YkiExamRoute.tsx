@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 
 import { audioManager } from "@core/audio/audioManager";
@@ -235,13 +235,15 @@ export default function YkiExamRoute({ onExit }: Props) {
     [],
   );
 
-  useFocusEffect(() => {
-    return () => {
-      void audioManager.stop();
-      void audioManager.stopRecording();
-      setRecording(false);
-    };
-  });
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        void audioManager.stop();
+        void audioManager.stopRecording();
+        setRecording(false);
+      };
+    }, []),
+  );
 
   async function runExamAction(kind: PendingAction, action: () => Promise<unknown>) {
     setRuntimeMessage(null);
