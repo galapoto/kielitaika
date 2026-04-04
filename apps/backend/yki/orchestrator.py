@@ -658,6 +658,8 @@ class YKIOrchestrator:
         current_section = session.state.section
         if not current_section:
             return
+        if session.state.view_type == "section_complete":
+            return
         expires_at = session.section_windows[current_section]["expires_at"]
         if expires_at and current_time > datetime.fromisoformat(expires_at):
             raise ContractViolation("SECTION_EXPIRED")

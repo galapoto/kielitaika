@@ -502,6 +502,7 @@ export default function AppShell({ requestedScreen = "root" }: Props) {
     }
 
     if (target === "auth") {
+      await clearRuntimePersistence();
       replaceIfNeeded("home");
       await resolveAndPersist("home", "root");
       return;

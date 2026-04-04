@@ -554,6 +554,7 @@ export default function YkiExamScreen({
                     <Stack gap="xs">
                       <Text variant="bodyStrong">Written response</Text>
                       <Input
+                        accessibilityLabel="yki-written-response"
                         editable={!busy && !currentView.response_locked && !isReadOnly}
                         multiline
                         onChangeText={onAnswerChange}

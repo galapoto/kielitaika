@@ -141,6 +141,38 @@ class YkiExamRuntimeTests(unittest.TestCase):
         rejected = advance_governed_exam(session_id)
         self.assertEqual(rejected["error"], "NEXT_SECTION_NOT_AVAILABLE")
 
+    def test_wait_mode_does_not_expire_completed_section_before_next_window_opens(self):
+        current_time = {"value": datetime(2026, 4, 3, 12, 0, tzinfo=UTC)}
+        install_fake_orchestrator(
+            engine_timing_enforced=True,
+            now_provider=lambda: current_time["value"],
+        )
+        session_id = start_governed_exam({"mode": "test"})["session_id"]
+
+        advance_governed_exam(session_id)
+        answer_governed_task(session_id, "To collect practical Finnish-learning ideas for onboarding.")
+        advance_governed_exam(session_id)
+        answer_governed_task(session_id, "The supervisor")
+        advance_governed_exam(session_id)
+
+        blocked_view = get_governed_exam(session_id)
+        self.assertEqual(blocked_view["current_view"]["kind"], "section_complete")
+        self.assertFalse(blocked_view["current_view"]["actions"]["next"]["enabled"])
+
+        listening_started_at = datetime.fromisoformat(
+            blocked_view["timing_manifest"]["sections"]["listening"]["started_at"]
+        )
+        current_time["value"] = listening_started_at
+
+        reopened_view = get_governed_exam(session_id)
+        self.assertEqual(reopened_view["current_view"]["kind"], "section_complete")
+        self.assertTrue(reopened_view["current_view"]["actions"]["next"]["enabled"])
+
+        advance_governed_exam(session_id)
+        listening_prompt = get_governed_exam(session_id)
+        self.assertEqual(listening_prompt["current_section"], "listening")
+        self.assertEqual(listening_prompt["current_view"]["kind"], "listening_prompt")
+
     def test_exam_completes_in_read_only_mode_after_explicit_submissions(self):
         session_id = start_governed_exam()["session_id"]
 

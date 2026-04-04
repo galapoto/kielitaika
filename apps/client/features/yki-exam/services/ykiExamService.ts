@@ -158,6 +158,8 @@ type PersistedExamSuccess = {
 };
 
 let inFlightStartExamSession: Promise<ApiResponse<YkiExamSession>> | null = null;
+let sessionPersistenceEpoch = 0;
+const blockedPersistedSessionIds = new Set<string>();
 
 function buildStartExamRequestBody() {
   const payload: Record<string, string> = {};
@@ -312,11 +314,28 @@ async function withExamSessionValidation(
   };
 }
 
-async function persistSessionFromResponse(data: YkiExamSession) {
+async function persistSessionFromResponse(data: YkiExamSession, persistenceEpoch: number) {
+  if (persistenceEpoch !== sessionPersistenceEpoch) {
+    logger.info("Ignored stale YKI exam session snapshot after a local reset.", {
+      actionType: "SESSION_PERSIST_SKIPPED",
+      currentScreen: "yki_exam",
+    });
+    return;
+  }
+
+  if (blockedPersistedSessionIds.has(data.session_id)) {
+    logger.info("Ignored re-persistence of a cleared YKI exam session.", {
+      actionType: "SESSION_PERSIST_SKIPPED",
+      currentScreen: "yki_exam",
+    });
+    return;
+  }
+
   logger.info("YKI exam session snapshot persisted.", {
     actionType: "SESSION_PERSIST",
     currentScreen: "yki_exam",
   });
+  blockedPersistedSessionIds.delete(data.session_id);
   await persistYkiExamSession({
     sessionId: data.session_id,
     status: data.status,
@@ -403,6 +422,11 @@ export async function getStoredExamSessionState(): Promise<
 }
 
 export async function clearExamSession() {
+  const persisted = await getStoredExamSessionState();
+  if (persisted?.ok && persisted.sessionId) {
+    blockedPersistedSessionIds.add(persisted.sessionId);
+  }
+  sessionPersistenceEpoch += 1;
   logger.info("YKI exam session was cleared from client persistence.", {
     actionType: "SESSION_CLEAR",
     currentScreen: "yki_exam",
@@ -411,6 +435,7 @@ export async function clearExamSession() {
 }
 
 export async function fetchExamSession(sessionId: string) {
+  const persistenceEpoch = sessionPersistenceEpoch;
   logger.info("YKI exam session load requested.", {
     actionType: "SESSION_LOAD",
     currentScreen: "yki_exam",
@@ -422,7 +447,7 @@ export async function fetchExamSession(sessionId: string) {
       actionType: "SESSION_LOAD",
       currentScreen: "yki_exam",
     });
-    await persistSessionFromResponse(response.data);
+    await persistSessionFromResponse(response.data, persistenceEpoch);
   }
 
   return response;

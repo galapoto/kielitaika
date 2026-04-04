@@ -156,6 +156,12 @@ export default function useYkiExam() {
       return;
     }
 
+    const refreshIntervalMs =
+      state.data.current_view.kind === "section_complete" &&
+      !state.data.current_view.actions.next?.enabled
+        ? 1000
+        : 5000;
+
     return createSafeInterval(() => {
       void runAction(
         async () =>
@@ -167,8 +173,14 @@ export default function useYkiExam() {
         "Exam runtime lost contact with the backend. Retry to continue with engine state.",
         { preserveVisibleData: true },
       );
-    }, 15000);
-  }, [state.data?.session_id, state.data?.current_view.view_key, state.data?.navigation.read_only]);
+    }, refreshIntervalMs);
+  }, [
+    state.data?.session_id,
+    state.data?.current_view.view_key,
+    state.data?.current_view.kind,
+    state.data?.current_view.actions.next?.enabled,
+    state.data?.navigation.read_only,
+  ]);
 
   return {
     ...state,
