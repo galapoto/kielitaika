@@ -8,13 +8,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from yki.adapter import (
     advance_governed_exam,
+    answer_governed_audio,
     answer_governed_task,
     get_governed_exam,
     play_governed_listening_prompt,
     start_governed_exam,
+    upload_governed_audio,
 )
 
-from yki_test_support import install_fake_orchestrator, move_to_listening_prompt
+from yki_test_support import install_fake_orchestrator, move_to_listening_prompt, move_to_speaking_response
 
 
 class YkiAudioMediaPipelineTests(unittest.TestCase):
@@ -107,6 +109,25 @@ class YkiAudioMediaPipelineTests(unittest.TestCase):
             unlocked_view["timing_manifest"]["current_section_remaining_seconds"],
             34,
         )
+
+    def test_speaking_upload_returns_managed_engine_audio_path(self):
+        session_id = start_governed_exam({"mode": "test"})["session_id"]
+        move_to_speaking_response(session_id)
+
+        upload = upload_governed_audio(
+            session_id,
+            filename="response.m4a",
+            content_type="audio/mp4",
+            content=b"speaking-bytes",
+        )
+        self.assertIn("file_path", upload)
+        self.assertTrue(upload["file_path"].startswith("uploads/audio/exam/"))
+
+        submitted = answer_governed_audio(session_id, upload["file_path"], 10_000)
+        self.assertIn("session_id", submitted)
+
+        speaking_view = get_governed_exam(session_id)
+        self.assertEqual(speaking_view["current_view"]["submitted_audio"], upload["file_path"])
 
 
 if __name__ == "__main__":

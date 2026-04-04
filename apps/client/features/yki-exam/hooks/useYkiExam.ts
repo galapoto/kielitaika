@@ -233,7 +233,7 @@ export default function useYkiExam() {
         () => submitExamAnswer(answer),
         "Answer submission could not be confirmed by the engine.",
       ),
-    submitAudio: (audio: string) =>
+    submitAudio: (audio: { uri: string; durationMs: number }) =>
       runAction(
         () => submitExamAudio(audio),
         "Audio submission could not be confirmed by the engine.",

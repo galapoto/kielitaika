@@ -63,9 +63,9 @@ export default function SpeakingPracticeExperience({ onBack, onOpenLearning }: P
 
   async function stopRecording() {
     try {
-      const uri = await audioManager.stopRecording();
-      setRecordingUri(uri);
-      setRecordingState(uri ? "recorded" : "idle");
+      const recording = await audioManager.stopRecording();
+      setRecordingUri(recording?.uri ?? null);
+      setRecordingState(recording?.uri ? "recorded" : "idle");
     } catch (error) {
       setRecordingState("idle");
       setRecordingError(error instanceof Error ? error.message : "RECORDING_FAILED");

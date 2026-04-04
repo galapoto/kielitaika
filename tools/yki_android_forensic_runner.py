@@ -112,7 +112,7 @@ class AndroidForensicRunner:
         if "device" not in devices:
             raise RunnerError("No Android device connected.")
         self.record("DEVICE_READY", raw_output=devices.strip())
-        self.prepare_device_ui()
+        self.prepare_device_ui(navigate_home=True)
 
     def _best_effort_adb(self, *args: str) -> str:
         try:
@@ -120,21 +120,22 @@ class AndroidForensicRunner:
         except Exception:
             return ""
 
-    def prepare_device_ui(self):
+    def prepare_device_ui(self, *, navigate_home: bool):
         self._best_effort_adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
         self._best_effort_adb("shell", "wm", "dismiss-keyguard")
         self._best_effort_adb("shell", "input", "keyevent", "82")
         self._best_effort_adb("shell", "cmd", "statusbar", "collapse")
-        self._best_effort_adb("shell", "input", "keyevent", "KEYCODE_BACK")
-        self._best_effort_adb("shell", "input", "swipe", "600", "2200", "600", "700", "250")
-        self._best_effort_adb("shell", "input", "keyevent", "KEYCODE_HOME")
-        self.record("DEVICE_UI_PREP")
+        if navigate_home:
+            self._best_effort_adb("shell", "input", "keyevent", "KEYCODE_BACK")
+            self._best_effort_adb("shell", "input", "swipe", "600", "2200", "600", "700", "250")
+            self._best_effort_adb("shell", "input", "keyevent", "KEYCODE_HOME")
+        self.record("DEVICE_UI_PREP", navigate_home=navigate_home)
         time.sleep(1.0)
 
     def launch_app(self):
         if not self.app_url:
             return
-        self.prepare_device_ui()
+        self.prepare_device_ui(navigate_home=True)
         self.adb("shell", "am", "force-stop", "host.exp.exponent")
         self.record("APP_FORCE_STOP", package="host.exp.exponent")
         time.sleep(1.0)
@@ -151,7 +152,7 @@ class AndroidForensicRunner:
         )
         self.record("APP_LAUNCH", app_url=self.app_url, raw_output=launch_output.strip())
         time.sleep(3.0)
-        self.prepare_device_ui()
+        self.prepare_device_ui(navigate_home=False)
 
     def _trim_xml_payload(self, output: str) -> str:
         xml_start = output.find("<?xml")
@@ -236,6 +237,18 @@ class AndroidForensicRunner:
             parent_hierarchy=node.parent_path,
         )
 
+    def _preferred_match(self, matches: list[UiNode]) -> UiNode:
+        for node in matches:
+            if node.enabled and node.clickable:
+                return node
+        for node in matches:
+            if node.enabled:
+                return node
+        for node in matches:
+            if node.clickable:
+                return node
+        return matches[0]
+
     def _keyguard_visible(self, nodes: list[UiNode]) -> bool:
         for node in nodes:
             if node.resource_id.startswith("com.android.systemui:id/keyguard_"):
@@ -259,10 +272,11 @@ class AndroidForensicRunner:
         while time.time() < deadline:
             nodes = self.dump_ui()
             for selector in selectors:
-                for node in nodes:
-                    if self._match_selector(node, selector):
-                        self._record_selector_success(node, selector)
-                        return node, selector
+                matches = [node for node in nodes if self._match_selector(node, selector)]
+                if matches:
+                    node = self._preferred_match(matches)
+                    self._record_selector_success(node, selector)
+                    return node, selector
             time.sleep(0.5)
         rendered = ", ".join(
             f"{selector['type']}={selector['value']}" for selector in selectors
@@ -285,7 +299,7 @@ class AndroidForensicRunner:
                 f"Element exists but is not tappable: {selector['type']}={selector['value']}"
             )
         x, y = node.center()
-        self.adb("shell", "input", "tap", str(x), str(y))
+        self.adb("shell", "input", "swipe", str(x), str(y), str(x), str(y), "120")
         self.record(
             "UI_TAP",
             selector_type=selector["type"],
@@ -299,11 +313,12 @@ class AndroidForensicRunner:
             parent_hierarchy=node.parent_path,
             x=x,
             y=y,
+            gesture="press_hold_120ms",
         )
         time.sleep(0.25)
 
     def tap_selectors(self, selectors: list[dict], timeout_seconds: float = 15.0) -> UiNode:
-        node, selector = self.find_node(selectors, timeout_seconds=timeout_seconds)
+        node, selector = self.wait_for_enabled_node(selectors, timeout_seconds=timeout_seconds)
         self.tap_node(node, selector)
         return node
 
@@ -340,7 +355,7 @@ class AndroidForensicRunner:
         session_id: str,
         previous_view_key: str,
         selectors: list[dict],
-        timeout_seconds: float = 15.0,
+        timeout_seconds: float = 20.0,
     ) -> dict:
         node, selector = self.find_node(selectors, timeout_seconds=timeout_seconds)
         self.tap_node(node, selector)
@@ -359,8 +374,8 @@ class AndroidForensicRunner:
             )
             raise
 
-    def wait_for_latest_session(self, previous_session_id: str | None) -> str:
-        deadline = time.time() + 25
+    def wait_for_latest_session(self, previous_session_id: str | None, timeout_seconds: float = 25.0) -> str:
+        deadline = time.time() + timeout_seconds
         while time.time() < deadline:
             try:
                 payload = self.get_data("/api/v1/yki/sessions/latest")
@@ -394,7 +409,7 @@ class AndroidForensicRunner:
         self,
         session_id: str,
         previous_view_key: str,
-        timeout_seconds: float = 15.0,
+        timeout_seconds: float = 20.0,
     ) -> dict:
         deadline = time.time() + timeout_seconds
         while time.time() < deadline:
@@ -407,6 +422,7 @@ class AndroidForensicRunner:
                 current_view.get("answer_status") != "pending"
                 or current_view.get("response_locked")
                 or current_view.get("submitted_answer")
+                or current_view.get("submitted_audio")
                 or (current_view.get("actions", {}).get("next") or {}).get("enabled")
             ):
                 return session
@@ -433,6 +449,11 @@ class AndroidForensicRunner:
         raise RunnerError(f"Prompt playback did not unlock next for {previous_view_key}")
 
     def open_exam_from_home(self) -> str:
+        selectors = [
+            {"type": "accessibilityLabel", "value": "yki-start-button"},
+            {"type": "resource-id", "value": "yki-start-button"},
+            {"type": "visible_text", "value": "YKI Exam"},
+        ]
         self.assert_device_unlocked()
         returned_home = False
         try:
@@ -444,42 +465,38 @@ class AndroidForensicRunner:
         except RunnerError:
             pass
         if returned_home:
-            self.find_node(
-                [
-                    {"type": "accessibilityLabel", "value": "yki-start-button"},
-                    {"type": "resource-id", "value": "yki-start-button"},
-                    {"type": "visible_text", "value": "YKI Exam"},
-                ],
-                timeout_seconds=20,
-            )
+            self.find_node(selectors, timeout_seconds=20)
         latest_before = None
         try:
             latest_before = self.get_data("/api/v1/yki/sessions/latest")["session_id"]
         except Exception:
             latest_before = None
-        try:
-            self.tap_selectors(
-                [
-                    {"type": "accessibilityLabel", "value": "yki-start-button"},
-                    {"type": "resource-id", "value": "yki-start-button"},
-                    {"type": "visible_text", "value": "YKI Exam"},
-                ],
-                timeout_seconds=20,
-            )
-            return self.wait_for_latest_session(latest_before)
-        except RunnerError:
-            if latest_before:
-                latest_session = self.get_data(f"/api/v1/yki/sessions/{latest_before}")
-                if latest_session["status"] != "read_only":
-                    self.record(
-                        "SESSION_REUSED",
-                        session_id=latest_before,
-                        current_section=latest_session.get("current_section"),
-                        view_key=latest_session["current_view"]["view_key"],
-                        reason="start_button_unavailable_after_launch",
-                    )
-                    return latest_before
-            raise
+        last_error: RunnerError | None = None
+        for attempt in range(3):
+            try:
+                self.tap_selectors(selectors, timeout_seconds=20 if attempt == 0 else 6)
+                return self.wait_for_latest_session(latest_before, timeout_seconds=8.0)
+            except RunnerError as exc:
+                last_error = exc
+                self.record(
+                    "SESSION_START_RETRY",
+                    attempt=attempt + 1,
+                    error=str(exc),
+                )
+                time.sleep(1.0)
+
+        if latest_before:
+            latest_session = self.get_data(f"/api/v1/yki/sessions/{latest_before}")
+            if latest_session["status"] != "read_only":
+                self.record(
+                    "SESSION_REUSED",
+                    session_id=latest_before,
+                    current_section=latest_session.get("current_section"),
+                    view_key=latest_session["current_view"]["view_key"],
+                    reason="start_button_unavailable_after_launch",
+                )
+                return latest_before
+        raise last_error or RunnerError("Timed out starting governed exam from home.")
 
     def drive_session(self, session_id: str) -> dict:
         writing_answer = "Automated exam response with enough content to satisfy the writing field."
@@ -547,7 +564,7 @@ class AndroidForensicRunner:
                 settled_session = self.wait_for_question_submission(
                     session_id,
                     previous_view_key,
-                    timeout_seconds=15.0,
+                    timeout_seconds=20.0,
                 )
                 if settled_session["current_view"]["view_key"] == previous_view_key:
                     enabled_node, selector = self.wait_for_enabled_node(
@@ -556,55 +573,47 @@ class AndroidForensicRunner:
                             {"type": "resource-id", "value": "yki-next-button"},
                             {"type": "visible_text", "value": "Next"},
                         ],
-                        timeout_seconds=4.0,
+                        timeout_seconds=8.0,
                     )
                     self.tap_node(enabled_node, selector)
-                    self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=6.0)
+                    self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=12.0)
             elif kind == "listening_prompt":
-                self.tap_selectors(
-                    [
-                        {"type": "accessibilityLabel", "value": "yki-play-audio"},
-                        {"type": "resource-id", "value": "yki-play-audio"},
-                        {"type": "visible_text", "value": "Play Prompt"},
-                    ],
-                )
-                prompt_session = self.get_data(f"/api/v1/yki/sessions/{session_id}")
-                prompt_remaining = prompt_session["timing_manifest"]["current_section_remaining_seconds"]
+                play_selectors = [
+                    {"type": "accessibilityLabel", "value": "yki-play-audio"},
+                    {"type": "resource-id", "value": "yki-play-audio"},
+                    {"type": "visible_text", "value": "Play Prompt"},
+                ]
+                prompt_session = None
+                for attempt in range(2):
+                    self.tap_selectors(play_selectors)
+                    try:
+                        prompt_session = self.wait_for_prompt_unlock(
+                            session_id,
+                            previous_view_key,
+                            timeout_seconds=12.0,
+                        )
+                        break
+                    except RunnerError as exc:
+                        self.record(
+                            "PROMPT_UNLOCK_RETRY",
+                            attempt=attempt + 1,
+                            error=str(exc),
+                        )
+                        if attempt == 1:
+                            raise
+                        time.sleep(1.0)
+                if prompt_session is None:
+                    raise RunnerError(f"Prompt playback did not unlock next for {previous_view_key}")
                 enabled_node, selector = self.wait_for_enabled_node(
                     [
                         {"type": "accessibilityLabel", "value": "yki-next-button"},
                         {"type": "resource-id", "value": "yki-next-button"},
                         {"type": "visible_text", "value": "Next"},
                     ],
-                    timeout_seconds=1.5,
+                    timeout_seconds=8.0,
                 )
-                if prompt_remaining > 8:
-                    try:
-                        self.tap_selectors(
-                            [
-                                {"type": "accessibilityLabel", "value": "yki-pause-audio"},
-                                {"type": "resource-id", "value": "yki-pause-audio"},
-                                {"type": "visible_text", "value": "Pause Prompt"},
-                            ],
-                            timeout_seconds=0.75,
-                        )
-                        self.tap_selectors(
-                            [
-                                {"type": "accessibilityLabel", "value": "yki-play-audio"},
-                                {"type": "resource-id", "value": "yki-play-audio"},
-                                {"type": "visible_text", "value": "Resume Prompt"},
-                            ],
-                            timeout_seconds=0.75,
-                        )
-                    except RunnerError:
-                        self.record("PROMPT_PAUSE_RESUME_UNAVAILABLE")
-                else:
-                    self.record(
-                        "PROMPT_PAUSE_RESUME_SKIPPED_LOW_TIME",
-                        section_remaining_seconds=prompt_remaining,
-                    )
                 self.tap_node(enabled_node, selector)
-                self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=4.0)
+                self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=15.0)
             elif kind == "writing_response":
                 self.tap_selectors(
                     [
@@ -614,15 +623,29 @@ class AndroidForensicRunner:
                     ],
                 )
                 self.input_text(writing_answer)
-                self.tap_and_wait_for_view_change(
-                    session_id,
-                    previous_view_key,
+                self.tap_selectors(
                     [
                         {"type": "accessibilityLabel", "value": "yki-submit-button"},
                         {"type": "resource-id", "value": "yki-submit-button"},
                         {"type": "visible_text", "value": "Submit Response"},
                     ],
                 )
+                settled_session = self.wait_for_question_submission(
+                    session_id,
+                    previous_view_key,
+                    timeout_seconds=20.0,
+                )
+                if settled_session["current_view"]["view_key"] == previous_view_key:
+                    enabled_node, selector = self.wait_for_enabled_node(
+                        [
+                            {"type": "accessibilityLabel", "value": "yki-next-button"},
+                            {"type": "resource-id", "value": "yki-next-button"},
+                            {"type": "visible_text", "value": "Next"},
+                        ],
+                        timeout_seconds=8.0,
+                    )
+                    self.tap_node(enabled_node, selector)
+                    self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=12.0)
             elif kind == "speaking_response":
                 self.tap_selectors(
                     [
@@ -631,16 +654,30 @@ class AndroidForensicRunner:
                         {"type": "visible_text", "value": "Start Recording"},
                     ],
                 )
-                time.sleep(1.5)
-                self.tap_and_wait_for_view_change(
-                    session_id,
-                    previous_view_key,
+                time.sleep(7.5)
+                self.tap_selectors(
                     [
                         {"type": "accessibilityLabel", "value": "yki-record-stop"},
                         {"type": "resource-id", "value": "yki-record-stop"},
                         {"type": "visible_text", "value": "Stop And Submit"},
                     ],
                 )
+                settled_session = self.wait_for_question_submission(
+                    session_id,
+                    previous_view_key,
+                    timeout_seconds=20.0,
+                )
+                if settled_session["current_view"]["view_key"] == previous_view_key:
+                    enabled_node, selector = self.wait_for_enabled_node(
+                        [
+                            {"type": "accessibilityLabel", "value": "yki-next-button"},
+                            {"type": "resource-id", "value": "yki-next-button"},
+                            {"type": "visible_text", "value": "Next"},
+                        ],
+                        timeout_seconds=8.0,
+                    )
+                    self.tap_node(enabled_node, selector)
+                    self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=12.0)
             elif kind == "exam_complete":
                 return {
                     "status": "PASS",

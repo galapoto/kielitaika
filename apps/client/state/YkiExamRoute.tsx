@@ -335,18 +335,19 @@ export default function YkiExamRoute({ onExit }: Props) {
     setActiveRequest("submit");
 
     try {
-      const audioUri = await audioManager.stopRecording();
+      const recording = await audioManager.stopRecording();
       setRecording(false);
       reportForensics("CLIENT_RECORDING_STOPPED", {
-        audio_uri_present: Boolean(audioUri),
+        audio_uri_present: Boolean(recording?.uri),
+        duration_ms: recording?.durationMs ?? 0,
       });
 
-      if (!audioUri) {
+      if (!recording?.uri) {
         setRuntimeMessage(humanizeRuntimeMessage("AUDIO_SUBMISSION_FAILED"));
         return;
       }
 
-      await submitAudio(audioUri);
+      await submitAudio(recording);
     } catch (error) {
       setRecording(false);
       setRuntimeMessage(

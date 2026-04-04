@@ -13,6 +13,12 @@ SECTION_TIME_LIMITS_MINUTES = {
     "writing": 55,
     "speaking": 20,
 }
+TEST_MODE_DURATION_PROFILE_SECONDS = {
+    "reading": 30,
+    "listening": 50,
+    "writing": 50,
+    "speaking": 40,
+}
 WARNING_THRESHOLD_SECONDS = 300
 LISTENING_PLAYBACK_LIMIT = 1
 WRITING_MINIMUM_WORDS = 80

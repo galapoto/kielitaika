@@ -8,6 +8,7 @@ from yki.contracts import (
     LISTENING_PLAYBACK_LIMIT,
     SECTION_ORDER,
     SPEAKING_MAX_RECORDING_SECONDS,
+    TEST_MODE_DURATION_PROFILE_SECONDS,
     WRITING_MINIMUM_WORDS,
     WRITING_RECOMMENDED_MAX_WORDS,
     DEFAULT_USER_ID,
@@ -45,7 +46,7 @@ class YKIOrchestrator:
         self.now_provider = now_provider or (lambda: datetime.now(UTC))
 
     async def start_session(self, user_id: str = DEFAULT_USER_ID, payload: dict | None = None):
-        effective_payload = payload or {}
+        effective_payload = self._apply_start_payload_policy(payload or {})
         engine_data = await self.engine.start_exam(effective_payload)
         session = self._initialize_session(engine_data, user_id=user_id)
         set_forensic_automation(
@@ -72,8 +73,10 @@ class YKIOrchestrator:
     async def get_session(self, session_id: str):
         session = self._get_required_session(session_id)
         self._enforce_timing(session)
-        engine_data = await self.engine.get_session(session.engine_session_id)
-        session.last_engine_data = engine_data
+        engine_data = session.last_engine_data
+        if session.status != "completed" and session.state.view_type != "exam_complete":
+            engine_data = await self.engine.get_session(session.engine_session_id)
+            session.last_engine_data = engine_data
         append_forensic_event(
             session,
             source="server",
@@ -93,7 +96,8 @@ class YKIOrchestrator:
         self._enforce_next_section_availability(session)
         previous_view_key = session.state.section and session.state.view_type
         session.state = compute_next_state(session, "next")
-        await self._refresh_engine_data(session)
+        if session.status != "completed" and session.state.view_type != "exam_complete":
+            await self._refresh_engine_data(session)
         self._maybe_finalize_session(session)
         append_forensic_event(
             session,
@@ -191,12 +195,13 @@ class YKIOrchestrator:
             raise InvalidTransition("NOT_SPEAKING_SECTION")
 
         audio_ref = self._validate_recording(payload.get("audio"))
+        duration_seconds = self._resolve_recording_duration_seconds(payload, audio_ref)
         await self.engine.submit_speaking(
             session.engine_session_id,
             {
                 "item_id": task.get("engine_item_id", task["id"]),
                 "audio_file_path": audio_ref,
-                "duration_sec": max(1.0, float(coerce_audio_duration_seconds(audio_ref))),
+                "duration_sec": max(1.0, float(duration_seconds)),
             },
         )
         task["evaluation"] = self._evaluate_audio_task(audio_ref)
@@ -216,6 +221,52 @@ class YKIOrchestrator:
         )
         self._persist(session)
         return {"session_id": session.session_id}
+
+    async def upload_recording(
+        self,
+        session_id: str,
+        *,
+        filename: str,
+        content_type: str,
+        content: bytes,
+    ):
+        session = self._get_required_session(session_id)
+        self._enforce_timing(session)
+        if session.status == "completed":
+            raise InvalidTransition("SESSION_READ_ONLY")
+        task = get_current_task(session)
+        if task is None or task["kind"] != "speaking_response":
+            raise InvalidTransition("NOT_SPEAKING_SECTION")
+        if not session.engine_session_token:
+            raise ContractViolation("ENGINE_SESSION_TOKEN_MISSING")
+
+        upload = await self.engine.upload_audio(
+            session_id=session.engine_session_id,
+            task_id=task.get("engine_item_id", task["id"]),
+            session_token=session.engine_session_token,
+            filename=filename,
+            content_type=content_type,
+            content=content,
+        )
+        file_path = str(upload.get("file_path") or "").strip()
+        if not file_path:
+            raise ContractViolation("ENGINE_INVALID_RESPONSE")
+        append_forensic_event(
+            session,
+            source="server",
+            event_type="RECORDING_UPLOADED",
+            current_time=self.now_provider(),
+            details={
+                "task_id": task["id"],
+                "file_path": file_path,
+                "content_type": content_type,
+            },
+        )
+        self._persist(session)
+        return {
+            "session_id": session.session_id,
+            "file_path": file_path,
+        }
 
     async def record_client_event(self, session_id: str, payload: dict | None = None):
         session = self._get_required_session(session_id)
@@ -293,6 +344,21 @@ class YKIOrchestrator:
                 return value
         raise ContractViolation("ENGINE_SESSION_ID_MISSING")
 
+    def _apply_start_payload_policy(self, payload: dict[str, Any]) -> dict[str, Any]:
+        effective_payload = dict(payload)
+        if effective_payload.get("mode") != "test":
+            return effective_payload
+
+        requested_profile = effective_payload.get("duration_profile_seconds")
+        duration_profile_seconds = dict(TEST_MODE_DURATION_PROFILE_SECONDS)
+        if isinstance(requested_profile, dict):
+            for section in SECTION_ORDER:
+                value = requested_profile.get(section)
+                if isinstance(value, (int, float)):
+                    duration_profile_seconds[section] = max(duration_profile_seconds[section], int(value))
+        effective_payload["duration_profile_seconds"] = duration_profile_seconds
+        return effective_payload
+
     def _extract_engine_session_token(self, engine_data: dict) -> str | None:
         value = engine_data.get("engine_session_token")
         return value if isinstance(value, str) and value else None
@@ -360,7 +426,10 @@ class YKIOrchestrator:
             return timing_manifest
 
         adjusted_manifest = dict(timing_manifest)
-        adjusted_manifest["listening"] = max(adjusted_manifest.get("listening", 0), 35)
+        adjusted_manifest["reading"] = max(adjusted_manifest.get("reading", 0), 30)
+        adjusted_manifest["listening"] = max(adjusted_manifest.get("listening", 0), 50)
+        adjusted_manifest["writing"] = max(adjusted_manifest.get("writing", 0), 50)
+        adjusted_manifest["speaking"] = max(adjusted_manifest.get("speaking", 0), 40)
         return adjusted_manifest
 
     def _extract_engine_timing_enforced(self, engine_data: dict) -> bool:
@@ -668,6 +737,17 @@ class YKIOrchestrator:
         return defaults.get(kind, ["This view is backend controlled."])
 
     def _enforce_timing(self, session: OrchestratedSession):
+        if session.status == "completed" or session.state.view_type == "exam_complete":
+            return
+
+        current_section = session.state.section
+        if (
+            session.state.view_type == "section_complete"
+            and current_section == SECTION_ORDER[-1]
+            and current_section in session.completed_sections
+        ):
+            return
+
         current_time = self.now_provider()
         exam_expires_at = datetime.fromisoformat(session.started_at) + timedelta(
             seconds=sum(session.timing_manifest.values())
@@ -675,7 +755,6 @@ class YKIOrchestrator:
         if current_time > exam_expires_at:
             raise ContractViolation("SESSION_EXPIRED")
 
-        current_section = session.state.section
         if not current_section:
             return
         if session.state.view_type == "section_complete":
@@ -736,6 +815,16 @@ class YKIOrchestrator:
         if coerce_audio_duration_seconds(normalized) > SPEAKING_MAX_RECORDING_SECONDS:
             raise ContractViolation("AUDIO_TOO_LONG")
         return normalized
+
+    def _resolve_recording_duration_seconds(self, payload: dict, audio_ref: str) -> int:
+        duration_ms = payload.get("duration_ms")
+        if isinstance(duration_ms, (int, float)):
+            duration_seconds = max(0, round(float(duration_ms) / 1000))
+        else:
+            duration_seconds = coerce_audio_duration_seconds(audio_ref)
+        if duration_seconds > SPEAKING_MAX_RECORDING_SECONDS:
+            raise ContractViolation("AUDIO_TOO_LONG")
+        return duration_seconds
 
     def _evaluate_text_task(self, task: dict[str, Any], answer: str) -> dict[str, Any]:
         if task["kind"] in {"reading_question", "listening_question"}:

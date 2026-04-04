@@ -5,6 +5,7 @@ import { logger } from "@core/logging/logger";
 
 let currentSound: Audio.Sound | null = null;
 let currentRecording: Audio.Recording | null = null;
+let currentRecordingStartedAt: number | null = null;
 let lifecycleGuardInitialized = false;
 
 function ensureLifecycleGuard() {
@@ -52,6 +53,7 @@ export const audioManager = {
     if (currentRecording) {
       await currentRecording.stopAndUnloadAsync();
       currentRecording = null;
+      currentRecordingStartedAt = null;
       logger.warn("Existing recording was force-stopped before starting a new one.", {
         actionType: "RECORDING_START",
       });
@@ -65,6 +67,7 @@ export const audioManager = {
     await recording.startAsync();
 
     currentRecording = recording;
+    currentRecordingStartedAt = Date.now();
     logger.info("Recording started.", {
       actionType: "RECORDING_START",
     });
@@ -83,8 +86,13 @@ export const audioManager = {
 
     await currentRecording.stopAndUnloadAsync();
     const uri = currentRecording.getURI();
+    const durationMs = Math.max(
+      0,
+      currentRecordingStartedAt === null ? 0 : Date.now() - currentRecordingStartedAt,
+    );
 
     currentRecording = null;
+    currentRecordingStartedAt = null;
 
     await Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
@@ -93,7 +101,10 @@ export const audioManager = {
     logger.info("Recording stopped and microphone released.", {
       actionType: "RECORDING_STOP",
     });
-    return uri;
+    return {
+      uri,
+      durationMs,
+    };
   },
 
   async play(uri: string) {

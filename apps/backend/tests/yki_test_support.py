@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import yki.adapter as yki_adapter
 from yki.adapter import advance_governed_exam, answer_governed_audio, answer_governed_task, play_governed_listening_prompt
+from yki.contracts import SECTION_ORDER
 from yki.orchestrator import YKIOrchestrator
 from yki.session_registry import SessionRegistry
 
@@ -174,6 +175,12 @@ class FakeEngineClient:
             "writing": 3300,
             "speaking": 1200,
         }
+        requested_duration_profile = (payload or {}).get("duration_profile_seconds")
+        if mode == "test" and isinstance(requested_duration_profile, dict):
+            duration_profile_seconds = {
+                section: int(requested_duration_profile.get(section, duration_profile_seconds[section]))
+                for section in SECTION_ORDER
+            }
         session = {
             "session_id": session_id,
             "engine_session_token": session_id,
@@ -212,6 +219,28 @@ class FakeEngineClient:
         self.sessions[session_id]["responses"][payload["item_id"]] = payload["audio_file_path"]
         return {"ok": True}
 
+    async def upload_audio(
+        self,
+        *,
+        session_id: str,
+        task_id: str,
+        session_token: str,
+        filename: str,
+        content_type: str,
+        content: bytes,
+    ):
+        self.sessions[session_id]["uploaded_audio"] = {
+            "task_id": task_id,
+            "session_token": session_token,
+            "filename": filename,
+            "content_type": content_type,
+            "size": len(content),
+        }
+        suffix = Path(filename).suffix or ".m4a"
+        return {
+            "file_path": f"uploads/audio/exam/{session_id}/{task_id}/recording{suffix}",
+        }
+
 
 def install_fake_orchestrator(
     *,
@@ -246,6 +275,13 @@ def move_to_listening_prompt(session_id: str):
 
 
 def complete_exam(session_id: str):
+    move_to_speaking_response(session_id)
+    answer_governed_audio(session_id, "clip_duration_ms=18000")
+    advance_governed_exam(session_id)
+    advance_governed_exam(session_id)
+
+
+def move_to_speaking_response(session_id: str):
     move_to_listening_prompt(session_id)
     play_governed_listening_prompt(session_id)
     advance_governed_exam(session_id)
@@ -264,8 +300,5 @@ def complete_exam(session_id: str):
         ),
     )
     advance_governed_exam(session_id)
-    advance_governed_exam(session_id)
-    advance_governed_exam(session_id)
-    answer_governed_audio(session_id, "clip_duration_ms=18000")
     advance_governed_exam(session_id)
     advance_governed_exam(session_id)

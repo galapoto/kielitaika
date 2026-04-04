@@ -1,6 +1,6 @@
 import sys
 import unittest
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from yki.adapter import (
     advance_governed_exam,
     answer_governed_task,
+    answer_governed_audio,
     get_governed_forensics,
     get_governed_exam,
     get_latest_governed_session_reference,
@@ -16,10 +17,11 @@ from yki.adapter import (
     play_governed_listening_prompt,
     start_governed_exam,
 )
+from yki.contracts import TEST_MODE_DURATION_PROFILE_SECONDS
 from yki.errors import EngineFailure
 from yki.orchestrator import YKIOrchestrator
 from yki.session_registry import SessionRegistry
-from yki_test_support import complete_exam, install_fake_orchestrator
+from yki_test_support import complete_exam, install_fake_orchestrator, move_to_speaking_response
 
 
 class YkiExamRuntimeTests(unittest.TestCase):
@@ -34,6 +36,10 @@ class YkiExamRuntimeTests(unittest.TestCase):
         self.assertIn("session_id", started)
         self.assertEqual(orchestrator.engine.start_payloads[-1]["mode"], "test")
         self.assertEqual(orchestrator.engine.start_payloads[-1]["seed"], "fixed-seed")
+        self.assertEqual(
+            orchestrator.engine.start_payloads[-1]["duration_profile_seconds"],
+            TEST_MODE_DURATION_PROFILE_SECONDS,
+        )
 
     def test_governed_exam_starts_on_reading_passage(self):
         started = start_governed_exam()
@@ -52,14 +58,26 @@ class YkiExamRuntimeTests(unittest.TestCase):
 
         session = get_governed_exam(started["session_id"])
 
-        self.assertLessEqual(session["timing_manifest"]["exam_remaining_seconds"], 85)
+        self.assertLessEqual(session["timing_manifest"]["exam_remaining_seconds"], 170)
         self.assertLessEqual(
             session["timing_manifest"]["sections"]["reading"]["remaining_seconds"],
-            20,
+            30,
+        )
+        self.assertGreaterEqual(
+            session["timing_manifest"]["sections"]["reading"]["remaining_seconds"],
+            29,
         )
         self.assertGreaterEqual(
             session["timing_manifest"]["sections"]["listening"]["remaining_seconds"],
-            34,
+            49,
+        )
+        self.assertGreaterEqual(
+            session["timing_manifest"]["sections"]["writing"]["remaining_seconds"],
+            49,
+        )
+        self.assertGreaterEqual(
+            session["timing_manifest"]["sections"]["speaking"]["remaining_seconds"],
+            39,
         )
 
     def test_runtime_requires_answers_and_playback_before_progressing(self):
@@ -191,6 +209,42 @@ class YkiExamRuntimeTests(unittest.TestCase):
 
         rejected = answer_governed_task(session_id, "late answer")
         self.assertEqual(rejected["error"], "SESSION_READ_ONLY")
+
+    def test_final_section_complete_can_finalize_after_exam_timer_elapses(self):
+        current_time = {"value": datetime(2026, 4, 4, 12, 0, tzinfo=UTC)}
+        install_fake_orchestrator(now_provider=lambda: current_time["value"])
+        session_id = start_governed_exam({"mode": "test"})["session_id"]
+
+        move_to_speaking_response(session_id)
+        answer_governed_audio(session_id, "clip_duration_ms=18000")
+        advance_governed_exam(session_id)
+
+        speaking_complete = get_governed_exam(session_id)
+        self.assertEqual(speaking_complete["current_view"]["kind"], "section_complete")
+        self.assertEqual(speaking_complete["current_section"], "speaking")
+
+        exam_expires_at = datetime.fromisoformat(
+            speaking_complete["timing_manifest"]["exam_expires_at"]
+        )
+        current_time["value"] = exam_expires_at + timedelta(seconds=1)
+
+        advance_governed_exam(session_id)
+        completed = get_governed_exam(session_id)
+
+        self.assertEqual(completed["status"], "read_only")
+        self.assertEqual(completed["current_view"]["kind"], "exam_complete")
+
+    def test_completed_session_load_does_not_depend_on_engine_refresh(self):
+        orchestrator = install_fake_orchestrator()
+        session_id = start_governed_exam({"mode": "test"})["session_id"]
+
+        complete_exam(session_id)
+        orchestrator.engine.raise_on_get = True
+
+        completed = get_governed_exam(session_id)
+
+        self.assertEqual(completed["status"], "read_only")
+        self.assertEqual(completed["current_view"]["kind"], "exam_complete")
 
     def test_engine_failures_fail_closed(self):
         install_fake_orchestrator(raise_on_get=True)

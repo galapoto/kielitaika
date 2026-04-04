@@ -29,8 +29,22 @@ def answer_governed_task(session_id: str, answer):
     return _run(orchestrator.submit_answer(session_id, {"answer": answer}))
 
 
-def answer_governed_audio(session_id: str, audio_ref: str):
-    return _run(orchestrator.submit_recording(session_id, {"audio": audio_ref}))
+def answer_governed_audio(session_id: str, audio_ref: str, duration_ms: int | None = None):
+    payload = {"audio": audio_ref}
+    if duration_ms is not None:
+        payload["duration_ms"] = duration_ms
+    return _run(orchestrator.submit_recording(session_id, payload))
+
+
+def upload_governed_audio(session_id: str, *, filename: str, content_type: str, content: bytes):
+    return _run(
+        orchestrator.upload_recording(
+            session_id,
+            filename=filename,
+            content_type=content_type,
+            content=content,
+        )
+    )
 
 
 def play_governed_listening_prompt(session_id: str):

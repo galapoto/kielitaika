@@ -9,62 +9,58 @@ Execution mode: `test`
 Deterministic seed: `automation-fixed`
 App URL: `exp://192.168.100.41:8083/--/auth`
 
-## Changes Applied Before Validation
+## Current Test Profile
 
-- Backend listening timing enforcement now skips expiry while the session is still on `listening_prompt` and no playback has started.
-- Backend first-play handling now restarts the listening section window from the play action so the answer budget is not consumed by prompt-entry latency.
-- Backend test-mode timing policy now guarantees at least `35` seconds for `listening`.
-- The Android forensic runner now:
-  - wakes the device
-  - dismisses non-secure system UI layers before launch
-  - fails explicitly when a secure keyguard PIN screen is still present
+- reading: `30s`
+- listening: `50s`
+- writing: `50s`
+- speaking: `40s`
 
-## Full Timeline
+## What Changed Before Validation
 
-1. `2026-04-04T17:03:07.052873+00:00` `DEVICE_READY`
-2. `2026-04-04T17:03:07.679021+00:00` `DEVICE_UI_PREP`
-3. `2026-04-04T17:03:09.302645+00:00` `DEVICE_UI_PREP`
-4. `2026-04-04T17:03:10.374241+00:00` `APP_FORCE_STOP`
-5. `2026-04-04T17:03:11.714831+00:00` `APP_LAUNCH`
-6. `2026-04-04T17:03:15.275259+00:00` `DEVICE_UI_PREP`
-7. `2026-04-04T17:03:18.515064+00:00` `DEVICE_LOCKED`
+- Backend test-mode start payload now forces explicit section durations for real-device validation.
+- Listening prompt expiry still remains suspended until first play.
+- First play still restarts the listening window on the backend.
+- Writing and speaking now have larger real-device slack.
+- Final section completion no longer dies just because the exam clock hit zero before `exam_complete` was materialized.
+- Completed governed sessions now load without depending on a fresh engine round-trip.
+- Android selector resolution now prefers enabled and clickable matches when duplicate nodes share the same automation ID.
+- Android prompt handling now waits longer for governed unlock and longer for post-tap view settlement.
 
-## Listening Timing Fields
-
-- `prompt_start_time`: not reached
-- `audio_play_start`: not reached
-- `audio_play_end`: not reached
-- `next_enabled_time`: not reached
-- `question_render_time`: not reached
-- `answer_time`: not reached
-- `expiry_time`: not reached
-
-## Total Time Spent
-
-- Total runtime before abort: about `11.46s`
-- Time spent inside listening: `0s`
-
-## Remaining Time At Each Step
-
-- Before governed session creation: not available because the app never reached the exam surface
-- During listening prompt: not available
-- During listening question: not available
-- At answer submit: not available
-
-## Supporting Timing Verification
-
-The real-device run was blocked before the exam surface, so listening timing proof currently comes from backend verification:
+## Verification Performed
 
 - `python3 -m unittest apps.backend.tests.test_yki_exam_runtime -v`
-  - PASS
-  - confirms test mode exposes a `35s` listening window floor
 - `python3 -m unittest apps.backend.tests.test_yki_audio_media_pipeline -v`
-  - PASS
-  - confirms `listening_prompt` does not expire before first play
-  - confirms the first play restarts the listening answer window
+- `venv/bin/python -m unittest engine.tests.test_engine_test_mode -v`
+
+All three test suites passed on 2026-04-04.
+
+## Latest Dedicated Validation Run
+
+- Artifact: `/tmp/listening_timing_validation.json`
+- Session: `3cf57399-0d07-47ec-8195-3118a46c77f3`
+- Result: `FAIL`
+
+Observed sequence:
+
+1. Reading passage rendered and advanced.
+2. Reading question answer was tapped.
+3. Backend then returned `SECTION_EXPIRED` before the question cycle settled.
+
+## Additional Live Evidence
+
+Across the repeated real-device reruns in this turn:
+
+- listening prompt repeatedly rendered on-device
+- `yki-play-audio` was repeatedly found and tapped
+- `yki-next-button` repeatedly unlocked after play
+- `listening_question` repeatedly rendered on-device
+- first listening answer was repeatedly tapped
+
+That means the original listening-surface blocker is no longer the dominant failure. The residual instability is in the broader real-device settle path and timing consumption before and around the section boundary.
 
 ## Verdict
 
 FAIL
 
-The listening timing patch is implemented and covered by tests, but the required real-device validation run could not reach the listening section because the handset was blocked by a secure PIN keyguard after app launch. The runner now reports this explicitly instead of misclassifying it as a missing start button.
+The backend listening timing model is materially improved and covered by tests, but the dedicated real-device validation run still does not complete deterministically enough to produce a clean listening-only PASS artifact. The remaining blocker is runner/client settle instability on the physical device, not missing listening controls or missing backend timing logic.

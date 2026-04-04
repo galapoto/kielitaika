@@ -157,6 +157,11 @@ type PersistedExamSuccess = {
   viewKey: string;
 };
 
+type RecordingSubmission = {
+  uri: string;
+  durationMs: number;
+};
+
 let inFlightStartExamSession: Promise<ApiResponse<YkiExamSession>> | null = null;
 let sessionPersistenceEpoch = 0;
 const blockedPersistedSessionIds = new Set<string>();
@@ -173,6 +178,66 @@ function buildStartExamRequestBody() {
   }
 
   return payload;
+}
+
+function inferAudioUploadMetadata(uri: string) {
+  const normalizedUri = uri.split("?")[0] ?? uri;
+  const filename = normalizedUri.split("/").pop() || "recording.m4a";
+  const extension = filename.split(".").pop()?.toLowerCase() ?? "m4a";
+  const contentTypeByExtension: Record<string, string> = {
+    m4a: "audio/mp4",
+    mp3: "audio/mpeg",
+    wav: "audio/wav",
+    webm: "audio/webm",
+    ogg: "audio/ogg",
+  };
+  return {
+    filename,
+    contentType: contentTypeByExtension[extension] ?? "application/octet-stream",
+  };
+}
+
+async function uploadExamAudioFile(
+  sessionId: string,
+  recording: RecordingSubmission,
+): Promise<{ ok: true; filePath: string } | { ok: false; error: ApiError }> {
+  const { filename, contentType } = inferAudioUploadMetadata(recording.uri);
+  const body = new FormData();
+  body.append(
+    "file",
+    {
+      uri: recording.uri,
+      name: filename,
+      type: contentType,
+    } as unknown as Blob,
+  );
+
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/api/v1/yki/sessions/${sessionId}/audio/upload`, {
+      method: "POST",
+      body,
+    });
+    const payload = (await response.json()) as ApiResponse<Record<string, unknown>>;
+    if (!response.ok || !payload.ok || !isRecord(payload.data) || typeof payload.data.file_path !== "string") {
+      return {
+        ok: false,
+        error: normalizeError(payload.error),
+      };
+    }
+    return {
+      ok: true,
+      filePath: payload.data.file_path,
+    };
+  } catch {
+    return {
+      ok: false,
+      error: {
+        code: "TRANSPORT_ERROR",
+        message: "TRANSPORT_ERROR",
+        traceReference: null,
+      },
+    };
+  }
 }
 
 function validateExamSessionReferencePayload(payload: Record<string, unknown>) {
@@ -613,7 +678,7 @@ export async function submitExamAnswer(answer: string) {
   );
 }
 
-export async function submitExamAudio(audio: string) {
+export async function submitExamAudio(recording: RecordingSubmission) {
   logger.info("YKI exam audio submission requested.", {
     actionType: "SESSION_SUBMIT",
     currentScreen: "yki_exam",
@@ -632,6 +697,15 @@ export async function submitExamAudio(audio: string) {
     } satisfies ApiResponse<YkiExamSession>;
   }
 
+  const uploaded = await uploadExamAudioFile(persisted.sessionId, recording);
+  if (!uploaded.ok) {
+    return {
+      ok: false,
+      data: null,
+      error: normalizeError(uploaded.error),
+    } satisfies ApiResponse<YkiExamSession>;
+  }
+
   return runMutationAndRefresh(
     `/api/v1/yki/sessions/${persisted.sessionId}/audio`,
     persisted.sessionId,
@@ -640,7 +714,10 @@ export async function submitExamAudio(audio: string) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ audio }),
+      body: JSON.stringify({
+        audio: uploaded.filePath,
+        duration_ms: recording.durationMs,
+      }),
     },
   );
 }

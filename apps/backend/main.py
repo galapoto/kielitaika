@@ -2,7 +2,7 @@ import json
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -45,6 +45,7 @@ from yki.adapter import (
     play_governed_listening_prompt,
     record_governed_forensic_event,
     start_governed_exam,
+    upload_governed_audio,
 )
 from yki.contracts import DEFAULT_USER_ID
 from yki.engine_client import get_engine_base_url
@@ -806,7 +807,8 @@ def yki_sessions_answer(session_id: str, body: dict, request: Request):
 @app.post("/api/v1/yki/sessions/{session_id}/audio")
 def yki_sessions_audio(session_id: str, body: dict, request: Request):
     audio_ref = body.get("audio")
-    result = answer_governed_audio(session_id, audio_ref)
+    duration_ms = body.get("duration_ms")
+    result = answer_governed_audio(session_id, audio_ref, duration_ms)
 
     if isinstance(result, dict) and "error" in result:
         return _failure_response(
@@ -822,7 +824,46 @@ def yki_sessions_audio(session_id: str, body: dict, request: Request):
         request,
         result,
         event_type="YKI_EXAM_RUNTIME_AUDIO_SUBMITTED",
-        request_payload={"audio": audio_ref, "session_id": session_id},
+        request_payload={"audio": audio_ref, "duration_ms": duration_ms, "session_id": session_id},
+        session_id=session_id,
+    )
+
+
+@app.post("/api/v1/yki/sessions/{session_id}/audio/upload")
+def yki_sessions_audio_upload(session_id: str, request: Request, file: UploadFile = File(...)):
+    content = file.file.read()
+    content_type = str(file.content_type or "").strip() or "application/octet-stream"
+    filename = str(file.filename or "recording.m4a").strip() or "recording.m4a"
+    result = upload_governed_audio(
+        session_id,
+        filename=filename,
+        content_type=content_type,
+        content=content,
+    )
+
+    if isinstance(result, dict) and "error" in result:
+        return _failure_response(
+            request,
+            result["error"],
+            event_type="YKI_EXAM_RUNTIME_AUDIO_UPLOADED",
+            request_payload={
+                "filename": filename,
+                "content_type": content_type,
+                "session_id": session_id,
+            },
+            retryable=False,
+            session_id=session_id,
+        )
+
+    return _success_response(
+        request,
+        result,
+        event_type="YKI_EXAM_RUNTIME_AUDIO_UPLOADED",
+        request_payload={
+            "filename": filename,
+            "content_type": content_type,
+            "session_id": session_id,
+        },
         session_id=session_id,
     )
 
