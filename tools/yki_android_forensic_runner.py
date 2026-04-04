@@ -350,17 +350,209 @@ class AndroidForensicRunner:
         self.record("UI_TEXT_INPUT", text=sanitized)
         time.sleep(0.25)
 
+    def capture_session_state(self, session: dict) -> dict:
+        current_view = session.get("current_view") or {}
+        next_action = current_view.get("actions", {}).get("next") or {}
+        playback = current_view.get("playback") or {}
+        return {
+            "status": session.get("status"),
+            "view_key": current_view.get("view_key"),
+            "view_kind": current_view.get("kind"),
+            "step_id": current_view.get("view_key"),
+            "session_hash": session.get("session_hash"),
+            "answer_status": current_view.get("answer_status"),
+            "response_locked": bool(current_view.get("response_locked")),
+            "submitted_answer": bool(current_view.get("submitted_answer")),
+            "submitted_audio": bool(current_view.get("submitted_audio")),
+            "next_enabled": bool(next_action.get("enabled")),
+            "playback_count": int(playback.get("count") or 0),
+        }
+
+    def ui_snapshot(self, nodes: list[UiNode], limit: int = 16) -> list[dict]:
+        snapshot: list[dict] = []
+        for node in nodes:
+            label = node.label.strip()
+            if not label:
+                continue
+            snapshot.append(
+                {
+                    "label": label,
+                    "text": node.text,
+                    "content_desc": node.content_desc,
+                    "resource_id": node.resource_id,
+                    "class_name": node.class_name,
+                    "clickable": node.clickable,
+                    "enabled": node.enabled,
+                    "bounds": node.bounds,
+                }
+            )
+            if len(snapshot) >= limit:
+                break
+        return snapshot
+
+    def record_action_state(self, action_name: str, state: dict):
+        self.record(
+            "ACTION_STATE_RECORDED",
+            action_name=action_name,
+            view_key=state.get("view_key"),
+            step_id=state.get("step_id"),
+            session_hash=state.get("session_hash"),
+            status=state.get("status"),
+            view_kind=state.get("view_kind"),
+            answer_status=state.get("answer_status"),
+            response_locked=state.get("response_locked"),
+            submitted_answer=state.get("submitted_answer"),
+            submitted_audio=state.get("submitted_audio"),
+            next_enabled=state.get("next_enabled"),
+            playback_count=state.get("playback_count"),
+        )
+
+    def wait_for_settlement(
+        self,
+        session_id: str,
+        before_state: dict,
+        *,
+        action_name: str,
+        timeout_seconds: float,
+        result_check=None,
+        ui_check=None,
+    ) -> tuple[dict | None, str]:
+        deadline = time.time() + timeout_seconds
+        last_state = before_state
+        last_backend_error = None
+        last_ui_error = None
+        last_ui_snapshot: list[dict] = []
+        while time.time() < deadline:
+            session = None
+            try:
+                session = self.get_data(f"/api/v1/yki/sessions/{session_id}")
+                last_state = self.capture_session_state(session)
+                last_backend_error = None
+            except RunnerError as exc:
+                last_backend_error = str(exc)
+
+            nodes: list[UiNode] = []
+            try:
+                nodes = self.dump_ui()
+                last_ui_snapshot = self.ui_snapshot(nodes)
+                last_ui_error = None
+            except RunnerError as exc:
+                last_ui_error = str(exc)
+
+            if session is not None:
+                if last_state.get("status") == "read_only":
+                    self.record(
+                        "SETTLEMENT_CONFIRMED",
+                        action_name=action_name,
+                        reason="status_read_only",
+                        before_view_key=before_state.get("view_key"),
+                        after_view_key=last_state.get("view_key"),
+                        before_step_id=before_state.get("step_id"),
+                        after_step_id=last_state.get("step_id"),
+                    )
+                    return session, "status_read_only"
+                if last_state.get("view_key") != before_state.get("view_key"):
+                    self.record(
+                        "SETTLEMENT_CONFIRMED",
+                        action_name=action_name,
+                        reason="view_key_changed",
+                        before_view_key=before_state.get("view_key"),
+                        after_view_key=last_state.get("view_key"),
+                        before_step_id=before_state.get("step_id"),
+                        after_step_id=last_state.get("step_id"),
+                    )
+                    return session, "view_key_changed"
+                if last_state.get("step_id") != before_state.get("step_id"):
+                    self.record(
+                        "SETTLEMENT_CONFIRMED",
+                        action_name=action_name,
+                        reason="step_id_changed",
+                        before_view_key=before_state.get("view_key"),
+                        after_view_key=last_state.get("view_key"),
+                        before_step_id=before_state.get("step_id"),
+                        after_step_id=last_state.get("step_id"),
+                    )
+                    return session, "step_id_changed"
+                if result_check and result_check(session, last_state, before_state):
+                    self.record(
+                        "SETTLEMENT_CONFIRMED",
+                        action_name=action_name,
+                        reason="action_result_visible",
+                        before_view_key=before_state.get("view_key"),
+                        after_view_key=last_state.get("view_key"),
+                        before_step_id=before_state.get("step_id"),
+                        after_step_id=last_state.get("step_id"),
+                    )
+                    return session, "action_result_visible"
+
+            if ui_check and nodes and ui_check(nodes):
+                self.record(
+                    "SETTLEMENT_CONFIRMED",
+                    action_name=action_name,
+                    reason="ui_reflects_next_state",
+                    before_view_key=before_state.get("view_key"),
+                    after_view_key=last_state.get("view_key"),
+                    before_step_id=before_state.get("step_id"),
+                    after_step_id=last_state.get("step_id"),
+                    ui_snapshot=last_ui_snapshot,
+                )
+                return session, "ui_reflects_next_state"
+
+            time.sleep(0.5)
+
+        failure = {
+            "action_name": action_name,
+            "before_state": before_state,
+            "last_state": last_state,
+            "backend_response": last_backend_error,
+            "ui_snapshot": last_ui_snapshot,
+            "ui_error": last_ui_error,
+        }
+        self.record("SETTLEMENT_TIMEOUT", **failure)
+        raise RunnerError(f"Settlement timeout after {action_name}: {json.dumps(failure, ensure_ascii=True)}")
+
+    def question_result_visible(self, session: dict, current_state: dict, before_state: dict) -> bool:
+        current_view = session.get("current_view") or {}
+        next_action = current_view.get("actions", {}).get("next") or {}
+        return (
+            current_state.get("answer_status") != before_state.get("answer_status")
+            or current_state.get("response_locked")
+            or current_state.get("submitted_answer")
+            or current_state.get("submitted_audio")
+            or bool(next_action.get("enabled"))
+        )
+
+    def prompt_unlock_visible(self, session: dict, current_state: dict, before_state: dict) -> bool:
+        current_view = session.get("current_view") or {}
+        playback = current_view.get("playback") or {}
+        next_action = current_view.get("actions", {}).get("next") or {}
+        return (
+            int(playback.get("count") or 0) > int(before_state.get("playback_count") or 0)
+            or bool(next_action.get("enabled"))
+        )
+
     def tap_and_wait_for_view_change(
         self,
         session_id: str,
-        previous_view_key: str,
+        before_session: dict,
         selectors: list[dict],
+        action_name: str,
         timeout_seconds: float = 20.0,
     ) -> dict:
-        node, selector = self.find_node(selectors, timeout_seconds=timeout_seconds)
+        before_state = self.capture_session_state(before_session)
+        self.record_action_state(action_name, before_state)
+        node, selector = self.wait_for_enabled_node(selectors, timeout_seconds=timeout_seconds)
         self.tap_node(node, selector)
         try:
-            return self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=timeout_seconds)
+            session, _ = self.wait_for_settlement(
+                session_id,
+                before_state,
+                action_name=action_name,
+                timeout_seconds=timeout_seconds,
+            )
+            if session is None:
+                raise RunnerError(f"Settlement produced no backend session for {action_name}")
+            return session
         except RunnerError:
             self.record(
                 "UI_TAP_NO_ADVANCE",
@@ -395,58 +587,6 @@ class AndroidForensicRunner:
                 return session_id
             time.sleep(0.5)
         raise RunnerError("Timed out waiting for a new governed session.")
-
-    def wait_for_view_change(self, session_id: str, previous_view_key: str, timeout_seconds: float = 15.0) -> dict:
-        deadline = time.time() + timeout_seconds
-        while time.time() < deadline:
-            session = self.get_data(f"/api/v1/yki/sessions/{session_id}")
-            if session["current_view"]["view_key"] != previous_view_key or session["status"] == "read_only":
-                return session
-            time.sleep(0.5)
-        raise RunnerError(f"View did not change from {previous_view_key}")
-
-    def wait_for_question_submission(
-        self,
-        session_id: str,
-        previous_view_key: str,
-        timeout_seconds: float = 20.0,
-    ) -> dict:
-        deadline = time.time() + timeout_seconds
-        while time.time() < deadline:
-            session = self.get_data(f"/api/v1/yki/sessions/{session_id}")
-            current_view = session["current_view"]
-            if current_view["view_key"] != previous_view_key:
-                return session
-
-            if (
-                current_view.get("answer_status") != "pending"
-                or current_view.get("response_locked")
-                or current_view.get("submitted_answer")
-                or current_view.get("submitted_audio")
-                or (current_view.get("actions", {}).get("next") or {}).get("enabled")
-            ):
-                return session
-            time.sleep(0.5)
-        raise RunnerError(f"Question submission did not settle for {previous_view_key}")
-
-    def wait_for_prompt_unlock(
-        self,
-        session_id: str,
-        previous_view_key: str,
-        timeout_seconds: float = 4.0,
-    ) -> dict:
-        deadline = time.time() + timeout_seconds
-        while time.time() < deadline:
-            session = self.get_data(f"/api/v1/yki/sessions/{session_id}")
-            current_view = session["current_view"]
-            if current_view["view_key"] != previous_view_key:
-                return session
-            playback = current_view.get("playback") or {}
-            next_action = current_view.get("actions", {}).get("next") or {}
-            if playback.get("count", 0) >= 1 or next_action.get("enabled"):
-                return session
-            time.sleep(0.25)
-        raise RunnerError(f"Prompt playback did not unlock next for {previous_view_key}")
 
     def open_exam_from_home(self) -> str:
         selectors = [
@@ -525,7 +665,7 @@ class AndroidForensicRunner:
             if kind in {"reading_passage", "writing_prompt", "speaking_prompt"}:
                 self.tap_and_wait_for_view_change(
                     session_id,
-                    previous_view_key,
+                    session,
                     [
                         {"type": "accessibilityLabel", "value": "yki-next-button"},
                         {"type": "resource-id", "value": "yki-next-button"},
@@ -535,8 +675,11 @@ class AndroidForensicRunner:
                             "contains": True,
                         },
                     ],
+                    action_name=f"advance_{kind}",
                 )
             elif kind == "section_complete":
+                before_state = self.capture_session_state(session)
+                self.record_action_state("advance_section_complete", before_state)
                 enabled_node, selector = self.wait_for_enabled_node(
                     [
                         {"type": "accessibilityLabel", "value": "yki-next-button"},
@@ -550,8 +693,15 @@ class AndroidForensicRunner:
                     timeout_seconds=20.0,
                 )
                 self.tap_node(enabled_node, selector)
-                self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=20.0)
+                self.wait_for_settlement(
+                    session_id,
+                    before_state,
+                    action_name="advance_section_complete",
+                    timeout_seconds=20.0,
+                )
             elif kind in {"reading_question", "listening_question"}:
+                before_state = self.capture_session_state(session)
+                self.record_action_state(f"select_option_{kind}", before_state)
                 option = view["options"][0]
                 self.tap_selectors(
                     [
@@ -561,12 +711,16 @@ class AndroidForensicRunner:
                     ],
                     timeout_seconds=15.0,
                 )
-                settled_session = self.wait_for_question_submission(
+                settled_session, reason = self.wait_for_settlement(
                     session_id,
-                    previous_view_key,
+                    before_state,
+                    action_name=f"select_option_{kind}",
                     timeout_seconds=20.0,
+                    result_check=self.question_result_visible,
                 )
-                if settled_session["current_view"]["view_key"] == previous_view_key:
+                if settled_session is None:
+                    raise RunnerError(f"No backend session after option selection for {previous_view_key}")
+                if reason == "action_result_visible":
                     enabled_node, selector = self.wait_for_enabled_node(
                         [
                             {"type": "accessibilityLabel", "value": "yki-next-button"},
@@ -575,8 +729,15 @@ class AndroidForensicRunner:
                         ],
                         timeout_seconds=8.0,
                     )
+                    next_before_state = self.capture_session_state(settled_session)
+                    self.record_action_state(f"advance_after_{kind}", next_before_state)
                     self.tap_node(enabled_node, selector)
-                    self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=12.0)
+                    self.wait_for_settlement(
+                        session_id,
+                        next_before_state,
+                        action_name=f"advance_after_{kind}",
+                        timeout_seconds=12.0,
+                    )
             elif kind == "listening_prompt":
                 play_selectors = [
                     {"type": "accessibilityLabel", "value": "yki-play-audio"},
@@ -585,12 +746,16 @@ class AndroidForensicRunner:
                 ]
                 prompt_session = None
                 for attempt in range(2):
+                    before_state = self.capture_session_state(session if attempt == 0 else prompt_session)
+                    self.record_action_state("play_listening_prompt", before_state)
                     self.tap_selectors(play_selectors)
                     try:
-                        prompt_session = self.wait_for_prompt_unlock(
+                        prompt_session, _ = self.wait_for_settlement(
                             session_id,
-                            previous_view_key,
+                            before_state,
+                            action_name="play_listening_prompt",
                             timeout_seconds=12.0,
+                            result_check=self.prompt_unlock_visible,
                         )
                         break
                     except RunnerError as exc:
@@ -612,8 +777,15 @@ class AndroidForensicRunner:
                     ],
                     timeout_seconds=8.0,
                 )
+                next_before_state = self.capture_session_state(prompt_session)
+                self.record_action_state("advance_after_listening_prompt", next_before_state)
                 self.tap_node(enabled_node, selector)
-                self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=15.0)
+                self.wait_for_settlement(
+                    session_id,
+                    next_before_state,
+                    action_name="advance_after_listening_prompt",
+                    timeout_seconds=15.0,
+                )
             elif kind == "writing_response":
                 self.tap_selectors(
                     [
@@ -623,6 +795,8 @@ class AndroidForensicRunner:
                     ],
                 )
                 self.input_text(writing_answer)
+                before_state = self.capture_session_state(session)
+                self.record_action_state("submit_writing_response", before_state)
                 self.tap_selectors(
                     [
                         {"type": "accessibilityLabel", "value": "yki-submit-button"},
@@ -630,12 +804,16 @@ class AndroidForensicRunner:
                         {"type": "visible_text", "value": "Submit Response"},
                     ],
                 )
-                settled_session = self.wait_for_question_submission(
+                settled_session, reason = self.wait_for_settlement(
                     session_id,
-                    previous_view_key,
+                    before_state,
+                    action_name="submit_writing_response",
                     timeout_seconds=20.0,
+                    result_check=self.question_result_visible,
                 )
-                if settled_session["current_view"]["view_key"] == previous_view_key:
+                if settled_session is None:
+                    raise RunnerError(f"No backend session after writing submission for {previous_view_key}")
+                if reason == "action_result_visible":
                     enabled_node, selector = self.wait_for_enabled_node(
                         [
                             {"type": "accessibilityLabel", "value": "yki-next-button"},
@@ -644,8 +822,15 @@ class AndroidForensicRunner:
                         ],
                         timeout_seconds=8.0,
                     )
+                    next_before_state = self.capture_session_state(settled_session)
+                    self.record_action_state("advance_after_writing_response", next_before_state)
                     self.tap_node(enabled_node, selector)
-                    self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=12.0)
+                    self.wait_for_settlement(
+                        session_id,
+                        next_before_state,
+                        action_name="advance_after_writing_response",
+                        timeout_seconds=12.0,
+                    )
             elif kind == "speaking_response":
                 self.tap_selectors(
                     [
@@ -655,6 +840,8 @@ class AndroidForensicRunner:
                     ],
                 )
                 time.sleep(7.5)
+                before_state = self.capture_session_state(session)
+                self.record_action_state("submit_speaking_response", before_state)
                 self.tap_selectors(
                     [
                         {"type": "accessibilityLabel", "value": "yki-record-stop"},
@@ -662,12 +849,16 @@ class AndroidForensicRunner:
                         {"type": "visible_text", "value": "Stop And Submit"},
                     ],
                 )
-                settled_session = self.wait_for_question_submission(
+                settled_session, reason = self.wait_for_settlement(
                     session_id,
-                    previous_view_key,
+                    before_state,
+                    action_name="submit_speaking_response",
                     timeout_seconds=20.0,
+                    result_check=self.question_result_visible,
                 )
-                if settled_session["current_view"]["view_key"] == previous_view_key:
+                if settled_session is None:
+                    raise RunnerError(f"No backend session after speaking submission for {previous_view_key}")
+                if reason == "action_result_visible":
                     enabled_node, selector = self.wait_for_enabled_node(
                         [
                             {"type": "accessibilityLabel", "value": "yki-next-button"},
@@ -676,8 +867,15 @@ class AndroidForensicRunner:
                         ],
                         timeout_seconds=8.0,
                     )
+                    next_before_state = self.capture_session_state(settled_session)
+                    self.record_action_state("advance_after_speaking_response", next_before_state)
                     self.tap_node(enabled_node, selector)
-                    self.wait_for_view_change(session_id, previous_view_key, timeout_seconds=12.0)
+                    self.wait_for_settlement(
+                        session_id,
+                        next_before_state,
+                        action_name="advance_after_speaking_response",
+                        timeout_seconds=12.0,
+                    )
             elif kind == "exam_complete":
                 return {
                     "status": "PASS",
