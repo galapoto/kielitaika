@@ -159,6 +159,7 @@ function buildActionButton(
   state: ButtonVisualState,
   tone: "primary" | "surface" = "primary",
   testID?: string,
+  accessibilityLabel?: string,
 ) {
   if (!action) {
     return null;
@@ -166,7 +167,7 @@ function buildActionButton(
 
   return (
     <Button
-      accessibilityLabel={action.label}
+      accessibilityLabel={accessibilityLabel ?? action.label}
       disabled={disabled || !action.enabled}
       label={action.label}
       onPress={onPress}
@@ -255,6 +256,7 @@ export default function YkiExamScreen({
 
   return (
     <ScreenContainer
+      actionsPosition="top"
       actions={
         isReadOnly ? null : (
           <Stack gap="xs">
@@ -271,20 +273,20 @@ export default function YkiExamScreen({
             {currentView.input_mode === "audio" && !currentView.response_locked ? (
               <>
                 <Button
-                  accessibilityLabel="Start Recording"
+                  accessibilityLabel="yki-record-start"
                   disabled={busy || recording}
                   label="Start Recording"
                   onPress={onStartRecording}
                   state={actionStates.startRecording}
-                  testID="yki-start-recording"
+                  testID="yki-record-start"
                 />
                 <Button
-                  accessibilityLabel="Stop And Submit"
+                  accessibilityLabel="yki-record-stop"
                   disabled={busy || !recording}
                   label="Stop And Submit"
                   onPress={onStopRecording}
                   state={actionStates.stopRecording}
-                  testID="yki-stop-recording"
+                  testID="yki-record-stop"
                   tone="surface"
                 />
               </>
@@ -297,29 +299,30 @@ export default function YkiExamScreen({
                   onSubmitText,
                   actionStates.submit,
                   "primary",
-                  "yki-submit-text",
+                  "yki-submit-button",
+                  "yki-submit-button",
                 )
               : null}
 
             {currentView.playback?.ready ? (
               promptPlaybackPaused ? (
                 <Button
-                  accessibilityLabel="Resume Prompt"
+                  accessibilityLabel="yki-play-audio"
                   disabled={busy}
                   label="Resume Prompt"
                   onPress={onResumePrompt}
                   state={actionStates.resumePrompt}
-                  testID="yki-resume-prompt"
+                  testID="yki-play-audio"
                   tone="surface"
                 />
               ) : (
                 <Button
-                  accessibilityLabel="Pause Prompt"
+                  accessibilityLabel="yki-pause-audio"
                   disabled={busy || currentView.playback.count === 0}
                   label="Pause Prompt"
                   onPress={onPausePrompt}
                   state={actionStates.pausePrompt}
-                  testID="yki-pause-prompt"
+                  testID="yki-pause-audio"
                   tone="surface"
                 />
               )
@@ -331,7 +334,8 @@ export default function YkiExamScreen({
               onPlayPrompt,
               actionStates.playPrompt,
               "surface",
-              "yki-play-prompt",
+              "yki-play-audio",
+              "yki-play-audio",
             )}
 
             {buildActionButton(
@@ -340,7 +344,8 @@ export default function YkiExamScreen({
               onNext,
               actionStates.next,
               currentView.input_mode === "text" ? "surface" : "primary",
-              "yki-next",
+              "yki-next-button",
+              "yki-next-button",
             )}
           </Stack>
         )

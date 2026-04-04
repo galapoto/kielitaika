@@ -42,7 +42,13 @@ export default function HomeScreen({
           <Button label="Daily Practice" onPress={onOpenDailyPractice} tone="surface" />
           <Button label="Professional Finnish" onPress={onOpenProfessionalFinnish} tone="surface" />
           <Button label="Speaking Practice" onPress={onOpenSpeakingPractice} tone="surface" />
-          <Button label="YKI Exam" onPress={onOpenYkiExam} tone="surface" />
+          <Button
+            accessibilityLabel="yki-start-button"
+            label="YKI Exam"
+            onPress={onOpenYkiExam}
+            testID="yki-start-button"
+            tone="surface"
+          />
           <Button label="Log Out" onPress={onLogout} tone="surface" />
         </Stack>
       }

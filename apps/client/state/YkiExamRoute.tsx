@@ -203,8 +203,8 @@ export default function YkiExamRoute({ onExit }: Props) {
     }
 
     return createSafeInterval(() => {
-      setCountdownSeconds((current) => Math.max(0, current - 1));
-    }, 1000);
+      setCountdownSeconds((current) => Math.max(0, current - 10));
+    }, 10000);
   }, [data?.session_id, data?.current_view.view_key, data?.navigation.read_only]);
 
   useEffect(() => {

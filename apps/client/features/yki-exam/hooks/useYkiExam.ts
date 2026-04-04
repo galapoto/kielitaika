@@ -167,7 +167,7 @@ export default function useYkiExam() {
         "Exam runtime lost contact with the backend. Retry to continue with engine state.",
         { preserveVisibleData: true },
       );
-    }, 5000);
+    }, 15000);
   }, [state.data?.session_id, state.data?.current_view.view_key, state.data?.navigation.read_only]);
 
   return {

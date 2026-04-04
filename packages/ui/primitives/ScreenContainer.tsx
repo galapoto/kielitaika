@@ -5,6 +5,7 @@ import { colors, componentSizes, spacing } from "../tokens";
 
 type Props = PropsWithChildren<{
   actions?: ReactNode;
+  actionsPosition?: "bottom" | "top";
   center?: boolean;
   content?: ReactNode;
   header?: ReactNode;
@@ -13,6 +14,7 @@ type Props = PropsWithChildren<{
 
 export default function ScreenContainer({
   actions,
+  actionsPosition = "bottom",
   center = false,
   children,
   content,
@@ -22,11 +24,15 @@ export default function ScreenContainer({
   const hasDeterministicZones =
     header !== undefined || content !== undefined || actions !== undefined;
 
+  const actionZone = <View style={styles.actionZone}>{actions}</View>;
+  const contentZone = <View style={styles.contentZone}>{content}</View>;
+
   const frame = hasDeterministicZones ? (
     <View style={[styles.frame, center ? styles.frameCentered : null]}>
       <View style={styles.headerZone}>{header}</View>
-      <View style={styles.contentZone}>{content}</View>
-      <View style={styles.actionZone}>{actions}</View>
+      {actionsPosition === "top" ? actionZone : null}
+      {contentZone}
+      {actionsPosition === "bottom" ? actionZone : null}
     </View>
   ) : (
     <View style={[styles.legacyFrame, center ? styles.frameCentered : null]}>{children}</View>
@@ -54,6 +60,7 @@ const styles = StyleSheet.create({
   actionZone: {
     alignSelf: "stretch",
     gap: componentSizes.layout.actionGap,
+    zIndex: 10,
   },
   contentZone: {
     alignSelf: "stretch",
