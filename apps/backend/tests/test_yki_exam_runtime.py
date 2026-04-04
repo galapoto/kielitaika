@@ -52,10 +52,14 @@ class YkiExamRuntimeTests(unittest.TestCase):
 
         session = get_governed_exam(started["session_id"])
 
-        self.assertLessEqual(session["timing_manifest"]["exam_remaining_seconds"], 40)
+        self.assertLessEqual(session["timing_manifest"]["exam_remaining_seconds"], 85)
         self.assertLessEqual(
             session["timing_manifest"]["sections"]["reading"]["remaining_seconds"],
-            10,
+            20,
+        )
+        self.assertGreaterEqual(
+            session["timing_manifest"]["sections"]["listening"]["remaining_seconds"],
+            34,
         )
 
     def test_runtime_requires_answers_and_playback_before_progressing(self):

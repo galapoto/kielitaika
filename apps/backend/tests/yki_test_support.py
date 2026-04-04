@@ -164,10 +164,10 @@ class FakeEngineClient:
         session_id = f"engine-session-{self.counter}"
         mode = "test" if (payload or {}).get("mode") == "test" else "production"
         duration_profile_seconds = {
-            "reading": 10,
-            "listening": 10,
-            "writing": 10,
-            "speaking": 10,
+            "reading": 20,
+            "listening": 20,
+            "writing": 15,
+            "speaking": 15,
         } if mode == "test" else {
             "reading": 3600,
             "listening": 2400,

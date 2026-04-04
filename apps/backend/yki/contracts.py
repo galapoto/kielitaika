@@ -178,6 +178,19 @@ def activate_section(session: OrchestratedSession, section: str, now: datetime |
     }
 
 
+def restart_section_window(session: OrchestratedSession, section: str, now: datetime | None = None):
+    current_time = now or utc_now()
+    existing_window = session.section_windows.get(section) or {}
+    started_at = current_time.isoformat()
+    session.section_start_time = started_at
+    session.section_windows[section] = {
+        "started_at": started_at,
+        "expires_at": (
+            datetime.fromisoformat(started_at) + timedelta(seconds=int(session.timing_manifest.get(section, 0)))
+        ).isoformat(),
+    }
+
+
 def ensure_forensic_runtime(runtime: dict[str, Any]) -> dict[str, Any]:
     forensic = runtime.get("forensics")
     if not isinstance(forensic, dict):

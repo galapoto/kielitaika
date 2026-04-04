@@ -112,10 +112,29 @@ class AndroidForensicRunner:
         if "device" not in devices:
             raise RunnerError("No Android device connected.")
         self.record("DEVICE_READY", raw_output=devices.strip())
+        self.prepare_device_ui()
+
+    def _best_effort_adb(self, *args: str) -> str:
+        try:
+            return self.adb(*args, check=False)
+        except Exception:
+            return ""
+
+    def prepare_device_ui(self):
+        self._best_effort_adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
+        self._best_effort_adb("shell", "wm", "dismiss-keyguard")
+        self._best_effort_adb("shell", "input", "keyevent", "82")
+        self._best_effort_adb("shell", "cmd", "statusbar", "collapse")
+        self._best_effort_adb("shell", "input", "keyevent", "KEYCODE_BACK")
+        self._best_effort_adb("shell", "input", "swipe", "600", "2200", "600", "700", "250")
+        self._best_effort_adb("shell", "input", "keyevent", "KEYCODE_HOME")
+        self.record("DEVICE_UI_PREP")
+        time.sleep(1.0)
 
     def launch_app(self):
         if not self.app_url:
             return
+        self.prepare_device_ui()
         self.adb("shell", "am", "force-stop", "host.exp.exponent")
         self.record("APP_FORCE_STOP", package="host.exp.exponent")
         time.sleep(1.0)
@@ -132,6 +151,7 @@ class AndroidForensicRunner:
         )
         self.record("APP_LAUNCH", app_url=self.app_url, raw_output=launch_output.strip())
         time.sleep(3.0)
+        self.prepare_device_ui()
 
     def _trim_xml_payload(self, output: str) -> str:
         xml_start = output.find("<?xml")
@@ -215,6 +235,24 @@ class AndroidForensicRunner:
             bounds=node.bounds,
             parent_hierarchy=node.parent_path,
         )
+
+    def _keyguard_visible(self, nodes: list[UiNode]) -> bool:
+        for node in nodes:
+            if node.resource_id.startswith("com.android.systemui:id/keyguard_"):
+                return True
+            if node.resource_id == "com.android.systemui:id/pinEntry":
+                return True
+            if "PIN" in node.text or "PIN" in node.content_desc:
+                return True
+        return False
+
+    def assert_device_unlocked(self):
+        nodes = self.dump_ui()
+        if self._keyguard_visible(nodes):
+            self.record("DEVICE_LOCKED", reason="secure_keyguard_visible")
+            raise RunnerError(
+                "Device is locked at secure keyguard; manual unlock required before Android validation run."
+            )
 
     def find_node(self, selectors: list[dict], timeout_seconds: float = 15.0) -> tuple[UiNode, dict]:
         deadline = time.time() + timeout_seconds
@@ -395,6 +433,7 @@ class AndroidForensicRunner:
         raise RunnerError(f"Prompt playback did not unlock next for {previous_view_key}")
 
     def open_exam_from_home(self) -> str:
+        self.assert_device_unlocked()
         returned_home = False
         try:
             self.tap_selectors(

@@ -14,6 +14,7 @@ from yki.contracts import (
     OrchestratedSession,
     activate_section,
     append_forensic_event,
+    restart_section_window,
     clamp_score,
     coerce_audio_duration_seconds,
     compute_session_hash,
@@ -163,6 +164,8 @@ class YKIOrchestrator:
         play_count = session.audio_playback.get(task["id"], 0)
         if play_count >= task.get("playback_limit", LISTENING_PLAYBACK_LIMIT):
             raise InvalidTransition("PLAYBACK_LIMIT_REACHED")
+        if play_count == 0 and session.state.section == "listening":
+            restart_section_window(session, "listening", now=self.now_provider())
         session.audio_playback[task["id"]] = play_count + 1
         session.state = compute_next_state(session, "play_audio")
         append_forensic_event(
@@ -306,7 +309,7 @@ class YKIOrchestrator:
                         break
                     seconds_by_section[section] = int(duration_seconds)
                 if len(seconds_by_section) == len(SECTION_ORDER):
-                    return seconds_by_section
+                    return self._apply_test_timing_policy(engine_data, seconds_by_section)
 
             timing = metadata.get("timing")
             if isinstance(timing, dict):
@@ -324,7 +327,7 @@ class YKIOrchestrator:
                             break
                         seconds_by_section[section_name] = int(duration_seconds)
                     if len(seconds_by_section) == len(SECTION_ORDER):
-                        return seconds_by_section
+                        return self._apply_test_timing_policy(engine_data, seconds_by_section)
 
         timing = engine_data.get("timing")
         if isinstance(timing, dict):
@@ -340,8 +343,25 @@ class YKIOrchestrator:
                         break
                     minutes_by_section[section] = duration_minutes
                 if len(minutes_by_section) == len(SECTION_ORDER):
-                    return build_timing_manifest_from_minutes(minutes_by_section)
-        return build_timing_manifest_from_minutes()
+                    return self._apply_test_timing_policy(
+                        engine_data,
+                        build_timing_manifest_from_minutes(minutes_by_section),
+                    )
+        return self._apply_test_timing_policy(engine_data, build_timing_manifest_from_minutes())
+
+    def _apply_test_timing_policy(
+        self,
+        engine_data: dict,
+        timing_manifest: dict[str, int],
+    ) -> dict[str, int]:
+        metadata = engine_data.get("metadata")
+        mode = metadata.get("mode") if isinstance(metadata, dict) else None
+        if mode != "test":
+            return timing_manifest
+
+        adjusted_manifest = dict(timing_manifest)
+        adjusted_manifest["listening"] = max(adjusted_manifest.get("listening", 0), 35)
+        return adjusted_manifest
 
     def _extract_engine_timing_enforced(self, engine_data: dict) -> bool:
         value = engine_data.get("engine_timing_enforced")
@@ -659,6 +679,14 @@ class YKIOrchestrator:
         if not current_section:
             return
         if session.state.view_type == "section_complete":
+            return
+        task = get_current_task(session)
+        if (
+            current_section == "listening"
+            and task is not None
+            and task.get("kind") == "listening_prompt"
+            and session.audio_playback.get(task["id"], 0) == 0
+        ):
             return
         expires_at = session.section_windows[current_section]["expires_at"]
         if expires_at and current_time > datetime.fromisoformat(expires_at):
